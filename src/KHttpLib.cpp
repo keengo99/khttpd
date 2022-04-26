@@ -238,41 +238,6 @@ const char * mk1123time(time_t time, char *buf, int size) {
 	make_http_time(time, buf, size);
 	return buf;
 }
-#if	!defined(_WIN32)
-#if	!defined(HAVE_DAEMON)
-int daemon(int nochdir, int noclose) {
-	pid_t child;
-
-	/* this is not complete */
-	child = fork();
-	if (child < 0) {
-		fprintf(stderr, "daemon(): Can't fork.\n");
-		return (1);
-	}
-	if (child > 0) {
-		/* parent */
-		exit(0);
-	}
-	if (!nochdir) {
-		chdir("/");
-	}
-	if (!noclose) {
-		fclose(stdin);
-		fclose(stdout);
-		fclose(stderr);
-		close(3);
-	}
-	return (0);
-}
-#endif	/* !HAVE_DAEMON */
-#else
-int
-daemon(int nochdir, int noclose)
-{
-	return(0);
-}
-#endif	
-
 
 void my_msleep(int msec) {
 #if	defined(OSF)

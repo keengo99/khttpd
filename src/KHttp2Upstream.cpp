@@ -1,6 +1,6 @@
 #include "KHttp2Upstream.h"
 #include "KStringBuf.h"
-#include "http.h"
+#include "khttp.h"
 #ifdef ENABLE_UPSTREAM_HTTP2
 bool KHttp2Upstream::set_header_callback(void *arg, kgl_header_callback header)
 {
