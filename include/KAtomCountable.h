@@ -1,7 +1,6 @@
 #ifndef KCOUNTABLE_H_99sss
 #define KCOUNTABLE_H_99sss
 #include "katom.h"
-
 class KAtomCountable
 {
 public:
