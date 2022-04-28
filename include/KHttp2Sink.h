@@ -18,7 +18,7 @@ public:
 	{
 		return false;
 	}
-	bool ResponseStatus(KHttpRequest *rq, uint16_t status_code)
+	bool ResponseStatus(KRequest *rq, uint16_t status_code)
 	{
 		return http2->add_status(ctx, status_code);
 	}
@@ -31,7 +31,7 @@ public:
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int StartResponseBody(KHttpRequest *rq, int64_t body_size)
+	int StartResponseBody(KRequest *rq, int64_t body_size)
 	{
 		ctx->SetContentLength(body_size);
 		return http2->send_header(ctx);
@@ -99,7 +99,7 @@ public:
 		return 0 == kconnection_self_addr(http2->c, addr);
 	}
 
-	int EndRequest(KHttpRequest *rq)
+	int EndRequest(KRequest *rq)
 	{
 		KBIT_SET(rq->req.flags, RQ_CONNECTION_CLOSE);
 		if (unlikely(rq->res.body_not_complete)) {

@@ -1,6 +1,8 @@
 #include "KTcpSink.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "kfiber.h"
+#include "KHttpServer.h"
+
 KTcpSink::KTcpSink(kconnection *cn)
 {
 	this->cn = cn;
@@ -9,9 +11,8 @@ KTcpSink::~KTcpSink()
 {
 	kconnection_destroy(cn);
 }
-kev_result KTcpSink::StartRequest(KHttpRequest *rq)
+kev_result KTcpSink::StartRequest(KRequest *rq)
 {
-#if 0
 	assert(rq->raw_url.host == NULL);
 	sockaddr_i addr;
 	GetSelfAddr(&addr);
@@ -23,12 +24,11 @@ kev_result KTcpSink::StartRequest(KHttpRequest *rq)
 	int len = (int)strlen(rq->raw_url.host);
 	snprintf(rq->raw_url.host + len, 7, ".%d", rq->raw_url.port);
 	rq->raw_url.path = strdup("/");
-	rq->meth = METH_CONNECT;
-	kfiber_create(start_request_fiber, rq, 0, conf.fiber_stack_size, NULL);
-#endif
+	rq->req.meth = METH_CONNECT;
+	kfiber_create(server_on_new_request, rq, 0, http_config.fiber_stack_size, NULL);
 	return kev_ok;
 }
-int KTcpSink::EndRequest(KHttpRequest *rq)
+int KTcpSink::EndRequest(KRequest *rq)
 {
 	delete rq;
 	return 0;

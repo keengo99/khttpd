@@ -13,7 +13,7 @@ class KHttpSink : public KSink {
 public:
 	KHttpSink(kconnection *c);
 	~KHttpSink();
-	bool ResponseStatus(KHttpRequest *rq, uint16_t status_code);
+	bool ResponseStatus(KRequest *rq, uint16_t status_code);
 	bool ResponseHeader(const char *name, int name_len, const char *val, int val_len);
 	bool ResponseConnection(const char *val, int val_len) {
 		return ResponseHeader(kgl_expand_string("Connection"), val, val_len);
@@ -30,8 +30,8 @@ public:
 	{
 		kselector_add_timer(cn->st.selector, result, arg, msec, &cn->st);
 	}
-	void StartHeader(KHttpRequest *rq);
-	int StartResponseBody(KHttpRequest *rq, int64_t body_size);
+	void StartHeader(KRequest *rq);
+	int StartResponseBody(KRequest *rq, int64_t body_size);
 	bool IsLocked();
 	//kev_result Write(void *arg, result_callback result, buffer_callback buffer);
 	//kev_result Read(void *arg, result_callback result, buffer_callback buffer);
@@ -74,14 +74,14 @@ public:
 	{
 		return cn->st.tmo;
 	}
-	int EndRequest(KHttpRequest *rq);
+	int EndRequest(KRequest *rq);
 	KOPAQUE GetOpaque()
 	{
 		return cn->st.data;
 	}
 	ks_buffer buffer;
-	kev_result ReadHeader(KHttpRequest *rq);
-	kev_result Parse(KHttpRequest *rq);
+	kev_result ReadHeader(KRequest *rq);
+	kev_result Parse(KRequest *rq);
 	sockaddr_i *GetAddr() {
 		return &cn->addr;
 	}
@@ -99,9 +99,9 @@ public:
 	{
 		return dechunk;
 	}
-	void SkipPost(KHttpRequest *rq);
-	int StartPipeLine(KHttpRequest *rq);
-	void EndFiber(KHttpRequest* rq);
+	void SkipPost(KRequest *rq);
+	int StartPipeLine(KRequest *rq);
+	void EndFiber(KRequest* rq);
 protected:
 	KDechunkContext *dechunk;
 	khttp_parser parser;

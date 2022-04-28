@@ -1,7 +1,7 @@
 #include "KHttp2.h"
 #include "kselector.h"
 #include "kconnection.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "KHttp2Sink.h"
 #include "KHttp2Upstream.h"
 #include "kfiber.h"
@@ -78,7 +78,7 @@ int bufferHttp2Write(KOPAQUE data, void *arg,iovec *buf,int bufCount)
 	return c->getWriteBuffer(buf,bufCount);
 }
 
-static bool construct_cookie_header(KHttp2Context *ctx,KHttpRequest *r)
+static bool construct_cookie_header(KHttp2Context *ctx,KRequest *r)
 {
 	char                     *buf, *p, *end;
 	size_t                      len;
@@ -372,7 +372,7 @@ bool KHttp2::add_cookie(kgl_http_v2_header_t *header)
 {
 	kgl_str_t    *val;
 	kgl_array_t  *cookies;
-	KHttpRequest *r = state.stream->request;
+	KRequest *r = state.stream->request;
 	cookies = state.stream->cookies;
 
 	if (cookies == NULL) {
@@ -401,7 +401,7 @@ u_char * KHttp2::state_process_header(u_char *pos,	u_char *end)
 	size_t                      len;
 	//intptr_t                   rc;
 	//kgl_table_elt_t            *h;
-	KHttpRequest	         *r;
+	KRequest	         *r;
 	kgl_http_v2_header_t       *header;
 
 	static kgl_str_t cookie = kgl_string("cookie");
@@ -596,7 +596,7 @@ bool KHttp2::ReadHeaderSuccess(KHttp2Context *stream)
 		return true;
 	}
 #endif//}}
-	KHttpRequest *rq = stream->request;
+	KRequest *rq = stream->request;
 	if (!construct_cookie_header(stream, rq)) {
 		return false;
 	}
@@ -706,7 +706,7 @@ KHttp2Context *KHttp2::create_stream()
 	kassert(kselector_is_same_thread(c->st.selector));
 	state.keep_pool = 1;
 	KHttp2Sink *sink = new KHttp2Sink(this,stream);
-	stream->request = new KHttpRequest(sink, state.pool);
+	stream->request = new KRequest(sink, state.pool);
 	stream->request->req.http_major = 2;
 	KBIT_SET(stream->request->raw_url.flags, KGL_URL_SSL);
 	return stream;
@@ -2166,7 +2166,7 @@ void KHttp2::ReleaseStateStream()
 		//incomplete stream
 		kassert(state.stream->request);
 		if (state.stream->request) {
-			KHttpRequest *rq = state.stream->request;
+			KRequest *rq = state.stream->request;
 #ifndef NDEBUG
 			//调试模式时，~KHttp2Sink里面会对ctx有检查。
 			KHttp2Sink *sink = static_cast<KHttp2Sink *>(rq->sink);

@@ -8,7 +8,7 @@
 #include "KPoolableSocketContainer.h"
 #include "klog.h"
 #include "kselector_manager.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "KSink.h"
 #include "KTsUpstream.h"
 #include "kfiber.h"

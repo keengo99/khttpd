@@ -1,14 +1,7 @@
-/*
- * KPoolableStream.cpp
- *
- *  Created on: 2010-8-18
- *      Author: keengo
- */
-
 #include "KUpstream.h"
 #include "KPoolableSocketContainer.h"
 #include "klog.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "kselector.h"
 struct kgl_upstream_delay_io
 {

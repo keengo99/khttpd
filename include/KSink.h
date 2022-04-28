@@ -7,7 +7,7 @@
 #include "kgl_ssl.h"
 #include "kstring.h"
 
-class KHttpRequest;
+class KRequest;
 
 class KSink {
 public:
@@ -97,13 +97,13 @@ public:
 		return cn->st.ssl;
 	}
 #endif
-	virtual void StartHeader(KHttpRequest *rq)
+	virtual void StartHeader(KRequest *rq)
 	{
 		return;
 	}
-	friend class KHttpRequest;
+	friend class KRequest;
 protected:
-	virtual int EndRequest(KHttpRequest *rq) = 0;
+	virtual int EndRequest(KRequest *rq) = 0;
 	int Write(const char *buf, int len)
 	{
 		WSABUF b;
@@ -113,9 +113,9 @@ protected:
 	}
 	virtual int Write(LPWSABUF buf, int bc) = 0;
 	virtual int Read(char *buf, int len) = 0;
-	virtual bool ResponseStatus(KHttpRequest *rq, uint16_t status_code) = 0;
+	virtual bool ResponseStatus(KRequest *rq, uint16_t status_code) = 0;
 	virtual bool ResponseHeader(const char *name, int name_len, const char *val, int val_len) = 0;
 	virtual bool ResponseConnection(const char *val, int val_len) = 0;
-	virtual int StartResponseBody(KHttpRequest *rq, int64_t body_size) = 0;
+	virtual int StartResponseBody(KRequest *rq, int64_t body_size) = 0;
 };
 #endif

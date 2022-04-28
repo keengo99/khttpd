@@ -1,7 +1,7 @@
 #include "KPreRequest.h"
 #include "KHttpSink.h"
 #include "KTcpSink.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "KHttp2.h"
 #include "KProxy.h"
 #include "kfiber.h"
@@ -15,13 +15,13 @@ static kev_result handle_http_request(kconnection *cn)
 #ifdef WORK_MODEL_TCP
 	if (KBIT_TEST(cn->server->flags, WORK_MODEL_TCP)) {
 		KTcpSink *sink = new KTcpSink(cn);
-		KHttpRequest *rq = new KHttpRequest(sink, NULL);
+		KRequest *rq = new KRequest(sink, NULL);
 		selectable_bind_opaque(&cn->st, rq, kgl_opaque_server);
 		return sink->StartRequest(rq);
 	}
 #endif
 	KHttpSink *sink = new KHttpSink(cn);
-	KHttpRequest *rq = new KHttpRequest(sink, NULL);
+	KRequest *rq = new KRequest(sink, NULL);
 	selectable_bind_opaque(&cn->st, rq, kgl_opaque_server);
 	return sink->ReadHeader(rq);
 }

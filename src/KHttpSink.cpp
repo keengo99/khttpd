@@ -1,5 +1,5 @@
 #include "KHttpSink.h"
-#include "KHttpRequest.h"
+#include "KRequest.h"
 #include "kbuf.h"
 #include "kfiber.h"
 #include "kfeature.h"
@@ -10,13 +10,13 @@
 #define MAX_HTTP_CHUNK_SIZE 8192
 kev_result delete_request_fiber(KOPAQUE data, void* arg, int got)
 {
-	KHttpRequest* rq = (KHttpRequest*)arg;
+	KRequest* rq = (KRequest*)arg;
 	delete rq;
 	return kev_ok;
 }
 kev_result end_http_sink_fiber(KOPAQUE data, void* arg, int got)
 {
-	KHttpRequest* rq = (KHttpRequest*)arg;
+	KRequest* rq = (KRequest*)arg;
 	KHttpSink *sink = static_cast<KHttpSink*>(rq->sink);
 	sink->EndFiber(rq);
 	return kev_ok;
@@ -29,7 +29,7 @@ static int buffer_write_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bc)
 }
 static void result_write_http_header(KOPAQUE data, void *arg, int got)
 {
-	KHttpRequest *rq = (KHttpRequest *)arg;
+	KRequest *rq = (KRequest *)arg;
 	KHttpSink *sink = static_cast<KHttpSink *>(rq->sink);
 	kassert(sink->rc==NULL);
 	if (got < 0) {
@@ -53,7 +53,7 @@ static kev_result result_write_http_sink(KOPAQUE data, void *arg, int got)
 }
 kev_result result_skip_chunk_request(KOPAQUE data, void *arg, int got)
 {
-	KHttpRequest *rq = (KHttpRequest *)arg;
+	KRequest *rq = (KRequest *)arg;
 	if (got < 0) {
 		delete rq;
 		return kev_destroy;
@@ -69,7 +69,7 @@ kev_result result_skip_chunk_request(KOPAQUE data, void *arg, int got)
 }
 kev_result result_skip_post(KOPAQUE data, void *arg, int got)
 {
-	KHttpRequest *rq = (KHttpRequest *)arg;
+	KRequest *rq = (KRequest *)arg;
 	if (got <= 0) {
 		delete rq;
 		return kev_destroy;
@@ -81,7 +81,7 @@ kev_result result_skip_post(KOPAQUE data, void *arg, int got)
 }
 kev_result result_read_http_sink(KOPAQUE data, void *arg, int got)
 {
-	KHttpRequest *rq = (KHttpRequest *)arg;
+	KRequest *rq = (KRequest *)arg;
 	if (got <= 0) {
 		delete rq;
 		return kev_destroy;
@@ -94,7 +94,7 @@ kev_result result_read_http_sink(KOPAQUE data, void *arg, int got)
 
 int buffer_read_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bufCount)
 {
-	KHttpRequest *rq = (KHttpRequest *)arg;
+	KRequest *rq = (KRequest *)arg;
 	KHttpSink *sink = static_cast<KHttpSink *>(rq->sink);
 	int bc = ks_get_write_buffers(&sink->buffer, buf, bufCount);
 	//printf("buf_len=[%d]\n", buf[0].len);
@@ -160,13 +160,13 @@ KHttpSink::~KHttpSink() {
 	}
 	kconnection_destroy(cn);
 }
-void KHttpSink::StartHeader(KHttpRequest *rq)
+void KHttpSink::StartHeader(KRequest *rq)
 {
 	if (rc == NULL) {
 		rc = new KResponseContext(rq->pool);
 	}
 }
-bool KHttpSink::ResponseStatus(KHttpRequest *rq, uint16_t status_code)
+bool KHttpSink::ResponseStatus(KRequest *rq, uint16_t status_code)
 {
 	kassert(rc);
 	kgl_str_t request_line;
@@ -174,7 +174,7 @@ bool KHttpSink::ResponseStatus(KHttpRequest *rq, uint16_t status_code)
 	rc->head_insert_const(request_line.data, (uint16_t)request_line.len);
 	return true;
 }
-kev_result KHttpSink::Parse(KHttpRequest *rq)
+kev_result KHttpSink::Parse(KRequest *rq)
 {
 	khttp_parse_result rs;
 	char *hot = buffer.buf;
@@ -246,7 +246,7 @@ bool KHttpSink::ResponseHeader(const char *name, int name_len, const char *val, 
 	rc->head_append(buf, len);
 	return true;
 }
-int KHttpSink::StartResponseBody(KHttpRequest *rq,int64_t body_size)
+int KHttpSink::StartResponseBody(KRequest *rq,int64_t body_size)
 {
 	if (rc == NULL) {
 		return 0;
@@ -299,7 +299,7 @@ int KHttpSink::Write(LPWSABUF buf, int bc)
 	assert(!kfiber_is_main());
 	return kfiber_net_writev(cn, buf, bc);
 }
-int KHttpSink::EndRequest(KHttpRequest *rq) 
+int KHttpSink::EndRequest(KRequest *rq) 
 {
 	if (rc) {
 		delete rc;
@@ -319,7 +319,7 @@ int KHttpSink::EndRequest(KHttpRequest *rq)
 	}
 	return StartPipeLine(rq);
 }
-void KHttpSink::SkipPost(KHttpRequest *rq)
+void KHttpSink::SkipPost(KRequest *rq)
 {
 	kassert(rq->req.left_read != 0);
 	if (dechunk) {
@@ -359,7 +359,7 @@ void KHttpSink::SkipPost(KHttpRequest *rq)
 	}
 	StartPipeLine(rq);
 }
-void KHttpSink::EndFiber(KHttpRequest* rq)
+void KHttpSink::EndFiber(KRequest* rq)
 {
 	if (buffer.used > 0) {
 		Parse(rq);
@@ -367,7 +367,7 @@ void KHttpSink::EndFiber(KHttpRequest* rq)
 	}
 	ReadHeader(rq);
 }
-int KHttpSink::StartPipeLine(KHttpRequest *rq)
+int KHttpSink::StartPipeLine(KRequest *rq)
 {
 	kassert(rq->req.left_read == 0 || KBIT_TEST(rq->req.flags, RQ_HAVE_EXPECT));
 	rq->clean();
@@ -380,7 +380,7 @@ int KHttpSink::StartPipeLine(KHttpRequest *rq)
 	}
 	return kfiber_exit_callback(NULL, end_http_sink_fiber, rq);	
 }
-kev_result KHttpSink::ReadHeader(KHttpRequest *rq)
+kev_result KHttpSink::ReadHeader(KRequest *rq)
 {
 	return selectable_read(&cn->st, result_read_http_sink, buffer_read_http_sink, rq);
 }

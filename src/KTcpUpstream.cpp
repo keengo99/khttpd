@@ -1,8 +1,6 @@
 #include "KTcpUpstream.h"
 #include "KPoolableSocketContainer.h"
-#include "KHttpRequest.h"
 #include "khttp.h"
-//#include "KAsyncFetchObject.h"
 void KTcpUpstream::OnPushContainer()
 {
 #ifndef _WIN32

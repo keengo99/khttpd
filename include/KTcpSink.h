@@ -53,9 +53,9 @@ public:
 	{
 		return cn;
 	}
-	kev_result StartRequest(KHttpRequest *rq);
-	int EndRequest(KHttpRequest *rq);
-	bool ResponseStatus(KHttpRequest *rq, uint16_t status_code)
+	kev_result StartRequest(KRequest *rq);
+	int EndRequest(KRequest *rq);
+	bool ResponseStatus(KRequest *rq, uint16_t status_code)
 	{
 		return false;
 	}
@@ -67,7 +67,7 @@ public:
 	{
 		return false;
 	}
-	int StartResponseBody(KHttpRequest *rq, int64_t body_size)
+	int StartResponseBody(KRequest *rq, int64_t body_size)
 	{
 		return 0;
 	}

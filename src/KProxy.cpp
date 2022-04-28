@@ -1,5 +1,4 @@
-#include "KHttpRequest.h"
-//#include "KUpstream.h"
+#include "KRequest.h"
 #include "kselector_manager.h"
 #include "KProxy.h"
 #include "kbuf.h"

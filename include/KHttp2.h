@@ -22,7 +22,7 @@
 #define  KGL_DONE       -4
 #define  KGL_DECLINED   -5
 #define  KGL_ABORT      -6
-class KHttpRequest;
+class KRequest;
 class KUpstream;
 #ifdef TLSEXT_TYPE_next_proto_neg
 #define KGL_HTTP_V2_NPN_NEGOTIATED       "h2"
@@ -272,7 +272,7 @@ class KHttp2Context
 public:
 	KHttp2Node *node;
 	union {
-		KHttpRequest *request;
+		KRequest *request;
 		KUpstream *us;
 		KOPAQUE data;
 	};
