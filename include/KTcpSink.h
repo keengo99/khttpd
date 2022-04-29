@@ -6,7 +6,7 @@
 
 class KTcpSink : public KSink {
 public:
-	KTcpSink(kconnection *cn);
+	KTcpSink(kconnection *cn,kgl_pool_t *pool);
 	~KTcpSink();
 	bool IsLocked()
 	{
@@ -33,11 +33,11 @@ public:
 	{
 		selectable_shutdown(&cn->st);
 	}
-	int Read(char *buf, int len)
+	int internal_read(WSABUF *buf, int bc)
 	{
-		return kfiber_net_read(cn, buf, len);
+		return kfiber_net_readv(cn, buf, bc);
 	}
-	int Write(LPWSABUF buf, int bc)
+	int internal_write(LPWSABUF buf, int bc)
 	{
 		return kfiber_net_writev(cn, buf, bc);
 	}
@@ -53,13 +53,13 @@ public:
 	{
 		return cn;
 	}
-	kev_result StartRequest(KRequest *rq);
-	int EndRequest(KRequest *rq);
-	bool ResponseStatus(KRequest *rq, uint16_t status_code)
+	kev_result StartRequest();
+	int end_request();
+	bool internal_response_status(uint16_t status_code)
 	{
 		return false;
 	}
-	bool ResponseHeader(const char *name, int name_len, const char *val, int val_len)
+	bool internal_response_header(const char *name, int name_len, const char *val, int val_len)
 	{
 		return false;
 	}
@@ -67,7 +67,7 @@ public:
 	{
 		return false;
 	}
-	int StartResponseBody(KRequest *rq, int64_t body_size)
+	int StartResponseBody(int64_t body_size)
 	{
 		return 0;
 	}

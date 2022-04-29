@@ -11,7 +11,7 @@
 #include "KUpstream.h"
 #include "KStringBuf.h"
 #include "KMutex.h"
-#include "KCountable.h"
+#include "KAtomCountable.h"
 void SafeDestroyUpstream(KUpstream *st);
 /*
  * 连接池容器类
@@ -77,7 +77,8 @@ public:
 	virtual void isGood(KUpstream *st)
 	{
 	}
-
+	kgl_refs_string* GetParam();
+	void SetParam(const char* param);
 #ifdef HTTP_PROXY
 	virtual void addHeader(KHttpRequest *rq,KHttpEnv *s)
 	{
@@ -89,9 +90,11 @@ protected:
 	 * 把连接真正放入池中
 	 */
 	void PutPoolSocket(KUpstream *st);
-	int lifeTime;	
+	int lifeTime;
+	kgl_refs_string* param;
 	KMutex lock;
 private:
+	
 	KUpstream *internalGetPoolSocket();
 	time_t getHttp2ExpireTime()
 	{

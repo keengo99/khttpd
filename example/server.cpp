@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include "KHttpServer.h"
-#include "KHttpRequest.h"
+#include "KSink.h"
 #include "kselector_manager.h"
 
 int on_new_http_request(void* arg, int header_size)
 {
-	KHttpRequest* rq = (KHttpRequest*)arg;
+	KSink* rq = (KSink*)arg;
 	rq->response_status(STATUS_OK);
 	rq->response_content_length(4);
 	rq->response_connection();
@@ -26,6 +26,7 @@ kev_result on_ready(KOPAQUE data, void* arg, int got)
 }
 int main(int argc, char** argv)
 {
+	printf("sizeof(KRequest)=[%d]\n", sizeof(KRequestData));
 	kasync_init();
 	selector_manager_on_ready(on_ready, NULL);
 	selector_manager_init(1, true);

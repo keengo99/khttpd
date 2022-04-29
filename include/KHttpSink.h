@@ -11,12 +11,12 @@ int buffer_read_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bufCount);
 
 class KHttpSink : public KSink {
 public:
-	KHttpSink(kconnection *c);
+	KHttpSink(kconnection *c,kgl_pool_t *pool);
 	~KHttpSink();
-	bool ResponseStatus(KRequest *rq, uint16_t status_code);
-	bool ResponseHeader(const char *name, int name_len, const char *val, int val_len);
+	
+	bool internal_response_header(const char *name, int name_len, const char *val, int val_len);
 	bool ResponseConnection(const char *val, int val_len) {
-		return ResponseHeader(kgl_expand_string("Connection"), val, val_len);
+		return internal_response_header(kgl_expand_string("Connection"), val, val_len);
 	}
 	bool HasHeaderDataToSend()
 	{
@@ -30,13 +30,11 @@ public:
 	{
 		kselector_add_timer(cn->st.selector, result, arg, msec, &cn->st);
 	}
-	void StartHeader(KRequest *rq);
-	int StartResponseBody(KRequest *rq, int64_t body_size);
+	void StartHeader();
+	int StartResponseBody(int64_t body_size);
 	bool IsLocked();
-	//kev_result Write(void *arg, result_callback result, buffer_callback buffer);
-	//kev_result Read(void *arg, result_callback result, buffer_callback buffer);
-	int Read(char *buf, int len);
-	int Write(LPWSABUF buf, int bc);
+	int internal_read(WSABUF *buf, int bc);
+	int internal_write(WSABUF *buf, int bc);
 	bool ReadHup(void *arg, result_callback result)
 	{
 		return selectable_readhup(&cn->st, result, arg);
@@ -74,14 +72,14 @@ public:
 	{
 		return cn->st.tmo;
 	}
-	int EndRequest(KRequest *rq);
+	int end_request();
 	KOPAQUE GetOpaque()
 	{
 		return cn->st.data;
 	}
 	ks_buffer buffer;
-	kev_result ReadHeader(KRequest *rq);
-	kev_result Parse(KRequest *rq);
+	kev_result ReadHeader();
+	kev_result Parse();
 	sockaddr_i *GetAddr() {
 		return &cn->addr;
 	}
@@ -99,10 +97,12 @@ public:
 	{
 		return dechunk;
 	}
-	void SkipPost(KRequest *rq);
-	int StartPipeLine(KRequest *rq);
-	void EndFiber(KRequest* rq);
+	void SkipPost();
+	int StartPipeLine();
+	void EndFiber();
 protected:
+	//@overide
+	bool internal_response_status(uint16_t status_code);
 	KDechunkContext *dechunk;
 	khttp_parser parser;
 };

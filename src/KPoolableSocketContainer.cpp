@@ -205,3 +205,31 @@ void KPoolableSocketContainer::clean()
 	}
 	lock.Unlock();
 }
+
+void KPoolableSocketContainer::SetParam(const char* param)
+{
+	lock.Lock();
+	if (this->param) {
+		release_string(this->param);
+		this->param = NULL;
+	}
+	if (param && *param) {
+		char* str = strdup(param);
+		int len = strlen(str);
+		kgl_refs_string* ns = convert_refs_string(str, len);
+		this->param = ns;
+	}
+	lock.Unlock();
+}
+kgl_refs_string* KPoolableSocketContainer::GetParam()
+{
+	lock.Lock();
+	if (param == NULL) {
+		lock.Unlock();
+		return NULL;
+	}
+	kgl_refs_string* result = param;
+	refs_string(result);
+	lock.Unlock();
+	return result;
+}

@@ -22,7 +22,7 @@
 #define  KGL_DONE       -4
 #define  KGL_DECLINED   -5
 #define  KGL_ABORT      -6
-class KRequest;
+class KRequestData;
 class KUpstream;
 #ifdef TLSEXT_TYPE_next_proto_neg
 #define KGL_HTTP_V2_NPN_NEGOTIATED       "h2"
@@ -189,6 +189,7 @@ struct http2_frame_goaway {
 #pragma pack(pop)
 class KHttp2Context;
 class KHttp2;
+class KSink;
 bool test_http2();
 typedef int (*http2_header_parser_pt)(KHttp2Context *ctx, kgl_str_t *name, kgl_str_t *value);
 typedef int (*http2_accept_handler_pt)(KHttp2Context *ctx);
@@ -272,7 +273,7 @@ class KHttp2Context
 public:
 	KHttp2Node *node;
 	union {
-		KRequest *request;
+		KSink *request;
 		KUpstream *us;
 		KOPAQUE data;
 	};

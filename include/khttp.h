@@ -1,5 +1,5 @@
-﻿#ifndef HTTP_H_SADFLKJASDLFKJA4
-#define HTTP_H_SADFLKJASDLFKJA4
+﻿#ifndef KHTTP_H_SADFLKJASDLFKJA455
+#define KHTTP_H_SADFLKJASDLFKJA455
 #include "kfeature.h"
 #ifdef KSOCKET_SSL
 	#define ENABLE_UPSTREAM_SSL   1
@@ -11,48 +11,6 @@
 #define MAX_HTTP_HEAD_SIZE	4194304
 #define IF_FREE(p) {if ( p ) xfree(p);p=NULL;}
 
-///////////////////////////////////////////////////////////////////
-/**
-* obj->index.flags
-*/
-#define FLAG_DEAD               1      /* */
-#define FLAG_URL_FREE           (1<<1) /* */
-#define FLAG_IN_MEM             (1<<2) /* */
-#define FLAG_IN_DISK            (1<<3) 
-//#define OBJ_IS_ENCODING         (1<<4)
-#define FLAG_NO_BODY            (1<<5) /* body */
-#define OBJ_MUST_REVALIDATE     (1<<6) /* must-revalidate */
-#define OBJ_IS_STATIC2          (1<<7) /* */
-#define OBJ_IS_READY            (1<<8) /* ׼ */
-//////////////////////////////////////////////////////////////////
-#define ANSW_HAS_EXPIRES        (1<<9) /* */
-#define ANSW_NO_CACHE           (1<<10) /**/
-#define ANSW_HAS_MAX_AGE        (1<<11) /**/
-#define ANSW_LAST_MODIFIED      (1<<12) /* */
-#define ANSW_HAS_CONTENT_LENGTH (1<<13) 
-#define OBJ_HAS_VARY            (1<<14)
-#define ANSW_HAS_CONTENT_RANGE  (1<<15) 
-//#define ANSW_CHUNKED            (1<<16) 
-/////////////////////////////////////////////////////////////////////
-#define FLAG_RQ_INTERNAL        (1<<17) 
-/////////////////////////////////////////////////////////////////////
-#define FLAG_NO_DISK_CACHE      (1<<19) /*  */
-#define FLAG_NO_NEED_CACHE      ANSW_NO_CACHE 
-//#define FLAG_NEED_GZIP          (1<<20)  /*  */
-#define OBJ_IS_GUEST            (1<<21)  /*  */
-/////////////////////////////////////////////////////////////////////
-//#define OBJ_IS_DELTA            (1<<22)
-#define OBJ_HAS_ETAG            (1<<23)
-/////////////////////////////////////////////////////////////////////
-#define OBJ_CACHE_RESPONSE      (1<<24) 
-#define ANSW_LOCAL_SERVER       (1<<25) 
-#define ANSW_XSENDFILE          (1<<26) /* x-accel-redirect */
-/////////////////////////////////////////////////////////////////////
-#define FLAG_BIG_OBJECT_PROGRESS (1<<27)
-//#define FLAG_BIG_OBJECT          (1<<28)
-//#define OBJ_INDEX_SAVED          (1<<29)
-//#define OBJ_INDEX_UPDATE         (1<<30)
-#define OBJ_NOT_OK               (1<<31)
 
 #define STATUS_OK               200
 #define STATUS_CREATED          201
@@ -99,7 +57,7 @@
 #define RQ_OBJ_VERIFIED        (1<<17)
 #define RQ_HAVE_RANGE          (1<<18)
 //#define RQ_TE_CHUNKED          (1<<19)
-#define RQ_TE_COMPRESS         (1<<20)
+//#define RQ_TE_COMPRESS         (1<<20)
 //#define RQ_HAS_SEND_HEADER     (1<<21)
 #define RQ_HAS_CONNECTION_UPGRADE  (1<<22)
 #define RQ_POST_UPLOAD         (1<<23)

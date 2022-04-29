@@ -5,7 +5,7 @@
 #ifdef ENABLE_HTTP2
 class KHttp2Sink : public KSink {
 public:
-	KHttp2Sink(KHttp2 *http2,KHttp2Context *ctx)
+	KHttp2Sink(KHttp2 *http2,KHttp2Context *ctx,kgl_pool_t *pool): KSink(pool)
 	{
 		this->http2 = http2;
 		this->ctx = ctx;
@@ -18,11 +18,11 @@ public:
 	{
 		return false;
 	}
-	bool ResponseStatus(KRequest *rq, uint16_t status_code)
+	bool internal_response_status(uint16_t status_code)
 	{
 		return http2->add_status(ctx, status_code);
 	}
-	bool ResponseHeader(const char *name, int name_len, const char *val, int val_len)
+	bool internal_response_header(const char *name, int name_len, const char *val, int val_len)
 	{
 		return http2->add_header(ctx, name, name_len,val, val_len);
 	}
@@ -31,7 +31,7 @@ public:
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int StartResponseBody(KRequest *rq, int64_t body_size)
+	int StartResponseBody(int64_t body_size)
 	{
 		ctx->SetContentLength(body_size);
 		return http2->send_header(ctx);
@@ -55,18 +55,15 @@ public:
 	{
 		http2->remove_read_hup(ctx);
 	}
-	int Read(char *buf, int len)
+	int internal_read(WSABUF *buf, int bc)
 	{
-		WSABUF buffer;
-		buffer.iov_base = buf;
-		buffer.iov_len = len;
-		return http2->read(ctx, &buffer, 1);
+		return http2->read(ctx, buf, bc);
 	}
 	bool HasHeaderDataToSend()
 	{
 		return false;
 	}	
-	int Write(LPWSABUF buf, int bc)
+	int internal_write(WSABUF *buf, int bc)
 	{
 		return http2->write(ctx, buf, bc);
 	}
@@ -99,10 +96,10 @@ public:
 		return 0 == kconnection_self_addr(http2->c, addr);
 	}
 
-	int EndRequest(KRequest *rq)
+	int end_request()
 	{
-		KBIT_SET(rq->req.flags, RQ_CONNECTION_CLOSE);
-		if (unlikely(rq->res.body_not_complete)) {
+		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+		if (unlikely(data.body_not_complete)) {
 			http2->shutdown(ctx);
 		} else {
 			http2->write_end(ctx);
@@ -111,7 +108,7 @@ public:
 #ifndef NDEBUG
 		ctx = NULL;
 #endif
-		delete rq;
+		delete this;
 		return 0;
 	}
 	void AddSync()
