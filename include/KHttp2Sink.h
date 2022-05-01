@@ -22,7 +22,7 @@ public:
 	{
 		return http2->add_status(ctx, status_code);
 	}
-	bool internal_response_header(const char *name, int name_len, const char *val, int val_len)
+	bool response_header(const char *name, int name_len, const char *val, int val_len)
 	{
 		return http2->add_header(ctx, name, name_len,val, val_len);
 	}
@@ -55,9 +55,12 @@ public:
 	{
 		http2->remove_read_hup(ctx);
 	}
-	int internal_read(WSABUF *buf, int bc)
+	int internal_read(char *buf, int len)
 	{
-		return http2->read(ctx, buf, bc);
+		WSABUF bufs;
+		bufs.iov_base = buf;
+		bufs.iov_len = len;
+		return http2->read(ctx, &bufs, 1);
 	}
 	bool HasHeaderDataToSend()
 	{

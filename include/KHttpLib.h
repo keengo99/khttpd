@@ -6,6 +6,7 @@ char *base64_decode(char*);
 char *url_encode(const char *s, size_t len, size_t *new_length);
 char *url_value_encode(const char *s, size_t len, size_t *new_length);
 std::string url_encode(const char *str, size_t len_string);
+
 void my_msleep(int msec);
 time_t parse1123time(const char *str);
 const char *mk1123time(time_t time, char *buf, int size);
@@ -15,7 +16,8 @@ void init_time_zone();
 u_short string_hash(const char *str, u_short res = 1);
 class KUrl;
 bool parse_url(const char* src, KUrl* url);
-
+int url_decode(char* str, int len, KUrl* url, bool space2plus);
+void CTIME_R(time_t* a, char* b, size_t l);
 /*
  * 18446744073709551616
  * buf min size length is 22

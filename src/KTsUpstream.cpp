@@ -29,7 +29,7 @@ void http2_header_callback(KOPAQUE data, void* arg, const char* attr, int attr_l
 		fo->PushHeader(rq, attr, attr_len, val, val_len, false);
 #endif
 }
-static void ts_header_callback(KOPAQUE data, void *arg, const char *attr, int attr_len, const char *val, int val_len)
+static bool ts_header_callback(KUpstream *us, void *arg, const char *attr, int attr_len, const char *val, int val_len,bool is_first)
 {
 	KTsUpstream *ts = (KTsUpstream *)arg;
 	kgl_pool_t *pool = ts->us->GetPool();
@@ -41,7 +41,12 @@ static void ts_header_callback(KOPAQUE data, void *arg, const char *attr, int at
 		ts->header = header;
 		ts->last_header = header;
 	}
-	return;
+	return true;
+}
+static int ts_send_header_complete(void* arg, int len)
+{
+	KUpstream* us = (KUpstream*)arg;
+	return (int)us->send_header_complete();
 }
 static int ts_shutdown(void* arg, int len)
 {
@@ -52,7 +57,7 @@ static int ts_shutdown(void* arg, int len)
 static int ts_write_end(void* arg, int len)
 {
 	KUpstream* us = (KUpstream*)arg;
-	us->WriteEnd();
+	us->write_end();
 	return 0;
 }
 static int ts_gc(void* arg, int len)
@@ -64,12 +69,12 @@ static int ts_gc(void* arg, int len)
 static int ts_read(void* arg, int len)
 {
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
-	return param->us->Read(param->buf, param->len);
+	return param->us->read(param->bufs, param->len);
 }
 static int ts_write(void* arg, int len)
 {
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
-	return param->us->Write(param->bufs, param->len);
+	return param->us->write(param->bufs, param->len);
 }
 static int ts_read_http_header(void* arg, int len)
 {
@@ -96,14 +101,15 @@ KGL_RESULT KTsUpstream::read_header()
 	}
 	int ret;
 	kfiber_join(fiber, &ret);
+	bool is_first = true;
 	while (header) {
-		kassert(stack.header == http2_header_callback);
-		stack.header(us->GetOpaque(), stack.arg, header->attr, header->attr_len, header->val, header->val_len);
+		stack.header(us, stack.arg, header->attr, header->attr_len, header->val, header->val_len,is_first);
+		is_first = false;
 		header = header->next;
 	}
 	return (KGL_RESULT)ret;
 }
-int KTsUpstream::Write(WSABUF* buf, int bc)
+int KTsUpstream::write(WSABUF* buf, int bc)
 {
 	KTsUpstreamParam param;
 	param.us = us;
@@ -118,12 +124,12 @@ int KTsUpstream::Write(WSABUF* buf, int bc)
 	kfiber_join(fiber, &ret);
 	return ret;
 }
-int KTsUpstream::Read(char* buf, int len)
+int KTsUpstream::read(WSABUF* buf, int bc)
 {
 	KTsUpstreamParam param;
 	param.us = us;
-	param.buf = buf;
-	param.len = len;
+	param.bufs = buf;
+	param.len = bc;
 	kfiber* fiber = NULL;
 	if (kfiber_create2(us->GetSelector(), ts_read, &param, 0, 0, &fiber) != 0) {
 		return -1;
@@ -132,10 +138,10 @@ int KTsUpstream::Read(char* buf, int len)
 	kfiber_join(fiber, &ret);
 	return ret;
 }
-void KTsUpstream::WriteEnd()
+void KTsUpstream::write_end()
 {
 	if (!us->IsMultiStream()) {
-		us->WriteEnd();
+		us->write_end();
 		return;
 	}
 	kfiber* fiber = NULL;
@@ -154,9 +160,16 @@ void KTsUpstream::Shutdown()
 	int ret;
 	kfiber_join(fiber, &ret);
 }
-bool KTsUpstream::send_header_complete(int64_t post_len)
+KGL_RESULT KTsUpstream::send_header_complete()
 {
-	return us->send_header_complete(post_len);
+	if (us->IsMultiStream()) {
+		return us->send_header_complete();
+	}
+	kfiber* fiber = NULL;
+	kfiber_create2(us->GetSelector(), ts_send_header_complete, us, 0, http_config.fiber_stack_size, &fiber);
+	int ret = KGL_EUNKNOW;
+	kfiber_join(fiber, &ret);
+	return (KGL_RESULT)ret;
 }
 void KTsUpstream::Destroy()
 {

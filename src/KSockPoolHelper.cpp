@@ -4,6 +4,8 @@
 #include "kselector_manager.h"
 #include "KHttp2Upstream.h"
 #include "KTsUpstream.h"
+#include "KHttpUpstream.h"
+
 #include "klog.h"
 
 using namespace std;
@@ -199,10 +201,10 @@ KUpstream *KSockPoolHelper::newConnection(KHttpRequest *rq,bool &need_name_resol
 	return socket;
 }
 #endif
-KUpstream* KSockPoolHelper::get_upstream(bool skip_pool, const char* sni_host)
+KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 {
 	KUpstream* socket = NULL;
-	if (!skip_pool) {
+	if (!KBIT_TEST(flags, KSOCKET_FLAGS_SKIP_POOL)) {
 		//如果是发生错误重连或upgrade的连接，则排除连接池
 		socket = get_pool_socket();
 		if (socket) {
@@ -247,14 +249,12 @@ KUpstream* KSockPoolHelper::get_upstream(bool skip_pool, const char* sni_host)
 			kfiber_net_close(cn);
 			return NULL;
 		}
-#if 0
 #ifdef ENABLE_UPSTREAM_HTTP2
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
-		if (http2 && cn->st.ssl && KBIT_TEST(rq->flags, RQ_HAS_CONNECTION_UPGRADE)) {
+		if (http2 && cn->st.ssl && KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
 			//websocket will turn off http2
 			SSL_set_alpn_protos(cn->st.ssl->ssl, (unsigned char*)KGL_HTTP_NPN_ADVERTISE, sizeof(KGL_HTTP_NPN_ADVERTISE) - 1);
 		}
-#endif
 #endif
 #endif
 		if (kfiber_ssl_handshake(cn) != 0) {
@@ -276,7 +276,11 @@ KUpstream* KSockPoolHelper::get_upstream(bool skip_pool, const char* sni_host)
 #endif
 	}
 #endif
-	socket = new KTcpUpstream(cn);
+	if (tcp) {
+		socket = new KTcpUpstream(cn);
+	} else {
+		socket = new KHttpUpstream(cn);
+	}
 	bind(socket);
 	return socket;
 }
@@ -406,4 +410,59 @@ bool KSockPoolHelper::isEnable() {
 void KSockPoolHelper::enable() {
 	tryTime = 0;
 	error_count = 0;
+}
+
+bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr)
+{
+	setHostPort(attr["host"], attr["port"].c_str());
+	setLifeTime(atoi(attr["life_time"].c_str()));
+	SetParam(attr["param"].c_str());
+	//{{ent
+#ifdef HTTP_PROXY
+	auth_user = attr["auth_user"];
+	auth_passwd = attr["auth_passwd"];
+#endif//}}
+	setIp(attr["self_ip"].c_str());
+	sign = (attr["sign"] == "1");
+	return true;
+}
+void KSockPoolHelper::build(std::map<std::string, std::string>& attr)
+{
+
+	attr["host"] = host;
+	attr["port"] = to_string(port);
+#if 0
+#ifdef ENABLE_UPSTREAM_SSL
+	if (ssl.size() > 0) {
+		s << ssl;
+	}
+#endif
+
+	s << " host='";
+	s << host << "' port='" << port;
+
+	s << "' life_time='" << getLifeTime() << "' ";
+	kgl_refs_string* str = GetParam();
+	if (str) {
+		s << "param='";
+		s.write(str->str.data, str->str.len);
+		s << "' ";
+		release_string(str);
+	}
+	//{{ent
+#ifdef HTTP_PROXY
+	if (auth_user.size() > 0) {
+		s << "auth_user='" << auth_user << "' ";
+	}
+	if (auth_passwd.size() > 0) {
+		s << "auth_passwd='" << auth_passwd << "' ";
+	}
+#endif//}}
+	if (ip && *ip) {
+		s << "self_ip='" << ip << "' ";
+	}
+	if (sign) {
+		s << "sign='1' ";
+	}
+#endif
 }

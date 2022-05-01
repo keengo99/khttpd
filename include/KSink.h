@@ -16,7 +16,15 @@ public:
 	}
 	virtual ~KSink()
 	{
-		clean();
+		if (pool) {
+			kgl_destroy_pool(pool);
+		}
+	}
+	void push_flow_info(KFlowInfo* fi)
+	{
+		KFlowInfoHelper* helper = new KFlowInfoHelper(fi);
+		helper->next = data.fh;
+		data.fh = helper;
 	}
 	void add_up_flow(int flow)
 	{
@@ -76,8 +84,9 @@ public:
 		return 0;
 	}
 	virtual bool SetTransferChunked() {
-		return internal_response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
+		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
 	}
+	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
 	kgl_pool_t *GetConnectionPool()
 	{
 		return GetConnection()->pool;
@@ -92,22 +101,22 @@ public:
 		sockaddr_i *addr = get_peer_addr();
 		return ksocket_sockaddr_ip(addr,  ips, ips_len);
 	}
-	uint16_t GetSelfPort() {
+	uint16_t get_self_port() {
 		sockaddr_i addr;
-		if (!GetSelfAddr(&addr)) {
+		if (!get_self_addr(&addr)) {
 			return 0;
 		}
 		return ksocket_addr_port(&addr);
 	}
-	bool GetSelfIp(char *ips, int ips_len)
+	bool get_self_ip(char *ips, int ips_len)
 	{
 		sockaddr_i addr;
-		if (!GetSelfAddr(&addr)) {
+		if (!get_self_addr(&addr)) {
 			return false;
 		}
 		return ksocket_sockaddr_ip(&addr, ips, ips_len);
 	}
-	virtual bool GetSelfAddr(sockaddr_i *addr)
+	virtual bool get_self_addr(sockaddr_i *addr)
 	{
 		return 0 == kconnection_self_addr(GetConnection(), addr);
 	}
@@ -148,7 +157,7 @@ public:
 		return cn->st.ssl;
 	}
 #endif
-	const char*get_peer_ip()
+	const char*get_client_ip()
 	{
 		if (data.client_ip) {
 			return data.client_ip;
@@ -159,24 +168,31 @@ public:
 		}
 		return "";
 	}
-	void set_peer_ip(const char* ip)
+	void set_client_ip(const char* ip)
 	{
 		if (data.client_ip) {
 			xfree(data.client_ip);
 		}
 		data.client_ip = strdup(ip);
 	}
+
 	bool start_response_body(INT64 body_len);
 	int write(WSABUF* buf, int bc);
 	int write(const char* buf, int len);
 	bool write(kbuf* buf);
+	int read(char* buf, int len);
 	bool write_full(const char* buf, int len);
 	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
+	void begin_request();
 	virtual int end_request() = 0;
 	kgl_pool_t* pool;
 	KRequestData data;
 	friend class KHttp2;
 protected:
+	virtual void start_header()
+	{
+
+	}
 	void set_if_none_match(const char* etag, int len)
 	{
 		data.if_none_match = (kgl_str_t*)kgl_pnalloc(pool, sizeof(kgl_str_t));
@@ -185,14 +201,12 @@ protected:
 		kgl_memcpy(data.if_none_match->data, etag, len + 1);
 	}
 	void start_parse();
-	void clean();
-	void init(kgl_pool_t* pool);
+	void reset_pipeline();
 	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int* val_len, bool is_first);
 	void init_pool(kgl_pool_t* pool);
 	virtual int internal_write(WSABUF *buf, int bc) = 0;
-	virtual int internal_read(WSABUF *buf, int bc) = 0;
+	virtual int internal_read(char *buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
-	virtual bool internal_response_header(const char *name, int name_len, const char *val, int val_len) = 0;
 	virtual bool ResponseConnection(const char *val, int val_len) = 0;
 	virtual int StartResponseBody(int64_t body_size) = 0;
 };

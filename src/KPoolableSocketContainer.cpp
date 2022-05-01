@@ -17,17 +17,17 @@
 using namespace std;
 struct KUpstreamSelectableList {
 	kgl_list queue;
-	KPoolableUpstream *st;
+	KUpstream *st;
 };
 kev_result next_destroy(KOPAQUE data, void *arg, int got)
 {
-	KPoolableUpstream *st = (KPoolableUpstream *)arg;
+	KUpstream *st = (KUpstream *)arg;
 	st->Destroy();
 	return kev_destroy;
 }
 int kfiber_next_destroy(void* arg, int got)
 {
-	KPoolableUpstream* st = (KPoolableUpstream*)arg;
+	KUpstream* st = (KUpstream*)arg;
 	st->Destroy();
 	return 0;
 }
@@ -54,7 +54,7 @@ void KPoolableSocketContainerImp::refreshList(kgl_list *l,bool clean)
 		size--;
 		klist_remove(n);
 		assert(socket_list->st->container == NULL);
-		KPoolableUpstream *st = socket_list->st;
+		KUpstream *st = socket_list->st;
 		delete socket_list;	
 		SafeDestroyUpstream(st);
 	}
@@ -77,11 +77,15 @@ void KPoolableSocketContainerImp::refresh(bool clean)
 KPoolableSocketContainer::KPoolableSocketContainer() {
 	lifeTime = 0;
 	imp = NULL;
+	param = NULL;
 }
 KPoolableSocketContainer::~KPoolableSocketContainer() {
 	if (imp) {
 		imp->refresh(true);
 		delete imp;
+	}
+	if (param) {
+		release_string(param);
 	}
 }
 
@@ -163,7 +167,7 @@ KUpstream *KPoolableSocketContainer::internalGetPoolSocket() {
 	}
 	return NULL;
 }
-void KPoolableSocketContainer::bind(KPoolableUpstream *st) {
+void KPoolableSocketContainer::bind(KUpstream *st) {
 	kassert(st->container==NULL);
 	st->container = this;
 	addRef();

@@ -1,4 +1,4 @@
-#include "KRequest.h"
+#include "KSink.h"
 #include "kselector_manager.h"
 #include "KProxy.h"
 #include "kbuf.h"
@@ -147,14 +147,12 @@ kev_result handl_proxy_request(kconnection *cn, result_callback cb)
 	proxy->cb = cb;
 	return selectable_read(&cn->st,result_proxy_reader, buffer_proxy_read,proxy);
 }
-#if 0
-bool build_proxy_header(KReadWriteBuffer *buffer, KHttpRequest *rq)
+kbuf *build_proxy_header(const char *ip)
 {
-	const char *ip = rq->GetClientIp();
 	ip_addr ia;
 	kgl_proxy_hdr_v2 *hdr;
 	if (!ksocket_get_ipaddr(ip, &ia)) {
-		return false;
+		return NULL;
 	}
 	int len;
 	kbuf *buf = NULL;
@@ -176,13 +174,11 @@ bool build_proxy_header(KReadWriteBuffer *buffer, KHttpRequest *rq)
 		kgl_memcpy(addr->src_addr, ia.addr8, sizeof(addr->src_addr));
 	} else {
 		//not support protocol
-		return false;
+		return NULL;
 	}
 	kgl_memcpy(hdr->sig, kgl_proxy_v2sig, sizeof(hdr->sig));
 	hdr->ver_cmd = (2<<4)|1;
 	hdr->len = htons((uint16_t)(len-sizeof(kgl_proxy_hdr_v2)));
-	buffer->Append(buf);
-	return true;
+	return buf;
 }
-#endif
 #endif

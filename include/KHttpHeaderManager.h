@@ -1,6 +1,13 @@
 #ifndef KHTTPHEADERMANAGER_H_99
 #define KHTTPHEADERMANAGER_H_99
 #include "KHttpHeader.h"
+enum class KHttpHeaderIteratorResult
+{
+	Continue,
+	Remove,
+	Free
+};
+typedef KHttpHeaderIteratorResult (*http_header_iterator) (void* arg, KHttpHeader* av);
 
 class KHttpHeaderManager {
 public:
@@ -23,6 +30,41 @@ public:
 		last->next = new_t;
 		last = new_t;
 		return;
+	}
+	void iterator(http_header_iterator it, void* arg)
+	{
+		KHttpHeader* l = header;
+		last = NULL;
+	next:
+		while (l) {
+			KHttpHeader* next = l->next;
+			switch (it(arg, l)) {
+			case KHttpHeaderIteratorResult::Remove:
+				if (last) {
+					last->next = next;
+				} else {
+					header = next;
+				}				
+				l = next;
+				goto next;
+			case KHttpHeaderIteratorResult::Free:
+			{
+				if (last) {
+					last->next = next;
+				} else {
+					header = next;
+				}
+				xfree_header(l);
+				l = next;
+				goto next;
+			}
+			default:
+				break;
+			}		
+			last = l;
+			l = next;
+		}
+		assert((header == NULL && last==NULL) || (header!=NULL && last->next==NULL));
 	}
 	bool AddHeader(const char *attr, int attr_len, const char *val, int val_len, bool tail = true)
 	{
@@ -67,19 +109,20 @@ public:
 	KHttpHeader *RemoveHeader(const char *attr)
 	{
 		KHttpHeader *l = header;
-		KHttpHeader *prev = NULL;
+		last = NULL;
 		while (l) {
 			if (strcasecmp(l->attr, attr) == 0) {
-				if (prev) {
-					prev->next = l->next;
+				if (last) {
+					last->next = l->next;
 				} else {
 					header = l->next;
 				}
 				return l;
 			}
-			prev = l;
+			last = l;
 			l = l->next;
 		}
+		assert((header == NULL && last == NULL) || (header != NULL && last->next == NULL));
 		return NULL;
 	}
 	KHttpHeader *GetHeader()

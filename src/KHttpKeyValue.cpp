@@ -113,7 +113,7 @@ KHttpKeyValue::~KHttpKeyValue() {
 }
 const char *KHttpKeyValue::getMethod(int meth) {
 	if (meth < 0 || meth >= MAX_METHOD) {
-		return "";
+		return "UNSET";
 	}
 	return http_methods[meth];
 }

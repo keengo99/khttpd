@@ -43,14 +43,13 @@ bool KHttp2Upstream::send_host(const char* host, hlen_t host_len)
 {
 	return http2->add_header(ctx, kgl_expand_string(":authority"), host, host_len);
 }
-bool KHttp2Upstream::send_content_length(int64_t content_length)
+void KHttp2Upstream::set_content_length(int64_t content_length)
 {
-	char tmpbuff[50];
-	int len = snprintf(tmpbuff, sizeof(tmpbuff) - 1, INT64_FORMAT, content_length);
-	return http2->add_header(ctx, kgl_expand_string("Content-Length"), tmpbuff, len);
+	ctx->SetContentLength(content_length);
+	return;
 }
-bool KHttp2Upstream::send_header_complete(int64_t post_body_len)
+KGL_RESULT KHttp2Upstream::send_header_complete()
 {
-	return true;
+	return KGL_OK;
 }
 #endif

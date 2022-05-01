@@ -35,3 +35,10 @@ int KUpstream::GetLifeTime()
 	}
 	return 0;
 }
+kgl_refs_string* KUpstream::get_param()
+{
+	if (container == NULL) {
+		return NULL;
+	}
+	return container->GetParam();
+}

@@ -11,7 +11,9 @@ public:
 	{
 		this->http2 = http2;
 		this->ctx = ctx;
+		ctx->us = this;
 		pool = NULL;
+		data = NULL;
 	}
 	~KHttp2Upstream()
 	{
@@ -23,7 +25,7 @@ public:
 	{
 		return http2->c;
 	}
-	void WriteEnd()
+	void write_end()
 	{
 		http2->write_end(ctx);
 	}
@@ -34,28 +36,29 @@ public:
 	}
 	void BindOpaque(KOPAQUE data)
 	{
-		ctx->data = data;
+		this->data = data;
 	}
 	KOPAQUE GetOpaque()
 	{
-		return ctx->data;
+		return this->data;
 	}
-	int Read(char* buf, int len)
+	int read(WSABUF* buf, int bc)
 	{
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = len;
-		return http2->read(ctx, &bufs, 1);
+		return http2->read(ctx, buf, bc);
 	}
-	int Write(WSABUF* buf, int bc)
+	int write(WSABUF* buf, int bc)
 	{
 		return http2->write(ctx, buf, bc);
+	}
+	bool send_connection(const char* val, hlen_t val_len)
+	{
+		return true;
 	}
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len);
 	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len);
 	bool send_host(const char* host, hlen_t host_len);
-	bool send_content_length(int64_t content_length);
-	bool send_header_complete(int64_t post_body_len);
+	void set_content_length(int64_t content_length);
+	KGL_RESULT send_header_complete();
 
 	KGL_RESULT read_header();
 	bool set_header_callback(void *arg, kgl_header_callback header);
@@ -114,6 +117,7 @@ public:
 	}
 	friend class KHttp2Env;
 private:
+	KOPAQUE data;
 	KHttp2 *http2;
 	KHttp2Context *ctx;
 	kgl_pool_t *pool;

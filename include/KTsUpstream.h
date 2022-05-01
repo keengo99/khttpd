@@ -32,9 +32,13 @@ public:
 	{
 		return us->SetTimeOut(tmo);
 	}
-	bool send_content_length(int64_t content_length)
+	void set_content_length(int64_t content_length)
 	{
-		return us->send_content_length(content_length);
+		return us->set_content_length(content_length);
+	}
+	bool send_connection(const char* val, hlen_t val_len)
+	{
+		return us->send_connection(val, val_len);
 	}
 	bool send_host(const char* host, hlen_t host_len)
 	{
@@ -44,7 +48,7 @@ public:
 	{
 		return us->send_method_path(meth, path, path_len);
 	}
-	bool send_header_complete(int64_t post_len);
+	KGL_RESULT send_header_complete();
 	bool set_header_callback(void* arg, kgl_header_callback header_callback);
 	KGL_RESULT read_header();
 	KOPAQUE GetOpaque()
@@ -55,8 +59,8 @@ public:
 	{
 		us->BindOpaque(data);
 	}
-	int Write(WSABUF* buf, int bc);
-	int Read(char* buf, int len);
+	int read(WSABUF* buf, int bc);
+	int write(WSABUF* buf, int bc);
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
 	{
 		return us->send_header(attr, attr_len, val, val_len);
@@ -84,7 +88,7 @@ public:
 	{
 		return us->IsBad(stage);
 	}
-	void WriteEnd();
+	void write_end();
 	void Shutdown();
 	void Destroy();
 	sockaddr_i *GetAddr()
@@ -98,6 +102,10 @@ public:
 	kgl_pool_t *GetPool()
 	{
 		return us->GetPool();
+	}
+	kgl_refs_string* get_param()
+	{
+		return us->get_param();
 	}
 	void gc(int life_time,time_t last_recv_time);
 	KUpstreamCallBack stack;

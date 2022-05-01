@@ -3,6 +3,7 @@
 #include "kbuf.h"
 #include "khttp.h"
 #include "kmalloc.h"
+#include "KStream.h"
 
 class KAutoBufferData
 {
@@ -13,7 +14,7 @@ public:
 	int total_len;
 	kgl_pool_t *pool;
 };
-class KAutoBuffer :public KAutoBufferData
+class KAutoBuffer : public KWStream, public KAutoBufferData
 {
 public:
 	KAutoBuffer(kgl_pool_t *pool)

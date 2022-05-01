@@ -33,9 +33,9 @@ public:
 	{
 		selectable_shutdown(&cn->st);
 	}
-	int internal_read(WSABUF *buf, int bc)
+	int internal_read(char *buf, int len)
 	{
-		return kfiber_net_readv(cn, buf, bc);
+		return kfiber_net_read(cn, buf, len);
 	}
 	int internal_write(LPWSABUF buf, int bc)
 	{
@@ -59,7 +59,7 @@ public:
 	{
 		return false;
 	}
-	bool internal_response_header(const char *name, int name_len, const char *val, int val_len)
+	bool response_header(const char *name, int name_len, const char *val, int val_len)
 	{
 		return false;
 	}

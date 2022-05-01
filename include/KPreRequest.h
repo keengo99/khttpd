@@ -4,5 +4,5 @@
 #include "kconnection.h"
 #include "kserver.h"
 
-KACCEPT_CALLBACK_DECLEAR(handle_connection);
+
 #endif

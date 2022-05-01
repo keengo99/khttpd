@@ -83,7 +83,7 @@ kev_result result_read_http_sink(KOPAQUE data, void *arg, int got)
 		delete sink;
 		return kev_destroy;
 	}
-	ks_write_success(&sink->buffer, got);	
+	ks_write_success(&sink->buffer, got);
 	return sink->Parse();
 }
 
@@ -94,33 +94,25 @@ int buffer_read_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bufCount)
 	return bc;
 }
 #ifdef KSOCKET_SSL
-#if 0
-int handle_http2https_error(void *arg, int got)
+static int handle_http2https_error(void *arg, int got)
 {
-	KHttpRequest* rq = (KHttpRequest*)arg;
-	KBIT_SET(rq->flags, RQ_CONNECTION_CLOSE);
-	if (conf.http2https_code == 0 || rq->raw_url.IsBad()) {
-		send_error2(rq, STATUS_HTTP_TO_HTTPS, "send http to https port");
-		goto clean;
+	KSink* sink = (KSink*)arg;
+	KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
+	if (http2https_error) {
+		http2https_error(sink, 0);
+		return 0;
 	}
-	sockaddr_i addr;
-	if (!rq->sink->GetSelfAddr(&addr)) {
-		send_error2(rq, STATUS_HTTP_TO_HTTPS, "send http to https port");
-		goto clean;
-	}
-	{
-		KStringBuf s;
-		s << "https://";
-		rq->raw_url.GetHost(s, 443);
-		rq->raw_url.GetPath(s, false);
-		push_redirect_header(rq, s.getBuf(), s.getSize(), conf.http2https_code);
-		rq->startResponseBody(0);
-	}
-clean:
-	rq->EndRequest();
+	const char* body = "send http to https port";
+	int body_len = (int)strlen(body);
+	sink->response_status(STATUS_HTTP_TO_HTTPS);
+	sink->response_content_length(body_len);
+	sink->response_header(kgl_expand_string("Cache-Control"), kgl_expand_string("no-cache,no-store"));
+	sink->response_connection();
+	sink->start_response_body(body_len);
+	sink->write_full(body, body_len);	
+	sink->end_request();
 	return 0;
 }
-#endif
 #endif
 kev_result KHttpSink::ResultResponseContext(int got)
 {
@@ -153,7 +145,7 @@ KHttpSink::~KHttpSink() {
 	}
 	kconnection_destroy(cn);
 }
-void KHttpSink::StartHeader()
+void KHttpSink::start_header()
 {
 	if (rc == NULL) {
 		rc = new KResponseContext(pool);
@@ -183,7 +175,7 @@ kev_result KHttpSink::Parse()
 			if (kgl_current_msec - data.begin_time_msec > 60000) {
 				delete this;
 				return kev_destroy;
-			}			
+			}
 			if (parser.header_len > MAX_HTTP_HEAD_SIZE) {
 				delete this;
 				return kev_destroy;
@@ -208,14 +200,12 @@ kev_result KHttpSink::Parse()
 			//printf("***************body_len=[%d]\n", parser.body_len);
 			rc = new KResponseContext(pool);
 #ifdef KSOCKET_SSL
-#if 0
 			if (kconnection_is_ssl_not_handshake(cn)) {
-				kfiber_create(handle_http2https_error, rq, 0, conf.fiber_stack_size, NULL);
+				kfiber_create(handle_http2https_error, (KSink *)this, 0, http_config.fiber_stack_size, NULL);
 				return kev_ok;
 			}
 #endif
-#endif
-			kfiber_create(server_on_new_request, (KSink *)this, parser.header_len, http_config.fiber_stack_size, NULL);
+			kfiber_create(khttp_server_new_request, (KSink *)this, parser.header_len, http_config.fiber_stack_size, NULL);
 			return kev_ok;
 		default:
 			delete this;
@@ -223,7 +213,7 @@ kev_result KHttpSink::Parse()
 		}
 	}
 }
-bool KHttpSink::internal_response_header(const char *name, int name_len, const char *val, int val_len)
+bool KHttpSink::response_header(const char *name, int name_len, const char *val, int val_len)
 {
 	kassert(rc);
 	int len = name_len + val_len + 4;
@@ -274,18 +264,18 @@ bool KHttpSink::IsLocked()
 {
 	return KBIT_TEST(cn->st.st_flags,STF_LOCK);
 }
-int KHttpSink::internal_read(WSABUF *buf, int bc)
+int KHttpSink::internal_read(char *buf, int len)
 {	
 	if (dechunk) {
-		return dechunk->Read(this, buf[0].iov_base, buf[0].iov_len);
+		return dechunk->Read(this, buf, len);
 	}
 	if (buffer.used > 0) {
-		int len = MIN(buf[0].iov_len, buffer.used);
-		kgl_memcpy(buf[0].iov_base, buffer.buf, len);
+		len = MIN((int)len, buffer.used);
+		kgl_memcpy(buf, buffer.buf, len);
 		ks_save_point(&buffer, buffer.buf + len, buffer.used - len);
 		return len;
 	}
-	return kfiber_net_readv(cn, buf, bc);
+	return kfiber_net_read(cn, buf, len);
 }
 int KHttpSink::internal_write(LPWSABUF buf, int bc)
 {
@@ -304,6 +294,10 @@ int KHttpSink::end_request()
 	}
 	ksocket_no_delay(cn->st.fd,false);
 	kassert(buffer.buf_size > 0);
+	kassert(data.left_read >= 0);
+	if (data.left_read < 0) {
+		return kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
+	}
 	if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
 		//still have data to read
 		SkipPost();
@@ -361,8 +355,7 @@ void KHttpSink::EndFiber()
 int KHttpSink::StartPipeLine()
 {
 	kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
-	clean();
-	init(NULL);
+	reset_pipeline();
 	memset(&parser, 0, sizeof(parser));
 	if (dechunk) {
 		delete dechunk;

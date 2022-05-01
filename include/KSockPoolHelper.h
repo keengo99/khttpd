@@ -8,6 +8,9 @@
 #include "KPoolableSocketContainer.h"
 #include "KTcpUpstream.h"
 
+#define KSOCKET_FLAGS_SKIP_POOL 1
+#define KSOCKET_FLAGS_WEBSOCKET (1<<1)
+
 #define ERROR_RECONNECT_TIME	600
 class KSockPoolHelper : public KPoolableSocketContainer {
 public:
@@ -79,7 +82,9 @@ public:
 		}
 		lock.Unlock();
 	}
-	KUpstream* get_upstream(bool skip_pool = false,const char *sni_host = NULL);
+	bool parse(std::map<std::string, std::string>& attr);
+	void build(std::map<std::string, std::string>& attr);
+	KUpstream* get_upstream(uint32_t flags = 0,const char *sni_host = NULL);
 	void checkActive();
 	bool setHostPort(std::string host,int port,const char *ssl);
 	bool setHostPort(std::string host, const char *port);
@@ -106,6 +111,7 @@ public:
 	uint16_t port;
 	union {
 		struct {
+			uint32_t tcp : 1;
 			uint32_t monitor : 1;
 			uint32_t is_unix : 1;
 			uint32_t sign : 1;

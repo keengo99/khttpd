@@ -15,8 +15,8 @@ http2_buff *get_frame(uint32_t sid, size_t length, uint8_t type, u_char flags)
 {
 	http2_buff *buf = new http2_buff;
 	http2_frame_header *h = (http2_frame_header *)malloc(length + sizeof(http2_frame_header));
-	buf->used = length + sizeof(http2_frame_header);
-	memset(h, 0, length + sizeof(http2_frame_header));
+	buf->used = length + (int)sizeof(http2_frame_header);
+	memset(h, 0, length + (int)sizeof(http2_frame_header));
 	buf->data = (char *)h;
 	h->set_length_type(length, type);
 	h->flags = flags;
@@ -127,7 +127,7 @@ static bool construct_cookie_header(KHttp2Context *ctx,KSink *r)
 
 	h.value.len = len;
 	h.value.data = buf;
-	r->parse_header(h.name.data, h.name.len, h.value.data, h.value.len,false);
+	r->parse_header(h.name.data, (int)h.name.len, h.value.data, (int)h.value.len,false);
 	return true;
 }
 KHttp2::KHttp2()
@@ -211,7 +211,7 @@ bool KHttp2::send_window_update(uint32_t sid, size_t window)
 int KHttp2::getReadBuffer(iovec *buf,int bufCount)
 {
 	buf[0].iov_base = (char *)(state.buffer + state.buffer_used);
-	buf[0].iov_len = sizeof(state.buffer) - state.buffer_used;
+	buf[0].iov_len = (int)(sizeof(state.buffer) - state.buffer_used);
 #ifndef NDEBUG
 	if (buf[0].iov_len > 1) {
 		//buf[0].iov_len = 1;
@@ -454,7 +454,7 @@ u_char * KHttp2::state_process_header(u_char *pos,	u_char *end)
 		//KHttpRequest *rq = state.stream->request;
 		kgl_http2_event *re = state.stream->read_wait;
 		kassert(re && re->header);
-		re->header(state.stream->data, re->header_arg, header->name.data, header->name.len, header->value.data, header->value.len);
+		re->header(state.stream->us, re->header_arg, header->name.data, header->name.len, header->value.data, header->value.len, false);
 		//KAsyncFetchObject *fo = (KAsyncFetchObject *)state.stream->read_wait->buffer_arg;
 		//fo->PushHeader(rq, header->name.data, header->name.len, header->value.data, header->value.len, false);
 		return state_header_complete(pos, end);
@@ -609,13 +609,12 @@ bool KHttp2::ReadHeaderSuccess(KHttp2Context *stream)
 	assert(processing >= 0);
 	katom_inc((void *)&processing);
 	state.stream = NULL;
-	kfiber_create(server_on_new_request, rq, state.header_length, http_config.fiber_stack_size, NULL);
+	kfiber_create(khttp_server_new_request, rq, state.header_length, http_config.fiber_stack_size, NULL);
 	return true;
 }
 u_char *KHttp2::state_header_complete(u_char *pos,u_char *end)
 {
 	KHttp2Context  *stream;
-
 	if (state.length) {
 		state.handler = &KHttp2::state_header_block;
 		return pos;
@@ -697,12 +696,11 @@ KHttp2Context *KHttp2::create_stream()
 {
 	KHttp2Context *stream = new KHttp2Context;
 	stream->Init(init_window);
-	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (client_model) {
 		return stream;
 	}
-#endif//}}
+#endif
 	kassert(kselector_is_same_thread(c->st.selector));
 	state.keep_pool = 1;
 	KHttp2Sink *sink = new KHttp2Sink(this, stream, state.pool);
@@ -1151,7 +1149,7 @@ bool KHttp2::add_status(KHttp2Context *ctx, uint16_t status_code)
 	if (ctx->send_header == NULL) {
 		ctx->send_header = new KHttp2HeaderFrame;
 	}
-	ctx->send_header->insert((char *)buf, hot - buf);
+	ctx->send_header->insert((char *)buf, (int)(hot - buf));
 	return true;
 }
 bool KHttp2::add_header(KHttp2Context *ctx, kgl_header_type name, const char *val, hlen_t val_len)
@@ -2100,7 +2098,7 @@ u_char *KHttp2::state_window_update(u_char *pos, u_char *end)
 			terminate_stream(stream, KGL_HTTP_V2_FLOW_CTRL_ERROR);			
 			return state_complete(pos, end);
 		}
-		stream->send_window += window;
+		stream->send_window += (int)window;
 		if (stream->write_wait && IS_WRITE_WAIT_FOR_WINDOW(stream->write_wait)) {
 			kassert(stream->queue.next);
 			WriteWindowReady(stream);

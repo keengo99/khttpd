@@ -14,9 +14,9 @@ public:
 	KHttpSink(kconnection *c,kgl_pool_t *pool);
 	~KHttpSink();
 	
-	bool internal_response_header(const char *name, int name_len, const char *val, int val_len);
+	bool response_header(const char *name, int name_len, const char *val, int val_len);
 	bool ResponseConnection(const char *val, int val_len) {
-		return internal_response_header(kgl_expand_string("Connection"), val, val_len);
+		return response_header(kgl_expand_string("Connection"), val, val_len);
 	}
 	bool HasHeaderDataToSend()
 	{
@@ -30,10 +30,10 @@ public:
 	{
 		kselector_add_timer(cn->st.selector, result, arg, msec, &cn->st);
 	}
-	void StartHeader();
+
 	int StartResponseBody(int64_t body_size);
 	bool IsLocked();
-	int internal_read(WSABUF *buf, int bc);
+	int internal_read(char *buf, int len);
 	int internal_write(WSABUF *buf, int bc);
 	bool ReadHup(void *arg, result_callback result)
 	{
@@ -101,6 +101,7 @@ public:
 	int StartPipeLine();
 	void EndFiber();
 protected:
+	void start_header();
 	//@overide
 	bool internal_response_status(uint16_t status_code);
 	KDechunkContext *dechunk;

@@ -15,7 +15,7 @@ kev_result KTcpSink::StartRequest()
 {
 	assert(data.raw_url.host == NULL);
 	sockaddr_i addr;
-	GetSelfAddr(&addr);
+	get_self_addr(&addr);
 	data.raw_url.port = ksocket_addr_port(&addr);
 	int host_len = MAXIPLEN + 9;
 	data.raw_url.host = (char *)malloc(host_len);
@@ -25,7 +25,7 @@ kev_result KTcpSink::StartRequest()
 	snprintf(data.raw_url.host + len, 7, ".%d", data.raw_url.port);
 	data.raw_url.path = strdup("/");
 	data.meth = METH_CONNECT;
-	kfiber_create(server_on_new_request, (KSink *)this, 0, http_config.fiber_stack_size, NULL);
+	kfiber_create(khttp_server_new_request, (KSink *)this, 0, http_config.fiber_stack_size, NULL);
 	return kev_ok;
 }
 int KTcpSink::end_request()

@@ -2,6 +2,8 @@
 #define KPROXY_H_ASDF0
 #include "khttp.h"
 #include "kconnection.h"
+#include "kbuf.h"
+
 #ifdef ENABLE_PROXY_PROTOCOL
 #pragma pack(push,1)
 struct kgl_proxy_hdr_v2 {
@@ -23,9 +25,7 @@ struct kgl_proxy_ipv6_addr {        /* for TCP/UDP over IPv6, len = 36 */
 	uint16_t dst_port;
 };
 #pragma pack(pop)
-class KHttpRequest;
-class KReadWriteBuffer;
 kev_result handl_proxy_request(kconnection *cn,result_callback cb);
-//bool build_proxy_header(KReadWriteBuffer *buffer, KHttpRequest *rq);
+kbuf *build_proxy_header(const char *ip);
 #endif
 #endif

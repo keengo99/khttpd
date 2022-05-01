@@ -13,7 +13,6 @@ struct kgl_keyval_t {
 extern kgl_str_t kgl_header_type_string[];
 void *kgl_memstr(char *haystack, int haystacklen, char *needle, int needlen);
 #define kgl_cpymem(dst, src, n)   (((u_char *) kgl_memcpy(dst, src, n)) + (n))
-typedef void(*kgl_header_callback)(KOPAQUE data, void *arg, const char *attr, int attr_len, const char *val, int val_len);
 inline KHttpHeader *new_pool_http_header(kgl_pool_t *pool,const char *attr, int attr_len, const char *val, int val_len) {
 	if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
 		return NULL;
@@ -46,13 +45,16 @@ inline KHttpHeader *new_http_header(const char *attr,int attr_len,const char *va
 	header->val_len = val_len;
 	return header;
 }
-inline void free_header(KHttpHeader *av) {
+inline void xfree_header(KHttpHeader* av) {
+	free(av->attr);
+	free(av->val);
+	free(av);
+}
+inline void free_header_list(KHttpHeader *av) {
 	KHttpHeader *next;
 	while (av) {
 		next = av->next;
-		free(av->attr);
-		free(av->val);
-		free(av);
+		xfree_header(av);
 		av = next;
 	}
 }

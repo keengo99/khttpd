@@ -12,7 +12,7 @@
 #include "KMutex.h"
 #include "kselector.h"
 #include "ksocket.h"
-#include "KHttpHeader.h"
+#include "KUpstream.h"
 #include "kfiber.h"
 
 #ifdef ENABLE_HTTP2

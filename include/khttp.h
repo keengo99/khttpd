@@ -1,5 +1,5 @@
-﻿#ifndef KHTTP_H_SADFLKJASDLFKJA455
-#define KHTTP_H_SADFLKJASDLFKJA455
+﻿#ifndef KHTTP_H_SADFLKJASDLFKJA455ss
+#define KHTTP_H_SADFLKJASDLFKJA455ss
 #include "kfeature.h"
 #ifdef KSOCKET_SSL
 	#define ENABLE_UPSTREAM_SSL   1
@@ -51,14 +51,15 @@
 #define RQ_HAS_AUTHORIZATION   (1<<9)
 #define RQ_HAS_PROXY_AUTHORIZATION (1<<10)
 #define RQ_HAS_KEEP_CONNECTION (1<<11)
+#define RQ_CONNECTION_UPGRADE  (1<<12)
 #define RQ_IF_RANGE_DATE       (1<<14)
 #define RQ_IF_RANGE_ETAG       (1<<15)
 #define RQ_HAS_CONTENT_LEN     (1<<16)
 #define RQ_OBJ_VERIFIED        (1<<17)
 #define RQ_HAVE_RANGE          (1<<18)
-//#define RQ_TE_CHUNKED          (1<<19)
-//#define RQ_TE_COMPRESS         (1<<20)
-//#define RQ_HAS_SEND_HEADER     (1<<21)
+#define RQ_TE_CHUNKED          (1<<19)
+#define RQ_TE_COMPRESS         (1<<20)
+#define RQ_HAS_SEND_HEADER     (1<<21)
 #define RQ_HAS_CONNECTION_UPGRADE  (1<<22)
 #define RQ_POST_UPLOAD         (1<<23)
 #define RQ_CONNECTION_CLOSE    (1<<24)

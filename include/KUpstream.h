@@ -23,7 +23,14 @@ enum BadStage
 	BadStage_SendSuccess,
 };
 
-class KUpstreamCallBack {
+
+class KPoolableSocketContainer;
+class KWriteStream;
+class KUpstream;
+typedef bool (*kgl_header_callback)(KUpstream* us, void* arg, const char* attr, int attr_len, const char* val, int val_len,bool is_first);
+
+class KUpstreamCallBack
+{
 public:
 	KUpstreamCallBack()
 	{
@@ -32,8 +39,6 @@ public:
 	kgl_header_callback header;
 	void* arg;
 };
-class KPoolableSocketContainer;
-class KWriteStream;
 
 class KUpstream
 {
@@ -58,11 +63,12 @@ public:
 	{
 		return GetConnection()->st.selector;
 	}
+	virtual bool send_connection(const char* val, hlen_t val_len) = 0;
 	virtual bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) = 0;
 	virtual bool send_host(const char* host, hlen_t host_len) = 0;
-	virtual bool send_content_length(int64_t content_length) = 0;
-	virtual bool send_header_complete(int64_t post_body_len) = 0;
+	virtual void set_content_length(int64_t content_length) = 0;
+	virtual KGL_RESULT send_header_complete() = 0;
 	virtual void BindOpaque(KOPAQUE data) = 0;
 	virtual bool set_header_callback(void* arg, kgl_header_callback header_callback) = 0;
 	virtual KGL_RESULT read_header() = 0;
@@ -71,12 +77,12 @@ public:
 		return NULL;
 	}
 	virtual kconnection *GetConnection() = 0;
-	virtual void WriteEnd()
+	virtual void write_end()
 	{
 
 	}
-	virtual int Read(char* buf, int len) = 0;
-	virtual int Write(WSABUF * buf, int bc) = 0;
+	virtual int read(WSABUF *buf, int bc) = 0;
+	virtual int write(WSABUF *buf, int bc) = 0;
 	virtual void Shutdown() = 0;
 	virtual void Destroy() = 0;
 	virtual bool IsMultiStream()
@@ -119,6 +125,7 @@ public:
 		}
 		return ksocket_addr_port(&addr);
 	}
+	virtual kgl_refs_string* get_param();
 	virtual void gc(int life_time,time_t base_time) = 0;
 	friend class KPoolableSocketContainer;
 	time_t expire_time;
@@ -126,5 +133,4 @@ public:
 protected:
 	virtual ~KUpstream();
 };
-#define KPoolableUpstream KUpstream
-#endif /* KPOOLABLESTREAM_H_ */
+#endif

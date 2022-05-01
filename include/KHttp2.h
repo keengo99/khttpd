@@ -275,12 +275,10 @@ public:
 	union {
 		KSink *request;
 		KUpstream *us;
-		KOPAQUE data;
 	};
 	kgl_array_t  *cookies;
 #ifndef NDEBUG
 	INT64 orig_content_length;
-	//KMD5_CTX md5;
 #endif
 	INT64 content_left;
 	int64_t	active_msec;
