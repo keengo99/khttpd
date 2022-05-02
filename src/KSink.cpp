@@ -5,7 +5,7 @@
 
 bool KSink::start_response_body(INT64 body_len)
 {
-	assert(!KBIT_TEST(data.flags,RQ_HAS_SEND_HEADER));
+	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
 	if (KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER)) {
 		return true;
 	}
@@ -139,11 +139,9 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		do {
 			if (field.is2("keep-alive", 10)) {
 				data.flags |= RQ_HAS_KEEP_CONNECTION;
-			}
-			else if (field.is2("upgrade", 7)) {
+			} else if (field.is2("upgrade", 7)) {
 				data.flags |= RQ_HAS_CONNECTION_UPGRADE;
-			}
-			else if (field.is2(kgl_expand_string("close"))) {
+			} else if (field.is2(kgl_expand_string("close"))) {
 				KBIT_CLR(data.flags, RQ_HAS_KEEP_CONNECTION);
 			}
 		} while (field.next());
@@ -176,8 +174,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 			if (data.if_none_match == NULL) {
 				set_if_none_match(val, *val_len);
 			}
-		}
-		else {
+		} else {
 			data.if_modified_since = try_time;
 			data.flags |= RQ_IF_RANGE_DATE;
 		}
@@ -218,8 +215,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 	if (!strcasecmp(attr, "X-Forwarded-Proto")) {
 		if (strcasecmp(val, "https") == 0) {
 			KBIT_SET(data.raw_url.flags, KGL_URL_ORIG_SSL);
-		}
-		else {
+		} else {
 			KBIT_CLR(data.raw_url.flags, KGL_URL_ORIG_SSL);
 		}
 		return kgl_header_no_insert;
@@ -234,8 +230,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		do {
 			if (field.is("no-store") || field.is("no-cache")) {
 				data.flags |= RQ_HAS_NO_CACHE;
-			}
-			else if (field.is("only-if-cached")) {
+			} else if (field.is("only-if-cached")) {
 				data.flags |= RQ_HAS_ONLY_IF_CACHED;
 			}
 		} while (field.next());
@@ -328,7 +323,7 @@ int KSink::read(char* buf, int len)
 		KBIT_CLR(data.flags, RQ_HAVE_EXPECT);
 		response_status(100);
 		start_response_body(0);
-		Flush();	
+		Flush();
 		start_header();
 	}
 	int length;

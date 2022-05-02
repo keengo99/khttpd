@@ -72,10 +72,7 @@ public:
 	virtual void BindOpaque(KOPAQUE data) = 0;
 	virtual bool set_header_callback(void* arg, kgl_header_callback header_callback) = 0;
 	virtual KGL_RESULT read_header() = 0;
-	virtual kgl_pool_t *GetPool()
-	{
-		return NULL;
-	}
+	virtual kgl_pool_t* GetPool() = 0;
 	virtual kconnection *GetConnection() = 0;
 	virtual void write_end()
 	{
@@ -131,6 +128,10 @@ public:
 	time_t expire_time;
 	KPoolableSocketContainer *container;
 protected:
+	virtual void clean()
+	{
+
+	}
 	virtual ~KUpstream();
 };
 #endif

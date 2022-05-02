@@ -55,7 +55,7 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 		if (bc == 0) {
 			break;
 		}
-		fwrite(buf[0].iov_base, 1, buf[0].iov_len, stdout);
+		//fwrite(buf[0].iov_base, 1, buf[0].iov_len, stdout);
 		int got = kfiber_net_writev(cn, buf, bc);
 		if (got <= 0) {
 			result = KGL_ESOCKET_BROKEN;
@@ -71,6 +71,7 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 }
 KGL_RESULT KHttpUpstream::read_header()
 {
+	assert(read_buffer == NULL);
 	if (read_buffer != NULL) {
 		return KGL_EUNKNOW;
 	}
@@ -139,4 +140,16 @@ int KHttpUpstream::read(WSABUF * buf, int bc)
 		read_buffer = NULL;
 	}
 	return KTcpUpstream::read(buf, bc);
+}
+void KHttpUpstream::clean()
+{
+	KTcpUpstream::clean();
+	if (send_header_buffer) {
+		krw_buffer_destroy(send_header_buffer);
+		send_header_buffer = NULL;
+	}
+	if (read_buffer) {
+		ks_buffer_destroy(read_buffer);
+		read_buffer = NULL;
+	}
 }

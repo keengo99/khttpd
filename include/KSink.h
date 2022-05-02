@@ -185,6 +185,17 @@ public:
 	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
 	void begin_request();
 	virtual int end_request() = 0;
+	void set_if_none_match(const char* etag, int len)
+	{
+		data.if_none_match = (kgl_str_t*)kgl_pnalloc(pool, sizeof(kgl_str_t));
+		data.if_none_match->data = (char*)kgl_pnalloc(pool, len + 1);
+		data.if_none_match->len = len;
+		kgl_memcpy(data.if_none_match->data, etag, len + 1);
+	}
+	void clean_if_none_match()
+	{
+		data.if_none_match = NULL;
+	}
 	kgl_pool_t* pool;
 	KRequestData data;
 	friend class KHttp2;
@@ -193,13 +204,7 @@ protected:
 	{
 
 	}
-	void set_if_none_match(const char* etag, int len)
-	{
-		data.if_none_match = (kgl_str_t*)kgl_pnalloc(pool, sizeof(kgl_str_t));
-		data.if_none_match->data = (char*)kgl_pnalloc(pool, len + 1);
-		data.if_none_match->len = len;
-		kgl_memcpy(data.if_none_match->data, etag, len + 1);
-	}
+	
 	void start_parse();
 	void reset_pipeline();
 	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int* val_len, bool is_first);

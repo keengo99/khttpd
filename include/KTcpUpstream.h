@@ -9,6 +9,7 @@ public:
 	KTcpUpstream(kconnection *cn)
 	{
 		this->cn = cn;
+		pool = NULL;
 		assert(cn);
 	}
 	~KTcpUpstream()
@@ -16,6 +17,7 @@ public:
 		if (cn) {
 			kfiber_net_close(cn);
 		}
+		assert(pool == NULL);
 	}
 	void BindOpaque(KOPAQUE data)
 	{
@@ -80,8 +82,24 @@ public:
 	{
 		delete this;
 	}
+	void clean()
+	{
+		if (pool) {
+			kgl_destroy_pool(pool);
+			pool = NULL;
+		}
+		memset(&stack, 0, sizeof(stack));
+	}
+	kgl_pool_t* GetPool()
+	{
+		if (pool == NULL) {
+			pool = kgl_create_pool(8192);
+		}
+		return pool;
+	}
 protected:
 	kconnection *cn;
 	KUpstreamCallBack stack;
+	kgl_pool_t* pool;
 };
 #endif

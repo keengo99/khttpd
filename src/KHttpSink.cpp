@@ -294,10 +294,8 @@ int KHttpSink::end_request()
 	}
 	ksocket_no_delay(cn->st.fd,false);
 	kassert(buffer.buf_size > 0);
-	kassert(data.left_read >= 0);
-	if (data.left_read < 0) {
-		return kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
-	}
+	kassert(data.left_read >= 0 || dechunk!=NULL);
+
 	if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
 		//still have data to read
 		SkipPost();
@@ -323,7 +321,11 @@ void KHttpSink::SkipPost()
 			add_up_flow((INT64)got);
 		}
 		return;
-	}	
+	}
+	if (data.left_read <= 0) {
+		kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
+		return;
+	}
 	int buf_size;
 	char *buf = ks_get_write_buffer(&buffer, &buf_size);
 	int skip_len = (int)(MIN(data.left_read, (INT64)buffer.used));

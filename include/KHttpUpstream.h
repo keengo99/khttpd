@@ -13,12 +13,8 @@ public:
 	}
 	~KHttpUpstream()
 	{
-		if (send_header_buffer) {
-			krw_buffer_destroy(send_header_buffer);
-		}
-		if (read_buffer) {
-			ks_buffer_destroy(read_buffer);
-		}
+		assert(send_header_buffer == NULL);
+		assert(read_buffer == NULL);
 	}
 	bool send_connection(const char* val, hlen_t val_len);
 	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len);
@@ -28,6 +24,7 @@ public:
 	int read(WSABUF* buf, int bc);
 	KGL_RESULT send_header_complete();
 	KGL_RESULT read_header();
+	void clean();
 private:
 	krw_buffer* send_header_buffer;
 	ks_buffer* read_buffer;

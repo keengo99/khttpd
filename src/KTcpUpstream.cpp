@@ -23,6 +23,7 @@ KGL_RESULT KTcpUpstream::read_header()
 }
 void KTcpUpstream::gc(int life_time,time_t base_time)
 {
+	clean();
 	if (container == NULL) {
 		Destroy();
 		return;

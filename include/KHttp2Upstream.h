@@ -95,10 +95,7 @@ public:
 	void gc(int life_time,time_t last_recv_time)
 	{
 		life_time = 30;
-		if (pool) {
-			kgl_destroy_pool(pool);
-			pool = NULL;
-		}
+		clean();
 		if (container == NULL) {
 			Destroy();
 			return;
@@ -116,6 +113,13 @@ public:
 		Destroy();
 	}
 	friend class KHttp2Env;
+	void clean()
+	{
+		if (pool) {
+			kgl_destroy_pool(pool);
+			pool = NULL;
+		}
+	}
 private:
 	KOPAQUE data;
 	KHttp2 *http2;
