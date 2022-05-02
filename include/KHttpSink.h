@@ -18,14 +18,6 @@ public:
 	bool ResponseConnection(const char *val, int val_len) {
 		return response_header(kgl_expand_string("Connection"), val, val_len);
 	}
-	bool HasHeaderDataToSend()
-	{
-		return (rc && rc->GetLen() > 0);
-	}
-	int GetReadPending()
-	{
-		return buffer.used;
-	}
 	void AddTimer(result_callback result, void *arg, int msec)
 	{
 		kselector_add_timer(cn->st.selector, result, arg, msec, &cn->st);
@@ -80,12 +72,6 @@ public:
 	ks_buffer buffer;
 	kev_result ReadHeader();
 	kev_result Parse();
-	sockaddr_i *GetAddr() {
-		return &cn->addr;
-	}
-	bool GetSelfAddr(sockaddr_i *addr) {	
-		return 0==kconnection_self_addr(cn,addr);
-	}
 	KResponseContext *rc;
 	kconnection *cn;
 	kev_result ResultResponseContext(int got);

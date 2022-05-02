@@ -8,7 +8,8 @@
 #include "kstring.h"
 #include "KRequest.h"
 
-class KSink {
+class KSink
+{
 public:
 	KSink(kgl_pool_t* pool)
 	{
@@ -19,6 +20,7 @@ public:
 		if (pool) {
 			kgl_destroy_pool(pool);
 		}
+		set_state(STATE_UNKNOW);
 	}
 	void push_flow_info(KFlowInfo* fi)
 	{
@@ -34,6 +36,7 @@ public:
 			helper = helper->next;
 		}
 	}
+	bool adjust_range(int64_t* len);
 	void add_down_flow(int flow, bool is_header_length = false)
 	{
 		if (!is_header_length) {
@@ -51,7 +54,7 @@ public:
 			return false;
 		}
 #endif
-		if (KBIT_TEST(data.flags,RQ_CONNECTION_UPGRADE)) {
+		if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
 			return ResponseConnection(kgl_expand_string("upgrade"));
 		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 			return ResponseConnection(kgl_expand_string("close"));
@@ -70,78 +73,93 @@ public:
 			//status_code只能发送一次
 			return false;
 		}
+		set_state(STATE_SEND);
 		data.first_response_time_msec = kgl_current_msec;
 		data.status_code = status_code;
 		return internal_response_status(status_code);
 	}
-	virtual bool ReadHup(void *arg, result_callback result) = 0;
+	virtual bool ReadHup(void* arg, result_callback result) = 0;
 	virtual void RemoveReadHup() = 0;
-	virtual bool HasHeaderDataToSend()
-	{
-		return false;
-	}
-	virtual int GetReadPending() {
-		return 0;
-	}
 	virtual bool SetTransferChunked() {
 		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
 	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
-	kgl_pool_t *GetConnectionPool()
+	kgl_pool_t* GetConnectionPool()
 	{
 		return GetConnection()->pool;
 	}
-	virtual sockaddr_i *get_peer_addr()
+	virtual sockaddr_i* get_peer_addr()
 	{
-		kconnection *cn = GetConnection();	
-		return &cn->addr;		
+		kconnection* cn = GetConnection();
+		return &cn->addr;
 	}
-	bool get_peer_ip(char *ips, int ips_len)
+	bool get_peer_ip(char* ips, int ips_len)
 	{
-		sockaddr_i *addr = get_peer_addr();
-		return ksocket_sockaddr_ip(addr,  ips, ips_len);
+		sockaddr_i* addr = get_peer_addr();
+		return ksocket_sockaddr_ip(addr, ips, ips_len);
 	}
 	uint16_t get_self_port() {
+		if (data.self_port > 0) {
+			return data.self_port;
+		}
 		sockaddr_i addr;
 		if (!get_self_addr(&addr)) {
 			return 0;
 		}
-		return ksocket_addr_port(&addr);
+		data.self_port = ksocket_addr_port(&addr);
+		return data.self_port;
 	}
-	bool get_self_ip(char *ips, int ips_len)
+	void set_self_port(uint16_t port, bool ssl)
+	{
+		if (port > 0) {
+			data.self_port = port;
+		}
+		if (ssl) {
+			KBIT_SET(data.raw_url.flags, KGL_URL_SSL);
+			if (data.raw_url.port == 80) {
+				data.raw_url.port = 443;
+			}
+		} else {
+			KBIT_CLR(data.raw_url.flags, KGL_URL_SSL);
+			if (data.raw_url.port == 443) {
+				data.raw_url.port = 80;
+			}
+		}
+	}
+	uint16_t get_self_ip(char* ips, int ips_len)
 	{
 		sockaddr_i addr;
 		if (!get_self_addr(&addr)) {
-			return false;
+			return 0;
 		}
-		return ksocket_sockaddr_ip(&addr, ips, ips_len);
+		if (!ksocket_sockaddr_ip(&addr, ips, ips_len)) {
+			return 0;
+		}
+		if (data.self_port > 0) {
+			return data.self_port;
+		}
+		data.self_port = ksocket_addr_port(&addr);
+		return data.self_port;
 	}
-	virtual bool get_self_addr(sockaddr_i *addr)
-	{
-		return 0 == kconnection_self_addr(GetConnection(), addr);
-	}
+	const char* get_state();
+	void set_state(uint8_t state);
 	virtual void AddSync() = 0;
 	virtual void RemoveSync() = 0;
-	kselector *GetSelector()
+	kselector* GetSelector()
 	{
 		return GetConnection()->st.selector;
 	}
 	virtual void Shutdown() = 0;
-	kserver *GetBindServer()
+	kserver* GetBindServer()
 	{
 		return GetConnection()->server;
 	}
-	virtual kconnection *GetConnection() = 0;
+	virtual kconnection* GetConnection() = 0;
 	virtual void SetTimeOut(int tmo_count) = 0;
-	virtual void AddTimer(result_callback result, void *arg, int msec)
-	{
-		kselector *selector = GetSelector();
-		kselector_add_timer(selector, result, arg, msec, NULL);
-	}
+
 	virtual int GetTimeOut() = 0;
 	virtual void SetDelay()
 	{
-
 	}
 	virtual void SetNoDelay(bool forever)
 	{
@@ -152,12 +170,12 @@ public:
 		SetDelay();
 	}
 #ifdef KSOCKET_SSL
-	kssl_session *GetSSL() {
-		kconnection *cn = GetConnection();
+	kssl_session* GetSSL() {
+		kconnection* cn = GetConnection();
 		return cn->st.ssl;
 	}
 #endif
-	const char*get_client_ip()
+	const char* get_client_ip()
 	{
 		if (data.client_ip) {
 			return data.client_ip;
@@ -196,6 +214,10 @@ public:
 	{
 		data.if_none_match = NULL;
 	}
+	virtual bool get_self_addr(sockaddr_i* addr)
+	{
+		return 0 == kconnection_self_addr(GetConnection(), addr);
+	}
 	kgl_pool_t* pool;
 	KRequestData data;
 	friend class KHttp2;
@@ -204,15 +226,14 @@ protected:
 	{
 
 	}
-	
 	void start_parse();
 	void reset_pipeline();
 	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int* val_len, bool is_first);
 	void init_pool(kgl_pool_t* pool);
-	virtual int internal_write(WSABUF *buf, int bc) = 0;
-	virtual int internal_read(char *buf, int len) = 0;
+	virtual int internal_write(WSABUF* buf, int bc) = 0;
+	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
-	virtual bool ResponseConnection(const char *val, int val_len) = 0;
+	virtual bool ResponseConnection(const char* val, int val_len) = 0;
 	virtual int StartResponseBody(int64_t body_size) = 0;
 };
 #endif

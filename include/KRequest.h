@@ -10,6 +10,20 @@
 #include "KHttpParser.h"
 #include "KHttpKeyValue.h"
 #include "KHttpOpaque.h"
+
+#define STATE_UNKNOW   0
+#define STATE_IDLE     1
+#define STATE_SEND     2
+#define STATE_RECV     3
+#define STATE_QUEUE    4
+
+extern volatile uint64_t kgl_total_requests;
+extern volatile uint64_t kgl_total_accepts;
+extern volatile uint64_t kgl_total_servers;
+extern volatile uint32_t kgl_reading;
+extern volatile uint32_t kgl_writing;
+extern volatile uint32_t kgl_waiting;
+
 class KRequestPlainData
 {
 public:
@@ -23,14 +37,12 @@ public:
 		int64_t range_from;
 		int64_t range_to;
 		int64_t begin_time_msec;
-		uint32_t flags;
-		uint8_t http_major : 4;
-		uint8_t http_minor : 4;
-		uint8_t meth;
-		uint16_t status_code;
 		int64_t first_response_time_msec;
 		//这个内存由KSink的pool自动管理
 		kgl_str_t* if_none_match;
+		uint32_t flags;
+		uint16_t status_code;
+		uint16_t self_port;
 };
 class KRequestData: public KHttpHeaderManager ,public KRequestPlainData {
 public:
@@ -38,13 +50,19 @@ public:
 	KRequestData() {
 		memset(this, 0, sizeof(*this));
 		begin_time_msec = kgl_current_msec;
-	}	
+	}
+	uint8_t http_major;
+	uint8_t http_minor;
+	uint8_t state;
+	uint8_t meth;
+	uint32_t mark;
 	/*
 	 * 原始url
 	 */
 	KUrl raw_url;
 	KUrl* url;
 	KHttpOpaque* opaque;
+
 	friend class KSink;
 	void bind_opaque(KHttpOpaque* opaque)
 	{

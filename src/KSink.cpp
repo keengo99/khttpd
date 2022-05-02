@@ -19,10 +19,8 @@ bool KSink::start_response_body(INT64 body_len)
 }
 void KSink::begin_request()
 {
-#ifdef ENABLE_STAT_STUB
 	katom_inc64((void*)&kgl_total_requests);
-#endif
-	//setState(STATE_RECV);
+	set_state(STATE_RECV);
 	assert(data.url == NULL);
 	data.url = new KUrl;
 	if (data.raw_url.host) {
@@ -275,6 +273,82 @@ void KSink::reset_pipeline()
 		kgl_destroy_pool(pool);
 		pool = kgl_create_pool(KGL_REQUEST_POOL_SIZE);
 	}
+	set_state(STATE_IDLE);
+}
+const char* KSink::get_state()
+{
+	switch (data.state) {
+	case STATE_IDLE:
+		return "idle";
+	case STATE_SEND:
+		return "send";
+	case STATE_RECV:
+		return "recv";
+	case STATE_QUEUE:
+		return "queue";
+	}
+	return "unknow";
+}
+void KSink::set_state(uint8_t state)
+{
+#ifdef ENABLE_STAT_STUB
+		if (data.state == state) {
+			return;
+		}
+		switch (data.state) {
+		case STATE_IDLE:
+		case STATE_QUEUE:
+			katom_dec((void*)&kgl_waiting);
+			break;
+		case STATE_RECV:
+			katom_dec((void*)&kgl_reading);
+			break;
+		case STATE_SEND:
+			katom_dec((void*)&kgl_writing);
+			break;
+		}
+#endif
+		data.state = state;
+#ifdef ENABLE_STAT_STUB
+		switch (state) {
+		case STATE_IDLE:
+		case STATE_QUEUE:
+			katom_inc((void*)&kgl_waiting);
+			break;
+		case STATE_RECV:
+			katom_inc((void*)&kgl_reading);
+			break;
+		case STATE_SEND:
+			katom_inc((void*)&kgl_writing);
+			break;
+		}
+#endif
+}
+bool KSink::adjust_range(int64_t* len)
+{
+	if (data.range_from >= 0) {
+		if (data.range_from >= *len) {
+			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
+			return false;
+		}
+		*len -= data.range_from;
+		if (data.range_to >= 0) {
+			*len = MIN(data.range_to - data.range_from + 1, *len);
+			if (len <= 0) {
+				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
+				return false;
+			}
+		}
+	} else if (data.range_from < 0) {
+		data.range_from += *len;
+		if (data.range_from < 0) {
+			data.range_from = 0;
+		}
+		*len -= data.range_from;
+	}
+	data.range_to = data.range_from + *len - 1;
+	//printf("after from=%lld,to=%lld,len=%lld\n",rq->sink->data.range_from,rq->sink->data.range_to,len);
+	return true;
 }
 void KSink::start_parse() {
 	data.start_parse();

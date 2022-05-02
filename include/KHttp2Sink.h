@@ -62,41 +62,9 @@ public:
 		bufs.iov_len = len;
 		return http2->read(ctx, &bufs, 1);
 	}
-	bool HasHeaderDataToSend()
-	{
-		return false;
-	}	
 	int internal_write(WSABUF *buf, int bc)
 	{
 		return http2->write(ctx, buf, bc);
-	}
-	sockaddr_i *GetAddr()
-	{
-		return &http2->c->addr;
-	}
-	bool GetRemoteIp(char *ips, int ips_len)
-	{
-		sockaddr_i *addr = GetAddr();
-		return ksocket_sockaddr_ip(addr, ips, ips_len);
-	}
-	uint16_t GetSelfPort() {
-		sockaddr_i addr;
-		if (!GetSelfAddr(&addr)) {
-			return 0;
-		}
-		return ksocket_addr_port(&addr);
-	}
-	bool GetSelfIp(char *ips, int ips_len)
-	{
-		sockaddr_i addr;
-		if (!GetSelfAddr(&addr)) {
-			return false;
-		}
-		return ksocket_sockaddr_ip(&addr, ips, ips_len);
-	}
-	bool GetSelfAddr(sockaddr_i *addr)
-	{
-		return 0 == kconnection_self_addr(http2->c, addr);
 	}
 
 	int end_request()
