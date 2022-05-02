@@ -1,5 +1,6 @@
 #ifndef KFLOWINFO_H
 #define KFLOWINFO_H
+#include <stdio.h>
 #include "KAtomCountable.h"
 #include "KMutex.h"
 #include "kselector.h"
