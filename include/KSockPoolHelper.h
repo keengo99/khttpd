@@ -4,7 +4,7 @@
 #include <string>
 #include <list>
 #include "ksocket.h"
-#include "KCountable.h"
+#include "KAtomCountable.h"
 #include "KPoolableSocketContainer.h"
 #include "KTcpUpstream.h"
 

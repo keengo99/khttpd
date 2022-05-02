@@ -28,10 +28,8 @@
 #include <string>
 #include <string.h>
 #include <stdlib.h>
-#ifdef _WIN32
 #include "kforwin32.h"
 #include "kstring.h"
-#endif
 #include "khttp.h"
 
 #define KBuffedWStream KWStream
