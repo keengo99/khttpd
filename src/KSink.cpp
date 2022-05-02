@@ -295,7 +295,7 @@ bool KSink::response_content_length(int64_t content_len)
 		//A HTTP/1.0 client no support TE head.
 		//The connection MUST close
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-	} else if (!data.connection_upgrade && SetTransferChunked()) {
+	} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && SetTransferChunked()) {
 		KBIT_SET(data.flags, RQ_TE_CHUNKED);
 	}
 	return true;

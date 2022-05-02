@@ -234,7 +234,7 @@ int KHttpSink::StartResponseBody(int64_t body_size)
 	if (rc == NULL) {
 		return 0;
 	}
-	if (!data.connection_upgrade) {
+	if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
 		ksocket_delay(cn->st.fd);
 	}
 	rc->head_append_const("\r\n", 2);

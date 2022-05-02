@@ -27,10 +27,6 @@ public:
 		uint8_t http_major : 4;
 		uint8_t http_minor : 4;
 		uint8_t meth;
-		//response
-		uint16_t cache_hit : 1;
-		uint16_t connection_upgrade : 1;
-		uint16_t body_not_complete : 1;
 		uint16_t status_code;
 		int64_t first_response_time_msec;
 		//这个内存由KSink的pool自动管理

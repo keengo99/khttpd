@@ -41,7 +41,7 @@ public:
 		}
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
-			helper->fi->AddDownFlow((INT64)flow, data.cache_hit);
+			helper->fi->AddDownFlow((INT64)flow, KBIT_TEST(data.flags, RQ_CACHE_HIT));
 			helper = helper->next;
 		}
 	}
@@ -51,7 +51,7 @@ public:
 			return false;
 		}
 #endif
-		if (data.connection_upgrade) {
+		if (KBIT_TEST(data.flags,RQ_CONNECTION_UPGRADE)) {
 			return ResponseConnection(kgl_expand_string("upgrade"));
 		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 			return ResponseConnection(kgl_expand_string("close"));

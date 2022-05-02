@@ -102,7 +102,7 @@ public:
 	int end_request()
 	{
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (unlikely(data.body_not_complete)) {
+		if (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE))) {
 			http2->shutdown(ctx);
 		} else {
 			http2->write_end(ctx);
