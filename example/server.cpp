@@ -62,7 +62,7 @@ int client_http_test(void *arg,int got)
 static u_char h3_alpn = KGL_ALPN_HTTP3|KGL_ALPN_HTTP2;
 int h3_server(void* arg, int got)
 {
-	auto ssl_ctx = kgl_ssl_ctx_new_server("D:\\project\\kangle\\etc\\server.crt", "D:\\project\\kangle\\etc\\server.key", NULL, NULL, &h3_alpn);
+	auto ssl_ctx = kgl_ssl_ctx_new_server("server.crt", "server.key", NULL, NULL, &h3_alpn);
 	auto h3_server = kgl_h3_new_server("0.0.0.0", 4433, ssl_ctx, 0);
 	if (h3_server == nullptr) {
 		perror("cann't init h3 server");

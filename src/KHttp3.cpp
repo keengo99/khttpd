@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <malloc.h>
+#include <errno.h>
 #include "khttp.h"
 #ifdef ENABLE_HTTP3
 #include "klog.h"
@@ -89,7 +90,7 @@ inline kev_result h3_recv_package(KHttp3ServerEngine* h3_engine, kconnection* uc
 {
     for (;;) {
 retry:
-        int got = kudp_try_recv(uc, h3_result_udp_recv, h3_buffer_udp_recv, uc);      
+        int got = kudp_recvmsg(uc, h3_result_udp_recv, h3_buffer_udp_recv, uc);      
         switch (got) {
         case KASYNC_IO_PENDING:
             goto done;
@@ -377,15 +378,7 @@ int send_packets_out(
  static int parse_local_addr(kgl_quic_package* package, kconnection* uc)
  {
      package->local_addr.v4.sin_family = package->peer_addr->v4.sin_family;
-     if (AF_INET == package->peer_addr->v4.sin_family) {
-         auto pk_info = kudp_pktinfo(uc);
-         if (pk_info != nullptr) {
-             memcpy(&package->local_addr.v4.sin_addr, &pk_info->ipi_addr, sizeof(package->local_addr.v4.sin_addr));
-         }
-     } else {
-         //auto pk_info = kudp_pktinfo6(uc);
-     }
-     return 0;
+     return kudp_get_recvaddr(uc,(struct sockaddr *)&package->local_addr);
  }
  inline int  kgl_quic_package_in(KHttp3ServerEngine* h3_engine, kgl_quic_package* package, int got)
  {

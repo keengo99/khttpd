@@ -23,6 +23,9 @@
 #include	<syslog.h>
 #include <unistd.h>
 #endif
+#ifdef FREEBSD
+#define HAVE_TIMEGM 1
+#endif
 #include	<time.h>
 #include 	<ctype.h>
 #include <string>
@@ -214,7 +217,7 @@ time_t parse1123time(const char* str) {
 		time_t dst = 0;
 #if defined (_TIMEZONE)
 #elif defined (_timezone)
-#elif defined(AIX)
+#elif defined(FREEBSD)
 #elif defined(CYGWIN)
 #elif defined(MSWIN)
 #else
