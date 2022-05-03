@@ -37,6 +37,7 @@ endif()
 
 add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/kasync EXCLUDE_FROM_ALL)
 set_source_files_properties(${KASYNC_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
+add_compile_options(-Wno-deprecated)
 list(APPEND KHTTPD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
