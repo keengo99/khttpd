@@ -79,18 +79,31 @@ public:
 	}
 	kgl_refs_string* GetParam();
 	void SetParam(const char* param);
+	virtual void set_tcp(bool tcp)
+	{
+		this->tcp = tcp;
+	}
 #ifdef HTTP_PROXY
 	virtual void addHeader(KHttpRequest *rq,KHttpEnv *s)
 	{
 	}
 #endif
 protected:
+	KUpstream* new_upstream(kconnection* cn);
 	KUpstream* get_pool_socket();
 	/*
 	 * 把连接真正放入池中
 	 */
 	void PutPoolSocket(KUpstream *st);
-	int lifeTime;
+	union
+	{
+		struct
+		{
+			uint16_t tcp : 1;
+			uint16_t lifeTime;
+		};
+		uint32_t flags;
+	};
 	kgl_refs_string* param;
 	KMutex lock;
 private:

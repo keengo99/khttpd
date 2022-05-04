@@ -276,11 +276,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 #endif
 	}
 #endif
-	if (tcp) {
-		socket = new KTcpUpstream(cn);
-	} else {
-		socket = new KHttpUpstream(cn);
-	}
+	socket = new_upstream(cn);
 	bind(socket);
 	return socket;
 }

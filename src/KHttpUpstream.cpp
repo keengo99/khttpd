@@ -75,6 +75,7 @@ KGL_RESULT KHttpUpstream::read_header()
 	if (read_buffer != NULL) {
 		return KGL_EUNKNOW;
 	}
+	assert(stack.header);
 	KGL_RESULT result = KGL_OK;
 	khttp_parser parser;
 	memset(&parser, 0, sizeof(parser));

@@ -37,7 +37,10 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 	server_on_new_request = on_new_request;
 	kssl_set_npn_callback(kgl_ssl_npn);
 }
-bool start_http_server(kserver* server, int flags)
+bool start_http_server(kserver* server, int flags, SOCKET sockfd)
 {
+	if (ksocket_opened(sockfd)){
+		return kserver_open_exsit(server, sockfd, handle_connection);
+	}
 	return kserver_open(server, 0, handle_connection);
 }

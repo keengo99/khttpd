@@ -2,13 +2,15 @@
 #define KHTTPSERVER_H_99
 #include "kfiber.h"
 #include "kconnection.h"
+
 typedef struct _khttp_server_config
 {
 	int fiber_stack_size;
 	int time_out;
 } khttp_server_config;
 
-typedef enum {
+typedef enum
+{
 	kgl_connection_success,
 	kgl_connection_too_many,
 	kgl_connection_per_limit,
@@ -23,5 +25,5 @@ extern krequest_start_func http2https_error;
 extern khttp_server_config http_config;
 int khttp_server_new_request(void* arg, int got);
 void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request);
-bool start_http_server(kserver* server, int flags);
+bool start_http_server(kserver* server, int flags, SOCKET sockfd = INVALID_SOCKET);
 #endif

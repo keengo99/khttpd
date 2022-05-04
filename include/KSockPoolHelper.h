@@ -111,7 +111,6 @@ public:
 	uint16_t port;
 	union {
 		struct {
-			uint32_t tcp : 1;
 			uint32_t monitor : 1;
 			uint32_t is_unix : 1;
 			uint32_t sign : 1;

@@ -13,6 +13,8 @@
 #include "KTsUpstream.h"
 #include "kfiber.h"
 #include "KHttpServer.h"
+#include "KTcpUpstream.h"
+#include "KHttpUpstream.h"
 
 using namespace std;
 struct KUpstreamSelectableList {
@@ -75,7 +77,7 @@ void KPoolableSocketContainerImp::refresh(bool clean)
 	refreshList(&head,clean);
 }
 KPoolableSocketContainer::KPoolableSocketContainer() {
-	lifeTime = 0;
+	flags = 0;
 	imp = NULL;
 	param = NULL;
 }
@@ -184,6 +186,13 @@ void KPoolableSocketContainer::refresh(time_t nowTime) {
 		imp->refresh(false);
 	}
 	lock.Unlock();
+}
+KUpstream* KPoolableSocketContainer::new_upstream(kconnection *cn)
+{
+	if (tcp) {
+		return new KTcpUpstream(cn);
+	}
+	return new KHttpUpstream(cn);
 }
 KUpstream *KPoolableSocketContainer::get_pool_socket() {
 	lock.Lock();

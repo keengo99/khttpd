@@ -25,8 +25,8 @@ public:
 
 	int StartResponseBody(int64_t body_size);
 	bool IsLocked();
-	int internal_read(char *buf, int len);
-	int internal_write(WSABUF *buf, int bc);
+	int internal_read(char *buf, int len) override;
+	int internal_write(WSABUF *buf, int bc) override;
 	bool ReadHup(void *arg, result_callback result)
 	{
 		return selectable_readhup(&cn->st, result, arg);
