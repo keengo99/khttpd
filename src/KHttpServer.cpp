@@ -9,6 +9,7 @@ kconnection_start_func server_on_new_connection = NULL;
 krequest_start_func server_on_new_request = NULL;
 krequest_start_func http2https_error = NULL;
 khttp_server_config http_config;
+#ifdef KSOCKET_SSL
 static void kgl_ssl_npn(void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen)
 {
 #ifdef ENABLE_HTTP2
@@ -22,6 +23,7 @@ static void kgl_ssl_npn(void* ssl_ctx_data, const unsigned char** out, unsigned 
 	*out = (unsigned char*)KGL_HTTP_NPN_ADVERTISE;
 	*outlen = sizeof(KGL_HTTP_NPN_ADVERTISE) - 1;
 }
+#endif
 int khttp_server_new_request(void* arg, int got)
 {
 	KSink* sink = (KSink*)arg;
@@ -35,7 +37,9 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 	http_config.time_out = 60;
 	server_on_new_connection = on_new_connection;
 	server_on_new_request = on_new_request;
+#ifdef KSOCKET_SSL
 	kssl_set_npn_callback(kgl_ssl_npn);
+#endif
 }
 bool start_http_server(kserver* server, int flags, SOCKET sockfd)
 {
