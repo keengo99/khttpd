@@ -328,14 +328,14 @@ void KSink::set_state(uint8_t state)
 bool KSink::adjust_range(int64_t* len)
 {
 	if (data.range_from >= 0) {
-		if (data.range_from >= *len) {
+		if (data.range_from >= (*len)) {
 			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
 			return false;
 		}
-		*len -= data.range_from;
+		(*len) -= data.range_from;
 		if (data.range_to >= 0) {
-			*len = MIN(data.range_to - data.range_from + 1, *len);
-			if (len <= 0) {
+			(*len) = MIN(data.range_to - data.range_from + 1, (*len));
+			if ((*len) <= 0) {
 				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
 				return false;
 			}
@@ -345,9 +345,9 @@ bool KSink::adjust_range(int64_t* len)
 		if (data.range_from < 0) {
 			data.range_from = 0;
 		}
-		*len -= data.range_from;
+		(*len) -= data.range_from;
 	}
-	data.range_to = data.range_from + *len - 1;
+	data.range_to = data.range_from + (*len) - 1;
 	//printf("after from=%lld,to=%lld,len=%lld\n",rq->sink->data.range_from,rq->sink->data.range_to,len);
 	return true;
 }
