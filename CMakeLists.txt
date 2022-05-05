@@ -6,7 +6,7 @@ set(USE_CXX ON)
 if (NOT KASYNC_DIR) 
  message(FATAL "config -DKASYNC_DIR")
 endif()
-add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/kasync EXCLUDE_FROM_ALL)
+add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/kasync EXCLUDE_FROM_ALL)
 #include_directories(${KASYNC_DIR}/build)
 
 
