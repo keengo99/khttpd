@@ -27,7 +27,7 @@ int client_http_test(void *arg,int got)
 {
 	KSockPoolHelper server;
 	server.setHostPort("dss0.bdstatic.com", "443sp");
-	KUpstream* us = server.get_upstream();
+	KUpstream* us = server.get_upstream(0);
 	if (us == NULL) {
 		printf("connect failed.\n");
 		return -1;

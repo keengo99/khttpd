@@ -84,7 +84,7 @@ public:
 	}
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
-	KUpstream* get_upstream(uint32_t flags = 0,const char *sni_host = NULL);
+	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);
 	void checkActive();
 	bool setHostPort(std::string host,int port,const char *ssl);
 	bool setHostPort(std::string host, const char *port);

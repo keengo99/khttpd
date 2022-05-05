@@ -214,11 +214,6 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 	sockaddr_i *bind_addr = NULL;
 	sockaddr_i bind_tmp_addr;
 	const char* bind_ip = ip;
-#if 0
-	if (bind_ip == NULL && rq) {
-		bind_ip = rq->bind_ip;
-	}
-#endif
 	if (bind_ip) {
 		bind_addr = &bind_tmp_addr;
 		if (!ksocket_getaddr(bind_ip, 0, AF_UNSPEC, AI_NUMERICHOST, bind_addr)) {

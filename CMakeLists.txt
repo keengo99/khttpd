@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.0)
 project(khttpd)
-file(GLOB KHTTPD_SOURCE_FILES  ${CMAKE_CURRENT_SOURCE_DIR}/../src/*.cpp)
-file(GLOB KHTTPD_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/*.h)
+file(GLOB KHTTPD_SOURCE_FILES  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB KHTTPD_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 set(USE_CXX ON)
 if (NOT KASYNC_DIR) 
  message(FATAL "config -DKASYNC_DIR")
 endif()
-add_subdirectory(${KASYNC_DIR}/build ${CMAKE_CURRENT_SOURCE_DIR}/kasync EXCLUDE_FROM_ALL)
+add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/kasync EXCLUDE_FROM_ALL)
 #include_directories(${KASYNC_DIR}/build)
 
 
-set(KHTTPD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+set(KHTTPD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 #message(STATUS ${KASYNC_SOURCE_FILES})
 list(APPEND KHTTPD_SOURCE_FILES ${KASYNC_SOURCE_FILES})
@@ -22,9 +22,9 @@ add_library(khttpd STATIC ${KHTTPD_SOURCE_FILES} ${KHTTPD_INCLUDE_FILES})
 target_include_directories(khttpd PUBLIC ${KHTTPD_INCLUDE_DIR})
 target_link_libraries(khttpd ${KHTTPD_LIBS})
 
-add_executable(server ${CMAKE_CURRENT_SOURCE_DIR}/../example/server.cpp)
-target_include_directories(server PUBLIC ${KHTTPD_INCLUDE_DIR})
-target_link_libraries(server ${KHTTPD_LIBS} khttpd)
+add_executable(server_example ${CMAKE_CURRENT_SOURCE_DIR}/example/server.cpp)
+target_include_directories(server_example PUBLIC ${KHTTPD_INCLUDE_DIR})
+target_link_libraries(server_example ${KHTTPD_LIBS} khttpd)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
