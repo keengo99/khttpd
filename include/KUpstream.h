@@ -78,6 +78,10 @@ public:
 		}
 		return KGL_OK;
 	}
+	virtual int64_t get_left()
+	{
+		return -1;
+	}
 	virtual bool send_connection(const char* val, hlen_t val_len) = 0;
 	virtual bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) = 0;
@@ -93,7 +97,7 @@ public:
 	{
 
 	}
-	virtual int read(WSABUF *buf, int bc) = 0;
+	virtual int read(char *buf, int len) = 0;
 	virtual int write(WSABUF *buf, int bc) = 0;
 	virtual void Shutdown() = 0;
 	virtual void Destroy() = 0;

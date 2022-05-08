@@ -9,12 +9,7 @@ bool webdav_header_callback(KUpstream* us, void* arg, const char* attr, int attr
 	if (is_first) {
 		rq->resp.status_code = atoi(val);
 		return true;
-	}
-	if (strcasecmp(attr, "Content-Length") == 0) {
-		rq->resp.content_length = string2int(val);
-		rq->resp.left = rq->resp.content_length;
-		return true;
-	}
+	}	
 	rq->resp.AddHeader(attr, attr_len, val, val_len);
 	return true;
 }
@@ -33,20 +28,70 @@ KWebDavRequest::~KWebDavRequest()
 }
 KGL_RESULT KWebDavRequest::skip_body()
 {
-	if (resp.content_length > 0) {
+
+	for (;;) {
 		char buf[512];
-		while (resp.left > 0) {
-			int len = read(buf, sizeof(buf));
-			if (len <= 0) {
-				return KGL_ESOCKET_BROKEN;
-			}
-			//fwrite(buf, 1, len, stdout);
+		int len = read(buf, sizeof(buf));
+		if (len == 0) {
+			return KGL_OK;
 		}
+		if (len < 0) {
+			return KGL_ESOCKET_BROKEN;
+		}
+		//fwrite(buf, 1, len, stdout);
 	}
-	return KGL_OK;
+
+}
+ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
+{
+	int64_t body_len = us->get_left();
+	if (body_len == 0) {
+		result = KGL_OK;
+		return nullptr;
+	}
+	if (body_len > 4096578) {
+		result = KGL_EINSUFFICIENT_BUFFER;
+		return nullptr;
+	}
+	if (body_len > 0) {
+		ks_buffer* buffer = ks_buffer_new(body_len+1);
+		if (!read_all(buffer->buf, body_len)) {
+			ks_buffer_destroy(buffer);
+			result = KGL_ESOCKET_BROKEN;
+			return nullptr;
+		}
+		result = KGL_OK;
+		return buffer;
+	}
+	ks_buffer* buffer = ks_buffer_new(4096);
+	for (;;) {
+		int len;
+		char* buf = ks_get_write_buffer(buffer, &len);
+		//printf("before us_read len=[%d]\n", len);
+		int got = us->read(buf, len);
+		//printf("got=[%d]\n", got);
+		if (got < 0) {
+			ks_buffer_destroy(buffer);
+			result = KGL_ESOCKET_BROKEN;
+			return nullptr;
+		}
+		if (got == 0) {
+			ks_write_str(buffer, "\0", 1);
+			return buffer;
+		}
+		ks_write_success(buffer, got);
+	}
 }
 KGL_RESULT KWebDavRequest::read_body(KXmlDocument& body)
 {
+	KGL_RESULT result;
+	ks_buffer* buffer = read_body(result);
+	if (buffer == nullptr) {
+		return result;
+	}
+	//printf("%s\n", buffer->buf);
+	body.parse(buffer->buf);
+	ks_buffer_destroy(buffer);
 	return KGL_OK;
 }
 bool KWebDavRequest::send_if_lock_token(KWebDavLockToken* token, bool send_resource)

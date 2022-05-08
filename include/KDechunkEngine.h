@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kmalloc.h"
+#include "kbuf.h"
 
 enum dechunk_status
 {
@@ -25,7 +26,9 @@ public:
 		}
 	}
 	//返回dechunk_continue表示还需要读数据，
-	dechunk_status dechunk(const char **buf, int &buf_len, const char **piece, int &piece_length);
+	dechunk_status dechunk(const char **buf, int&buf_len, const char **piece, int &piece_length,int max_piece_length=0);
+	dechunk_status dechunk(ks_buffer *buf, char* out,int& out_len);
+private:
 	bool is_failed() {
 		return work_len < -4;
 	}
@@ -35,7 +38,6 @@ public:
 	bool is_end() {
 		return work_len <= -4;
 	}
-private:
 	int chunk_size ;
 	int work_len ;
 	char *work;

@@ -51,6 +51,7 @@ KXmlNode *KXmlDocument::parse(char *str)
 	try {
 		xml.startParse(str);
 	} catch (KXmlException& e) {
+		fprintf(stderr, "%s", e.what());
 		return nullptr;
 	}
 	return curNode;

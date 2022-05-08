@@ -3,6 +3,8 @@
 #include "KUpstream.h"
 #include "KHttpHeaderManager.h"
 #include "KXmlDocument.h"
+#include "kbuf.h"
+
 class KWebDavLockToken;
 struct KWebDavAuth;
 class KWebDavClient;
@@ -11,8 +13,6 @@ class KResponseData : public KHttpHeaderManager
 {
 public:
 	uint16_t status_code;
-	int64_t content_length;
-	int64_t left;
 };
 class KWebDavRequest
 {
@@ -40,20 +40,7 @@ public:
 	}
 	int read(char* buf, int len)
 	{
-		if (resp.content_length >= 0) {
-			len = (int)MIN((int64_t)len, resp.left);
-			if (len <= 0) {
-				return len;
-			}
-		}
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = len;
-		int got = us->read(&bufs, 1);
-		if (got > 0 && resp.content_length>0) {
-			resp.left -= got;
-		}
-		return got;
+		return us->read(buf, len);
 	}
 	bool read_all(char* buf, int len) {
 		while (len > 0) {
@@ -66,7 +53,12 @@ public:
 		}
 		return true;
 	}
+	int64_t get_left()
+	{
+		return us->get_left();
+	}
 	KGL_RESULT skip_body();
+	ks_buffer *read_body(KGL_RESULT &result);
 	KGL_RESULT read_body(KXmlDocument &body);
 	KResponseData resp;
 private:

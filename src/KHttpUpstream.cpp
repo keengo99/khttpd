@@ -8,20 +8,20 @@ bool KHttpUpstream::send_connection(const char* val, hlen_t val_len)
 }
 bool KHttpUpstream::send_method_path(uint16_t meth, const char* path, hlen_t path_len)
 {
-	assert(this->send_header_buffer == NULL);
-	if (this->send_header_buffer == NULL) {
-		send_header_buffer = krw_buffer_new(4096);
+	assert(this->ctx.send_header_buffer == NULL);
+	if (this->ctx.send_header_buffer == NULL) {
+		ctx.send_header_buffer = krw_buffer_new(4096);
 	}
 	const char* meth_str = KHttpKeyValue::getMethod(meth);
-	krw_write_str(send_header_buffer, meth_str, (int)strlen(meth_str));
-	krw_write_str(send_header_buffer, kgl_expand_string(" "));
-	krw_write_str(send_header_buffer, path, path_len);
-	krw_write_str(send_header_buffer, kgl_expand_string(" HTTP/1.1\r\n"));
+	krw_write_str(ctx.send_header_buffer, meth_str, (int)strlen(meth_str));
+	krw_write_str(ctx.send_header_buffer, kgl_expand_string(" "));
+	krw_write_str(ctx.send_header_buffer, path, path_len);
+	krw_write_str(ctx.send_header_buffer, kgl_expand_string(" HTTP/1.1\r\n"));
 	return true;
 }
 bool KHttpUpstream::send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
 {
-	if (this->send_header_buffer == NULL) {
+	if (this->ctx.send_header_buffer == NULL) {
 		return false;
 	}
 #if 0
@@ -30,10 +30,10 @@ bool KHttpUpstream::send_header(const char* attr, hlen_t attr_len, const char* v
 	fwrite(val, 1, val_len, stdout);
 	fwrite("\n", 1, 1, stdout);
 #endif
-	krw_write_str(send_header_buffer, attr, attr_len);
-	krw_write_str(send_header_buffer, kgl_expand_string(": "));
-	krw_write_str(send_header_buffer, val, val_len);
-	krw_write_str(send_header_buffer, kgl_expand_string("\r\n"));
+	krw_write_str(ctx.send_header_buffer, attr, attr_len);
+	krw_write_str(ctx.send_header_buffer, kgl_expand_string(": "));
+	krw_write_str(ctx.send_header_buffer, val, val_len);
+	krw_write_str(ctx.send_header_buffer, kgl_expand_string("\r\n"));
 	return true;
 }
 bool KHttpUpstream::send_host(const char* host, hlen_t host_len)
@@ -50,14 +50,14 @@ void KHttpUpstream::set_content_length(int64_t content_length)
 }
 KGL_RESULT KHttpUpstream::send_header_complete()
 {
-	if (this->send_header_buffer == NULL) {
+	if (this->ctx.send_header_buffer == NULL) {
 		return KGL_ENOT_READY;
 	}
-	krw_write_str(send_header_buffer, kgl_expand_string("\r\n"));
+	krw_write_str(ctx.send_header_buffer, kgl_expand_string("\r\n"));
 	KGL_RESULT result = KGL_OK;
 	WSABUF buf[32];
 	for (;;) {
-		int bc = krw_get_read_buffers(send_header_buffer, buf, kgl_countof(buf));
+		int bc = krw_get_read_buffers(ctx.send_header_buffer, buf, kgl_countof(buf));
 		if (bc == 0) {
 			break;
 		}
@@ -67,38 +67,38 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 			result = KGL_ESOCKET_BROKEN;
 			break;
 		}
-		if (!krw_read_success(send_header_buffer, got)) {
+		if (!krw_read_success(ctx.send_header_buffer, got)) {
 			break;
 		}
 	}
-	krw_buffer_destroy(send_header_buffer);
-	send_header_buffer = NULL;
+	krw_buffer_destroy(ctx.send_header_buffer);
+	ctx.send_header_buffer = NULL;
 	return result;
 }
 KGL_RESULT KHttpUpstream::read_header()
 {
-	assert(read_buffer == NULL);
-	if (read_buffer != NULL) {
+	assert(ctx.read_buffer == NULL);
+	if (ctx.read_buffer != NULL) {
 		return KGL_EUNKNOW;
 	}
 	assert(stack.header);
 	KGL_RESULT result = KGL_OK;
 	khttp_parser parser;
 	memset(&parser, 0, sizeof(parser));
-	read_buffer = ks_buffer_new(8192);
+	ctx.read_buffer = ks_buffer_new(8192);
 	int64_t begin_time_msec = kgl_current_msec;
 	for (;;) {
 	continue_read:
 		int write_len;
-		char* write_buf = ks_get_write_buffer(read_buffer, &write_len);
+		char* write_buf = ks_get_write_buffer(ctx.read_buffer, &write_len);
 		int got = kfiber_net_read(cn, write_buf, write_len);
 		if (got <= 0) {
 			return KGL_EDATA_FORMAT;
 		}
-		ks_write_success(read_buffer, got);
+		ks_write_success(ctx.read_buffer, got);
 		khttp_parse_result rs;
-		char* hot = read_buffer->buf;
-		int len = read_buffer->used;
+		char* hot = ctx.read_buffer->buf;
+		int len = ctx.read_buffer->used;
 		for(;;) {
 			memset(&rs, 0, sizeof(rs));
 			kgl_parse_result parse_result = khttp_parse(&parser, &hot, &len, &rs);
@@ -113,18 +113,26 @@ KGL_RESULT KHttpUpstream::read_header()
 					result = KGL_EDATA_FORMAT;
 					goto out;
 				}
-				ks_save_point(read_buffer, hot, len);
+				ks_save_point(ctx.read_buffer, hot, len);
 				goto continue_read;
 			}
 			case kgl_parse_success:
 			{
+				if (ctx.dechunk==NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val,"chunked")==0) {
+					ctx.dechunk = new KDechunkEngine;
+					ctx.left = -1;
+					break;
+				}
+				if (strcasecmp(rs.attr, "Content-Length") == 0) {
+					ctx.left = string2int(rs.val);
+				}
 				if (!stack.header(this, stack.arg, rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
 					goto out;
 				}
 				break;
 			}
 			case kgl_parse_finished:
-				ks_save_point(read_buffer, hot, len);
+				ks_save_point(ctx.read_buffer, hot, len);
 				goto out;
 			default:
 				result = KGL_EDATA_FORMAT;
@@ -136,29 +144,76 @@ KGL_RESULT KHttpUpstream::read_header()
 out:
 	return result;
 }
-int KHttpUpstream::read(WSABUF * buf, int bc)
+int KHttpUpstream::read(char* buf, int len)
 {
-	if (read_buffer) {
-		if (read_buffer->used > 0) {
-			int len = MIN((int)buf[0].iov_len, (int)read_buffer->used);
-			kgl_memcpy(buf[0].iov_base, read_buffer->buf, len);
-			ks_save_point(read_buffer, read_buffer->buf + len, read_buffer->used - len);
+	if (ctx.left == 0) {
+		return 0;
+	}
+	if (ctx.dechunk) {
+		assert(ctx.read_buffer);
+		assert(ctx.left < 0);
+		for (;;) {
+			int got = len;
+			switch (ctx.dechunk->dechunk(ctx.read_buffer, buf, got)) {
+			case dechunk_success:
+				if (got > 0) {
+					return got;
+				}
+				continue;
+			case dechunk_continue:
+			{
+				if (got > 0) {
+					return got;
+				}
+				int write_len;
+				char* write_buf = ks_get_write_buffer(ctx.read_buffer, &write_len);
+				int got = kfiber_net_read(cn, write_buf, write_len);
+				if (got <= 0) {
+					return -1;
+				}
+				ks_write_success(ctx.read_buffer, got);
+				continue;
+			}
+			case dechunk_end:
+			{
+				ctx.left = 0;
+				return 0;
+			}
+			default:
+				return -1;
+			}
+		}
+	}
+	len = (int)MIN((int64_t)len, ctx.left);
+	if (ctx.read_buffer) {
+		if (ctx.read_buffer->used > 0) {
+			len = MIN((int)len, (int)ctx.read_buffer->used);
+			kgl_memcpy(buf, ctx.read_buffer->buf, len);
+			ks_save_point(ctx.read_buffer, ctx.read_buffer->buf + len, ctx.read_buffer->used - len);
+			assert(len < ctx.left);
+			ctx.left -= len;
 			return len;
 		}
-		ks_buffer_destroy(read_buffer);
-		read_buffer = NULL;
+		ks_buffer_destroy(ctx.read_buffer);
+		ctx.read_buffer = NULL;
 	}
-	return KTcpUpstream::read(buf, bc);
+	int got = KTcpUpstream::read(buf, len);
+	if (got > 0) {
+		ctx.left -= got;
+	}
+	return got;
 }
 void KHttpUpstream::clean()
 {
 	KTcpUpstream::clean();
-	if (send_header_buffer) {
-		krw_buffer_destroy(send_header_buffer);
-		send_header_buffer = NULL;
+	if (ctx.send_header_buffer) {
+		krw_buffer_destroy(ctx.send_header_buffer);
 	}
-	if (read_buffer) {
-		ks_buffer_destroy(read_buffer);
-		read_buffer = NULL;
+	if (ctx.read_buffer) {
+		ks_buffer_destroy(ctx.read_buffer);
 	}
+	if (ctx.dechunk) {
+		delete ctx.dechunk;
+	}
+	memset(&ctx, 0, sizeof(ctx));
 }

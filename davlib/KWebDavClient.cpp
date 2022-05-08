@@ -76,7 +76,9 @@ KGL_RESULT KWebDavClient::new_request(const char* method, const char* path, int6
 		*rq = nullptr;
 		return KGL_ESOCKET_BROKEN;
 	}
-	us->send_host(url->host, (hlen_t)strlen(url->host));
+	KStringBuf host;
+	url->GetHost(host);
+	us->send_host(host.getBuf(), host.getSize());
 	if (us->IsMultiStream()) {
 		us->send_header(kgl_expand_string(":scheme"), kgl_expand_string("https"));
 	}
@@ -395,16 +397,9 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 		return result;
 	}
 	KXmlDocument body;
+	rq->read_body(body);
 	//printf("status_code=[%d]\n", rq->resp.status_code);
-	if (rq->resp.content_length > 0 && rq->resp.content_length < 4096578) {
-		char* buf = (char*)xmalloc(rq->resp.content_length + 1);
-		if (rq->read_all(buf, (int)rq->resp.content_length)) {
-			buf[rq->resp.content_length] = '\0';
-			//printf("buf=[%s]\n", buf);
-			body.parse(buf);
-		}
-		xfree(buf);
-	}
+	
 	if (rq->resp.status_code == STATUS_MULTI_STATUS) {
 		if (!file_list.parse(body, (int)strlen(path))) {
 			return KGL_EDATA_FORMAT;

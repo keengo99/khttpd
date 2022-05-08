@@ -1,5 +1,21 @@
 #include "KDechunkEngine.h"
-dechunk_status KDechunkEngine::dechunk(const char **buf, int &buf_len, const char **piece, int &piece_length)
+dechunk_status KDechunkEngine::dechunk(ks_buffer* buf, char* out, int& out_len)
+{
+	char* hot = (char *)buf->buf;
+	int hot_len = buf->used;
+	const char* piece = NULL;
+	int piece_len;
+	dechunk_status result = dechunk((const char **)&hot, hot_len, &piece, piece_len, out_len);
+	if (piece) {
+		kgl_memcpy(out, piece, piece_len);
+		out_len = piece_len;
+	} else {
+		out_len = 0;
+	}
+	ks_save_point(buf, hot, hot_len);
+	return result;
+}
+dechunk_status KDechunkEngine::dechunk(const char **buf, int &buf_len, const char **piece, int &piece_length,int max_piece_length)
 {
 	char *next_line;
 	char *data;
@@ -108,11 +124,21 @@ restart:
 	if (work_len == -2) {
 		int read_len = MIN(chunk_size, buf_len);
 		if (read_len > 0) {
+			bool continue_read_piece = false;
+			if (max_piece_length > 0) {
+				if (read_len > max_piece_length) {
+					read_len = max_piece_length;
+					continue_read_piece = true;
+				}
+			}
 			*piece = *buf;
 			piece_length = read_len;
 			buf_len -= read_len;
 			(*buf) += read_len;
 			chunk_size -= read_len;
+			if (continue_read_piece) {
+				return dechunk_success;
+			}
 		}
 		if (buf_len > 0) {
 			kassert(chunk_size >= 0);

@@ -69,7 +69,7 @@ static int ts_gc(void* arg, int len)
 static int ts_read(void* arg, int len)
 {
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
-	return param->us->read(param->bufs, param->len);
+	return param->us->read(param->buf, param->len);
 }
 static int ts_write(void* arg, int len)
 {
@@ -124,12 +124,12 @@ int KTsUpstream::write(WSABUF* buf, int bc)
 	kfiber_join(fiber, &ret);
 	return ret;
 }
-int KTsUpstream::read(WSABUF* buf, int bc)
+int KTsUpstream::read(char* buf, int len)
 {
 	KTsUpstreamParam param;
 	param.us = us;
-	param.bufs = buf;
-	param.len = bc;
+	param.buf = buf;
+	param.len = len;
 	kfiber* fiber = NULL;
 	if (kfiber_create2(us->GetSelector(), ts_read, &param, 0, 0, &fiber) != 0) {
 		return -1;

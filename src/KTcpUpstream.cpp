@@ -35,9 +35,9 @@ void KTcpUpstream::gc(int life_time,time_t base_time)
 #endif
 	container->gcSocket(this, life_time, base_time);
 }
-int KTcpUpstream::read(WSABUF *buf, int bc)
+int KTcpUpstream::read(char* buf, int len)
 {
-	return kfiber_net_readv(cn, buf, bc);
+	return kfiber_net_read(cn, buf, len);
 }
 int KTcpUpstream::write(WSABUF* buf, int bc)
 {

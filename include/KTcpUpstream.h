@@ -63,20 +63,20 @@ public:
 	{
 		return true;
 	}
-	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len);
-	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len);
-	bool send_host(const char* host, hlen_t host_len);
-	void set_content_length(int64_t content_length)
+	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override;
+	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override;
+	bool send_host(const char* host, hlen_t host_len) override;
+	void set_content_length(int64_t content_length) override
 	{
 
 	}
-	KGL_RESULT send_header_complete();
-	bool set_header_callback(void* arg, kgl_header_callback cb);
-	KGL_RESULT read_header();
-	int read(WSABUF* buf, int bc);
-	int write(WSABUF* buf, int bc);
+	KGL_RESULT send_header_complete() override;
+	bool set_header_callback(void* arg, kgl_header_callback cb) override;
+	KGL_RESULT read_header() override;
+	int read(char* buf, int len) override;
+	int write(WSABUF* buf, int bc) override;
 	void BindSelector(kselector *selector);
-	void gc(int life_time,time_t last_recv_time);
+	void gc(int life_time,time_t last_recv_time) override;
 	void OnPushContainer();
 	void Destroy()
 	{

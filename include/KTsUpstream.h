@@ -51,6 +51,10 @@ public:
 	KGL_RESULT send_header_complete();
 	bool set_header_callback(void* arg, kgl_header_callback header_callback);
 	KGL_RESULT read_header();
+	int64_t get_left() override
+	{
+		return us->get_left();
+	}
 	KOPAQUE GetOpaque()
 	{
 		return us->GetOpaque();
@@ -59,7 +63,7 @@ public:
 	{
 		us->BindOpaque(data);
 	}
-	int read(WSABUF* buf, int bc);
+	int read(char* buf, int len);
 	int write(WSABUF* buf, int bc);
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
 	{

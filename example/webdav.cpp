@@ -2,13 +2,30 @@
 #include "kselector_manager.h"
 #include "KDefer.h"
 #include "kfiber.h"
+#include "KDechunkEngine.h"
+
 #define LOCKED_FILE_CONTENT "lock-test"
 #define DAV_PREFIX_DIR "/dav"
 #define DAV_AUTH_USER "test"
 #define DAV_AUTH_PASSWD "test"
 #define test_assert(x) test_assert2(x,__FILE__,__LINE__)
 static int total_passed = 0;
-
+static void test_dechunk()
+{
+	KDechunkEngine engine;
+	ks_buffer* buffer = ks_buffer_new(512);
+	ks_write_str(buffer, kgl_expand_string("9\r\n123456789\r\n0\r\n\r\n"));
+	for (;;) {
+		char buf[2];
+		int len = 1;
+		if (engine.dechunk(buffer, buf, len) == dechunk_end) {
+			break;
+		}
+		assert(len == 1);
+		buf[1] = '\0';
+		printf("[%s]\n", buf);
+	}
+}
 static void test_assert2(bool condition,const char *file,int line)
 {
 	if (condition) {
@@ -17,7 +34,9 @@ static void test_assert2(bool condition,const char *file,int line)
 		return;
 	}
 	printf("%s:%d test failed.\n", file, line);
-	assert(condition);
+	if (!condition) {
+		abort();
+	}
 }
 static void assert_dav_file_content(KWebDavClient* client, const char* path, const char* content,int content_length)
 {
@@ -172,5 +191,6 @@ static int webdav_main(void* arg, int argc)
 }
 int main(int argc, char** argv)
 {
+
 	return kasync_main(webdav_main, argv, argc);
 }
