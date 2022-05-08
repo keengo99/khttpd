@@ -13,9 +13,10 @@ KTcpSink::~KTcpSink()
 }
 kev_result KTcpSink::StartRequest()
 {
-	assert(data.raw_url->host == NULL);
+	assert(data.raw_url == NULL);
 	sockaddr_i addr;
 	get_self_addr(&addr);
+	data.raw_url = new KUrl;
 	data.raw_url->port = ksocket_addr_port(&addr);
 	int host_len = MAXIPLEN + 9;
 	data.raw_url->host = (char *)malloc(host_len);

@@ -46,7 +46,7 @@ bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len,
 	if (is_first) {
 		start_parse();
 	}
-	printf("%s%s%s\n", attr, is_first ? " " : ": ", val);
+	//printf("%s%s%s\n", attr, is_first ? " " : ": ", val);
 	kgl_header_result ret = internal_parse_header(attr, attr_len, val, &val_len, is_first);
 	switch (ret) {
 	case kgl_header_failed:

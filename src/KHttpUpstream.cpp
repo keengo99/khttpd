@@ -88,8 +88,10 @@ KGL_RESULT KHttpUpstream::read_header()
 	read_buffer = ks_buffer_new(8192);
 	int64_t begin_time_msec = kgl_current_msec;
 	for (;;) {
-continue_read:
-		int got = kfiber_net_read(cn, read_buffer->buf, read_buffer->buf_size);
+	continue_read:
+		int write_len;
+		char* write_buf = ks_get_write_buffer(read_buffer, &write_len);
+		int got = kfiber_net_read(cn, write_buf, write_len);
 		if (got <= 0) {
 			return KGL_EDATA_FORMAT;
 		}
