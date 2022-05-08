@@ -58,7 +58,7 @@ int KAutoBuffer::getReadBuffer(LPWSABUF buffer, int bufferCount)
 	assert(head);
 	kbuf *tmp = head;
 	buffer[0].iov_base = hot;
-	buffer[0].iov_len = head->used - (hot - head->data);
+	buffer[0].iov_len = head->used - (int)(hot - head->data);
 	int i;
 	for (i = 1; i < bufferCount; i++) {
 		tmp = tmp->next;
@@ -74,7 +74,7 @@ bool KAutoBuffer::readSuccess(int *got)
 {
 	kassert(hot && head);
 	while (*got > 0) {
-		int hot_left = head->used - (hot - head->data);
+		int hot_left = head->used - (int)(hot - head->data);
 		int this_len = MIN(*got, hot_left);
 		hot += this_len;
 		*got -= this_len;

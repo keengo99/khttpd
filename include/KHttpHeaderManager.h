@@ -1,6 +1,43 @@
 #ifndef KHTTPHEADERMANAGER_H_99
 #define KHTTPHEADERMANAGER_H_99
 #include "KHttpHeader.h"
+
+inline int attr_tolower(const char p) {
+	if (p == '-') {
+		return '_';
+	}
+	return tolower(p);
+}
+inline int attr_casecmp(const char* s1, const char* s2)
+{
+	const unsigned char* p1 = (const unsigned char*)s1;
+	const unsigned char* p2 = (const unsigned char*)s2;
+	int result;
+	if (p1 == p2)
+		return 0;
+
+	while ((result = attr_tolower(*p1) - attr_tolower(*p2++)) == 0)
+		if (*p1++ == '\0')
+			break;
+	return result;
+}
+inline bool is_val(KHttpHeader* av, const char* val, int val_len)
+{
+	if (av->val_len != val_len) {
+		return false;
+	}
+	return strncasecmp(av->val, val, val_len) == 0;
+}
+inline bool is_attr(KHttpHeader* av, const char* attr) {
+	if (!av || !av->attr || !attr)
+		return false;
+	return attr_casecmp(av->attr, attr) == 0;
+}
+inline bool is_attr(KHttpHeader* av, const char* attr, int attr_len)
+{
+	assert(av && av->attr && attr);
+	return attr_casecmp(av->attr, attr) == 0;
+}
 enum class KHttpHeaderIteratorResult
 {
 	Continue,

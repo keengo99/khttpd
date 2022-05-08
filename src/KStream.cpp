@@ -30,7 +30,7 @@
 #include "KStream.h"
 #include "kmalloc.h"
 KConsole KConsole::out;
-char *KRStream::readLine() {
+char *KRStream::read_line() {
 	std::stringstream s;
 	char buf[2];
 	for (;;) {
@@ -73,10 +73,5 @@ StreamState KWStream::write_all(const char *buf) {
 	return write_all(buf, (int)strlen(buf));
 }
 int KConsole::write(const char *buf, int len) {
-	char *str = (char *) xmalloc(len+1);
-	kgl_memcpy(str, buf, len);
-	str[len] = 0;
-	printf("%s", str);
-	xfree(str);
-	return len;
+	return (int)fwrite(buf, 1, len, stdout);
 }

@@ -70,9 +70,10 @@ class KRStream {
 public:
 	virtual ~KRStream() {
 	}
+	virtual int64_t get_read_left() = 0;
 	virtual int read(char *buf, int len) = 0;
 	bool read_all(char *buf, int len);
-	char *readLine();
+	char *read_line();
 };
 class KWStream {
 public:
@@ -103,7 +104,7 @@ public:
 	inline KWStream & operator <<(const char *str)
 	{
 		if (KGL_OK!= write_all(str, (int)strlen(str))) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to stream 1\n");
 		}
 		return *this;
 	}
@@ -138,7 +139,7 @@ public:
 			return *this;
 		}
 		if (KGL_OK != write_all(buf, len)) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to stream 2\n");
 		}
 		return *this;
 	}
@@ -146,7 +147,7 @@ public:
 		char buf[INT2STRING_LEN];
 		int2string(value,buf,false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to stream 3\n");
 		}
 		return *this;
 	}
@@ -167,7 +168,7 @@ public:
 			return *this;
 		}
 		if (KGL_OK != write_all(buf, len)) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to stream 4\n");
 		}
 		return *this;
 	}

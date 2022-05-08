@@ -78,7 +78,7 @@ public:
 		data.status_code = status_code;
 		return internal_response_status(status_code);
 	}
-	virtual bool ReadHup(void* arg, result_callback result) = 0;
+	virtual bool read_hup(void* arg, result_callback result) = 0;
 	virtual void RemoveReadHup() = 0;
 	virtual bool SetTransferChunked() {
 		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
@@ -115,14 +115,14 @@ public:
 			data.self_port = port;
 		}
 		if (ssl) {
-			KBIT_SET(data.raw_url.flags, KGL_URL_SSL);
-			if (data.raw_url.port == 80) {
-				data.raw_url.port = 443;
+			KBIT_SET(data.raw_url->flags, KGL_URL_SSL);
+			if (data.raw_url->port == 80) {
+				data.raw_url->port = 443;
 			}
 		} else {
-			KBIT_CLR(data.raw_url.flags, KGL_URL_SSL);
-			if (data.raw_url.port == 443) {
-				data.raw_url.port = 80;
+			KBIT_CLR(data.raw_url->flags, KGL_URL_SSL);
+			if (data.raw_url->port == 443) {
+				data.raw_url->port = 80;
 			}
 		}
 	}
@@ -199,7 +199,7 @@ public:
 	int write(const char* buf, int len);
 	bool write(kbuf* buf);
 	int read(char* buf, int len);
-	bool write_full(const char* buf, int len);
+	bool write_all(const char* buf, int len);
 	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
 	void begin_request();
 	virtual int end_request() = 0;

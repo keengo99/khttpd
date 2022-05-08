@@ -34,7 +34,7 @@ bool KHttp2Upstream::send_header(const char* attr, hlen_t attr_len, const char* 
 }
 bool KHttp2Upstream::send_method_path(uint16_t meth, const char* path, hlen_t path_len)
 {
-	if (!http2->add_method(ctx, meth)) {
+	if (!http2->add_method(ctx, (uint8_t)meth)) {
 		return false;
 	}
 	return http2->add_header(ctx, kgl_expand_string(":path"), path, path_len);

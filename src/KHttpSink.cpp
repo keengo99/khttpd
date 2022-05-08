@@ -109,7 +109,7 @@ static int handle_http2https_error(void *arg, int got)
 	sink->response_header(kgl_expand_string("Cache-Control"), kgl_expand_string("no-cache,no-store"));
 	sink->response_connection();
 	sink->start_response_body(body_len);
-	sink->write_full(body, body_len);	
+	sink->write_all(body, body_len);	
 	sink->end_request();
 	return 0;
 }

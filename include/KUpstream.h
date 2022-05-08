@@ -63,6 +63,21 @@ public:
 	{
 		return GetConnection()->st.selector;
 	}
+	KGL_RESULT write_all(const char* buf, int len)
+	{
+		while (len > 0) {
+			WSABUF bufs;
+			bufs.iov_base = (char *)buf;
+			bufs.iov_len = len;
+			int this_len = write(&bufs, 1);
+			if (this_len <= 0) {
+				return KGL_EIO;
+			}
+			len -= this_len;
+			buf += this_len;
+		}
+		return KGL_OK;
+	}
 	virtual bool send_connection(const char* val, hlen_t val_len) = 0;
 	virtual bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) = 0;

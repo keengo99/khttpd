@@ -52,7 +52,7 @@ http2_buff *KHttp2HeaderFrame::create(uint32_t stream_id,bool no_body, size_t ma
 	while (head) {
 		assert(head->used <= (int)max_frame_size);
 		if (frame_size + head->used > max_frame_size) {
-			h->set_length_type(frame_size, type);				
+			h->set_length_type((int)frame_size, type);				
 			h->stream_id = htonl(stream_id);
 			type = KGL_HTTP_V2_CONTINUATION_FRAME;
 			frame_size = 0;
@@ -69,7 +69,7 @@ http2_buff *KHttp2HeaderFrame::create(uint32_t stream_id,bool no_body, size_t ma
 		last = head;
 		head = head->next;
 	}
-	h->set_length_type(frame_size, type);
+	h->set_length_type((int)frame_size, type);
 	h->stream_id = htonl(stream_id);
 	h->flags |= KGL_HTTP_V2_END_HEADERS_FLAG;
 	return buf;

@@ -1,8 +1,9 @@
 #if	!defined(_LIB_H_INCLUDED_)
 #define _LIB_H_INCLUDED_
 #include "kfeature.h"
-char *base64_encode(char*);
-char *base64_decode(char*);
+#include <string>
+std::string b64encode(const unsigned char* in, int len = 0);
+char* b64decode(const unsigned char* in, int* l);
 char *url_encode(const char *s, size_t len, size_t *new_length);
 char *url_value_encode(const char *s, size_t len, size_t *new_length);
 std::string url_encode(const char *str, size_t len_string);

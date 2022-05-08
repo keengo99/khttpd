@@ -23,16 +23,16 @@ void KSink::begin_request()
 	set_state(STATE_RECV);
 	assert(data.url == NULL);
 	data.url = new KUrl;
-	if (data.raw_url.host) {
-		data.url->host = xstrdup(data.raw_url.host);
+	if (data.raw_url->host) {
+		data.url->host = xstrdup(data.raw_url->host);
 	}
-	if (data.raw_url.param) {
-		data.url->param = strdup(data.raw_url.param);
+	if (data.raw_url->param) {
+		data.url->param = strdup(data.raw_url->param);
 	}
-	data.url->flag_encoding = data.raw_url.flag_encoding;
-	data.url->port = data.raw_url.port;
-	if (data.raw_url.path) {
-		data.url->path = xstrdup(data.raw_url.path);
+	data.url->flag_encoding = data.raw_url->flag_encoding;
+	data.url->port = data.raw_url->port;
+	if (data.raw_url->path) {
+		data.url->path = xstrdup(data.raw_url->path);
 		url_decode(data.url->path, 0, data.url, false);
 	}
 	if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
@@ -77,7 +77,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 			return kgl_header_no_insert;
 		}
 		if (strcmp(attr, "path") == 0) {
-			parse_url(val, &data.raw_url);
+			parse_url(val, data.raw_url);
 			return kgl_header_no_insert;
 		}
 		if (strcmp(attr, "authority") == 0) {
@@ -110,7 +110,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		if (data.meth == METH_CONNECT) {
 			result = data.parse_connect_url(val);
 		} else {
-			result = parse_url(val, &data.raw_url);
+			result = parse_url(val, data.raw_url);
 		}
 		if (!result) {
 			klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
@@ -153,15 +153,15 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		KHttpFieldValue field(val);
 		do {
 			if (field.is2(kgl_expand_string("gzip"))) {
-				KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_GZIP);
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
 			} else if (field.is2(kgl_expand_string("deflate"))) {
-				KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_DEFLATE);
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_DEFLATE);
 			} else if (field.is2(kgl_expand_string("compress"))) {
-				KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_COMPRESS);
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_COMPRESS);
 			} else if (field.is2(kgl_expand_string("br"))) {
-				KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_BR);
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_BR);
 			} else if (!field.is2(kgl_expand_string("identity"))) {
-				KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_UNKNOW);
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
 			}
 		} while (field.next());
 		return kgl_header_success;
@@ -213,9 +213,9 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 	}
 	if (!strcasecmp(attr, "X-Forwarded-Proto")) {
 		if (strcasecmp(val, "https") == 0) {
-			KBIT_SET(data.raw_url.flags, KGL_URL_ORIG_SSL);
+			KBIT_SET(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		} else {
-			KBIT_CLR(data.raw_url.flags, KGL_URL_ORIG_SSL);
+			KBIT_CLR(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		}
 		return kgl_header_no_insert;
 	}
@@ -329,14 +329,14 @@ bool KSink::adjust_range(int64_t* len)
 {
 	if (data.range_from >= 0) {
 		if (data.range_from >= (*len)) {
-			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
+			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
 			return false;
 		}
 		(*len) -= data.range_from;
 		if (data.range_to >= 0) {
 			(*len) = MIN(data.range_to - data.range_from + 1, (*len));
 			if ((*len) <= 0) {
-				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url.host, rq->sink->data.raw_url.path, rq->sink->data.range_from, rq->sink->data.range_to, len);
+				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
 				return false;
 			}
 		}
@@ -354,7 +354,7 @@ bool KSink::adjust_range(int64_t* len)
 void KSink::start_parse() {
 	data.start_parse();
 	if (KBIT_TEST(GetBindServer()->flags, WORK_MODEL_SSL)) {
-		KBIT_SET(data.raw_url.flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
+		KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
 	}
 }
 bool KSink::response_content_length(int64_t content_len)
@@ -421,14 +421,14 @@ int KSink::read(char* buf, int len)
 bool KSink::write(kbuf* buf)
 {
 	while (buf) {
-		if (!write_full(buf->data, buf->used)) {
+		if (!write_all(buf->data, buf->used)) {
 			return false;
 		}
 		buf = buf->next;
 	}
 	return true;
 }
-bool KSink::write_full(const char* buf, int len)
+bool KSink::write_all(const char* buf, int len)
 {
 	while (len > 0) {
 		int this_len = write(buf, len);

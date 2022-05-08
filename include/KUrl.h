@@ -9,6 +9,8 @@
 #include "kforwin32.h"
 #include "kmalloc.h"
 #include "KHttpLib.h"
+#include "katom.h"
+
 
 #define KGL_URL_SSL       1   //根据端口判断是否是ssl
 #define KGL_URL_IPV6      2
@@ -27,21 +29,14 @@
 //#define KGL_ENCODING_YES      (1<<7)
 
 class KUrl {
-public:
-	~KUrl() {
 
-	}
+public:
 	KUrl() {
 		memset(this, 0, sizeof(KUrl));
+		refs_count = 1;
 	}
-	void destroy() {
-		IF_FREE(host);
-		IF_FREE(path);
-		IF_FREE(param);
-#ifndef NDEBUG
-		flag_encoding = 0;
-#endif
-	}
+	
+
 	bool match_accept_encoding(u_char accept_encoding) {
 		if (encoding > 0) {
 			return KBIT_TEST(accept_encoding,encoding) > 0  && KBIT_TEST(this->accept_encoding,accept_encoding) == accept_encoding;
@@ -96,24 +91,12 @@ public:
 		}
 		return strcmp(param, a->param);
 	}
-	KUrl *clone() {
-		KUrl *url = new KUrl;
-		clone_to(url);
-		return url;
+	KUrl* refs() {
+		katom_inc16((void*)&refs_count);
+		return this;
 	}
 	bool IsBad() {
 		return host == NULL || path == NULL;
-	}
-	//clone this to url
-	void clone_to(KUrl *url) {
-
-		url->host = xstrdup(host);
-		url->path = xstrdup(path);
-		if (param) {
-			url->param = xstrdup(param);
-		}
-		url->port = port;
-		url->flag_encoding = flag_encoding;
 	}
 	char *getUrl() {
 		KStringBuf s(128);
@@ -167,7 +150,27 @@ public:
 			s << ":" << port;
 		}
 	}
-	void GetHost(KStringBuf &s)
+	bool GetSchema(KStringBuf& s)
+	{
+		if (unlikely(host == NULL || path == NULL)) {
+			return false;
+		}
+		if (KBIT_TEST(flags, KGL_URL_SSL)) {
+			s << "https://";
+		} else {
+			s << "http://";
+		}
+		return true;
+	}
+	bool GetUrl(KStringBuf &s,bool urlEncode=false) {
+		if (!GetSchema(s)) {
+			return false;
+		}
+		GetHost(s);
+		GetPath(s, urlEncode);
+		return true;
+	}
+	void GetHost(KStringBuf& s)
 	{
 		int default_port = 80;
 		if (KBIT_TEST(flags, KGL_URL_SSL)) {
@@ -175,22 +178,17 @@ public:
 		}
 		GetHost(s, default_port);
 	}
-	bool GetUrl(KStringBuf &s,bool urlEncode=false) {
-		if (unlikely(host == NULL || path == NULL)) {
-			return false;
+	void relase()
+	{
+		if (katom_dec16((void*)&refs_count) > 0) {
+			return;
 		}
-		if(KBIT_TEST(flags,KGL_URL_SSL)){
-			s << "https://";
-		} else {
-			s << "http://";
-		}
-		GetHost(s);
-		GetPath(s, urlEncode);
-		return true;
-	}	
+		delete this;
+	}
 	char *host;
 	char *path;
 	char *param;
+	volatile uint16_t refs_count;
 	uint16_t port;
 	union {
 		uint32_t flag_encoding;
@@ -201,10 +199,28 @@ public:
 			u_char reserv;
 		};
 	};
-};
+private:
 
-inline void free_url(KUrl *url)
+	~KUrl() {
+		IF_FREE(host);
+		IF_FREE(path);
+		IF_FREE(param);
+#ifndef NDEBUG
+		flag_encoding = 0;
+#endif
+	}
+};
+class KAutoUrl
 {
-	url->destroy();
-}
+public:
+	KAutoUrl()
+	{
+		u = new KUrl;		
+	}
+	~KAutoUrl()
+	{
+		u->relase();
+	}
+	KUrl* u;
+};
 #endif

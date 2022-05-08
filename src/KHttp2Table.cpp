@@ -161,7 +161,7 @@ bool KHttp2::table_size(size_t size)
 
 	klog(KLOG_DEBUG,"http2 new hpack table size: %uz was:%u\n",	size, hpack.size);
 
-	needed = hpack.size - size;
+	needed = (int)(hpack.size - size);
 
 	while (needed > (int)hpack.free) {
 		entry = hpack.entries[hpack.deleted++ % hpack.allocated];

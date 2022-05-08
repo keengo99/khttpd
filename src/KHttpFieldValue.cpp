@@ -51,7 +51,7 @@ bool KHttpFieldValue::is(const char *field) {
 	return false;
 }
 bool KHttpFieldValue::is(const char *field, int *n) {
-	int len = strlen(field);
+	int len = (int)strlen(field);
 	if (strncasecmp(val, field, len) == 0) {
 		*n = atoi(val + len);
 		return true;

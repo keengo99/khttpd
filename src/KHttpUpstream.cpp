@@ -13,7 +13,7 @@ bool KHttpUpstream::send_method_path(uint16_t meth, const char* path, hlen_t pat
 		send_header_buffer = krw_buffer_new(4096);
 	}
 	const char* meth_str = KHttpKeyValue::getMethod(meth);
-	krw_write_str(send_header_buffer, meth_str, strlen(meth_str));
+	krw_write_str(send_header_buffer, meth_str, (int)strlen(meth_str));
 	krw_write_str(send_header_buffer, kgl_expand_string(" "));
 	krw_write_str(send_header_buffer, path, path_len);
 	krw_write_str(send_header_buffer, kgl_expand_string(" HTTP/1.1\r\n"));
@@ -24,6 +24,12 @@ bool KHttpUpstream::send_header(const char* attr, hlen_t attr_len, const char* v
 	if (this->send_header_buffer == NULL) {
 		return false;
 	}
+#if 0
+	fwrite(attr, 1, attr_len, stdout);
+	fwrite(": ", 1, 2, stdout);
+	fwrite(val, 1, val_len, stdout);
+	fwrite("\n", 1, 1, stdout);
+#endif
 	krw_write_str(send_header_buffer, attr, attr_len);
 	krw_write_str(send_header_buffer, kgl_expand_string(": "));
 	krw_write_str(send_header_buffer, val, val_len);
@@ -132,7 +138,7 @@ int KHttpUpstream::read(WSABUF * buf, int bc)
 {
 	if (read_buffer) {
 		if (read_buffer->used > 0) {
-			int len = MIN(buf[0].iov_len, read_buffer->used);
+			int len = MIN((int)buf[0].iov_len, (int)read_buffer->used);
 			kgl_memcpy(buf[0].iov_base, read_buffer->buf, len);
 			ks_save_point(read_buffer, read_buffer->buf + len, read_buffer->used - len);
 			return len;

@@ -228,7 +228,7 @@ void KPoolableSocketContainer::SetParam(const char* param)
 	}
 	if (param && *param) {
 		char* str = strdup(param);
-		int len = strlen(str);
+		int len = (int)strlen(str);
 		kgl_refs_string* ns = convert_refs_string(str, len);
 		this->param = ns;
 	}

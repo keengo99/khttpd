@@ -25,6 +25,7 @@
 #include	<time.h>
 #include 	<ctype.h>
 #include <string>
+#include <sstream>
 #include	"kforwin32.h"
 #include "kmalloc.h"
 #include "KHttpLib.h"
@@ -39,10 +40,13 @@ kgl_str_t kgl_header_type_string[] = {
 	{ kgl_expand_string("Content-Length")},
 	{ kgl_expand_string("Last-Modified")},
 };
-static const char *days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-static const char *months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-static int make_month(const char *s);
-static int make_num(const char *s);
+static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+#define B64PAD '='
+
+static const char* days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+static int make_month(const char* s);
+static int make_num(const char* s);
 static int timz_minutes = 0;
 void init_time_zone()
 {
@@ -52,7 +56,7 @@ void init_time_zone()
 	localtime_r(&tt, &t);
 	timz_minutes = (int)(t.tm_gmtoff / 60);
 #else
-	struct tm gmt;	
+	struct tm gmt;
 	int days, hours;
 	gmtime_r(&tt, &gmt);
 	localtime_r(&tt, &t);
@@ -61,7 +65,7 @@ void init_time_zone()
 	timz_minutes = hours * 60 + t.tm_min - gmt.tm_min;
 #endif
 }
-void CTIME_R(time_t *a, char *b, size_t l) 
+void CTIME_R(time_t* a, char* b, size_t l)
 {
 #if	defined(HAVE_CTIME_R)
 #if	defined(CTIME_R_3)
@@ -74,16 +78,16 @@ void CTIME_R(time_t *a, char *b, size_t l)
 	memset(b, 0, l);
 	localtime_r(a, &tm);
 	snprintf(b, l - 1, "%s %02d %s %02d:%02d:%02d\n", days[tm.tm_wday],
-			tm.tm_mday, months[tm.tm_mon], tm.tm_hour, tm.tm_min, tm.tm_sec);
+		tm.tm_mday, months[tm.tm_mon], tm.tm_hour, tm.tm_min, tm.tm_sec);
 #endif /* HAVE_CTIME_R */
 }
 
-void makeLastModifiedTime(time_t *a, char *b, size_t l) {
+void makeLastModifiedTime(time_t* a, char* b, size_t l) {
 	struct tm tm;
 	memset(b, 0, l);
 	localtime_r(a, &tm);
 	snprintf(b, l - 1, "%02d-%s-%04d %02d:%02d", tm.tm_mday, months[tm.tm_mon],
-			1900 + tm.tm_year, tm.tm_hour, tm.tm_min);
+		1900 + tm.tm_year, tm.tm_hour, tm.tm_min);
 
 }
 void do_exit(int code) {
@@ -92,14 +96,14 @@ void do_exit(int code) {
 	//  exit(code);
 }
 
-static int make_num(const char *s) {
+static int make_num(const char* s) {
 	if (*s >= '0' && *s <= '9')
 		return 10 * (*s - '0') + *(s + 1) - '0';
 	else
 		return *(s + 1) - '0';
 }
 
-static int make_month(const char *s) {
+static int make_month(const char* s) {
 	int i;
 	for (i = 0; i < 12; i++) {
 		if (!strncasecmp(months[i], s, 3))
@@ -108,7 +112,7 @@ static int make_month(const char *s) {
 	return -1;
 }
 
-static bool isRightTime(struct tm *tm) {
+static bool isRightTime(struct tm* tm) {
 	if (tm->tm_sec < 0 || tm->tm_sec > 59)
 		return false;
 	if (tm->tm_min < 0 || tm->tm_min > 59)
@@ -122,9 +126,9 @@ static bool isRightTime(struct tm *tm) {
 	return true;
 }
 
-bool parse_date_elements(const char *day, const char *month, const char *year,
-		const char *aTime, const char *zone, struct tm *tm) {
-	const char *t;
+bool parse_date_elements(const char* day, const char* month, const char* year,
+	const char* aTime, const char* zone, struct tm* tm) {
+	const char* t;
 	memset(tm, 0, sizeof(struct tm));
 
 	if (!day || !month || !year || !aTime)
@@ -152,14 +156,14 @@ bool parse_date_elements(const char *day, const char *month, const char *year,
 	return isRightTime(tm);
 }
 
-bool parse_date(const char *str, struct tm *tm) {
-	char *day = NULL;
-	char *month = NULL;
-	char *year = NULL;
-	char *aTime = NULL;
-	char *zone = NULL;
-	char *buf = xstrdup(str);
-	char *hot = buf;
+bool parse_date(const char* str, struct tm* tm) {
+	char* day = NULL;
+	char* month = NULL;
+	char* year = NULL;
+	char* aTime = NULL;
+	char* zone = NULL;
+	char* buf = xstrdup(str);
+	char* hot = buf;
 	for (;;) {
 		hot = strchr(hot, ' ');
 		if (hot == NULL) {
@@ -185,7 +189,7 @@ bool parse_date(const char *str, struct tm *tm) {
 	return result;
 }
 
-time_t parse1123time(const char *str) {
+time_t parse1123time(const char* str) {
 	struct tm tm;
 	time_t t;
 	if (NULL == str)
@@ -200,7 +204,7 @@ time_t parse1123time(const char *str) {
 	t = mktime(&tm);
 	if (t != -1) {
 		struct tm local;
-		localtime_r(&t,&local);
+		localtime_r(&t, &local);
 		t += local.tm_gmtoff;
 	}
 #else
@@ -226,16 +230,16 @@ time_t parse1123time(const char *str) {
 #endif
 	return t;
 }
-int make_http_time(time_t time,char *buf,int size)
+int make_http_time(time_t time, char* buf, int size)
 {
 	struct tm tm;
 	time_t holder = time;
 	gmtime_r(&holder, &tm);
 	return snprintf(buf, size, "%s, %02d %s %d %02d:%02d:%02d GMT", days[tm.tm_wday],
-			tm.tm_mday, months[tm.tm_mon], tm.tm_year + 1900, tm.tm_hour,
-			tm.tm_min, tm.tm_sec);
+		tm.tm_mday, months[tm.tm_mon], tm.tm_year + 1900, tm.tm_hour,
+		tm.tm_min, tm.tm_sec);
 }
-const char * mk1123time(time_t time, char *buf, int size) {
+const char* mk1123time(time_t time, char* buf, int size) {
 	make_http_time(time, buf, size);
 	return buf;
 }
@@ -243,7 +247,7 @@ const char * mk1123time(time_t time, char *buf, int size) {
 void my_msleep(int msec) {
 #if	defined(OSF)
 	/* DU don't want to sleep in poll when number of descriptors is 0 */
-	usleep(msec*1000);
+	usleep(msec * 1000);
 #elif	defined(_WIN32)
 	Sleep(msec);
 #else
@@ -255,7 +259,7 @@ void my_msleep(int msec) {
 }
 #define	BU_FREE	1
 #define	BU_BUSY	2
-const char *log_request_time(time_t time,char *buf, size_t buf_size) {
+const char* log_request_time(time_t time, char* buf, size_t buf_size) {
 	int timz = timz_minutes;
 	struct tm t;
 	localtime_r(&time, &t);
@@ -264,23 +268,23 @@ const char *log_request_time(time_t time,char *buf, size_t buf_size) {
 		timz = -timz;
 	}
 	snprintf(buf, buf_size - 1, "[%02d/%s/%d:%02d:%02d:%02d %c%.2d%.2d]",
-			t.tm_mday, months[t.tm_mon], t.tm_year + 1900, t.tm_hour, t.tm_min,
-			t.tm_sec, sign, timz / 60, timz % 60);
+		t.tm_mday, months[t.tm_mon], t.tm_year + 1900, t.tm_hour, t.tm_min,
+		t.tm_sec, sign, timz / 60, timz % 60);
 	return buf;
 }
 
 static unsigned char hexchars[] = "0123456789ABCDEF";
-char *url_value_encode(const char *s, size_t len, size_t *new_length) {
+char* url_value_encode(const char* s, size_t len, size_t* new_length) {
 	unsigned char c;
-	unsigned char *to, *start;
-	unsigned char const *from, *end;
+	unsigned char* to, * start;
+	unsigned char const* from, * end;
 	if (len == 0) {
 		//assert(false);
 		return strdup("");
 	}
-	from = (unsigned char *) s;
-	end = (unsigned char *) s + len;
-	start = to = (unsigned char *) xmalloc(3*len+1);
+	from = (unsigned char*)s;
+	end = (unsigned char*)s + len;
+	start = to = (unsigned char*)xmalloc(3 * len + 1);
 
 	while (from < end) {
 		c = *from++;
@@ -299,31 +303,31 @@ char *url_value_encode(const char *s, size_t len, size_t *new_length) {
 	if (new_length) {
 		*new_length = to - start;
 	}
-	return (char *) start;
+	return (char*)start;
 }
 
-char *url_encode(const char *s, size_t len, size_t *new_length) {
+char* url_encode(const char* s, size_t len, size_t* new_length) {
 	unsigned char c;
-	unsigned char *to, *start;
-	unsigned char const *from, *end;
+	unsigned char* to, * start;
+	unsigned char const* from, * end;
 	if (len == 0) {
 		//assert(false);
 		return strdup("");
 	}
-	from = (unsigned char *) s;
-	end = (unsigned char *) s + len;
-	start = to = (unsigned char *) xmalloc(3*len+1);
+	from = (unsigned char*)s;
+	end = (unsigned char*)s + len;
+	start = to = (unsigned char*)xmalloc(3 * len + 1);
 
 	while (from < end) {
 		c = *from++;
 		if (c == '/') {
 			*to++ = c;
-		/*
-		} else if (c == ' ') {
-			*to++ = '+';
-		*/
+			/*
+			} else if (c == ' ') {
+				*to++ = '+';
+			*/
 		} else if ((c < '0' && c != '-' && c != '.') || (c < 'A' && c > '9')
-				|| (c > 'Z' && c < 'a' && c != '_') || (c > 'z') || c=='\\') {
+			|| (c > 'Z' && c < 'a' && c != '_') || (c > 'z') || c == '\\') {
 			to[0] = '%';
 			to[1] = hexchars[c >> 4];
 			to[2] = hexchars[c & 15];
@@ -336,14 +340,14 @@ char *url_encode(const char *s, size_t len, size_t *new_length) {
 	if (new_length) {
 		*new_length = to - start;
 	}
-	return (char *) start;
+	return (char*)start;
 }
-std::string url_encode(const char *str, size_t len_string) {
+std::string url_encode(const char* str, size_t len_string) {
 	std::string s;
 	if (len_string == 0) {
 		len_string = strlen(str);
 	}
-	char *new_string = url_encode(str, len_string, NULL);
+	char* new_string = url_encode(str, len_string, NULL);
 	if (new_string) {
 		s = new_string;
 		xfree(new_string);
@@ -366,12 +370,11 @@ bool parse_url(const char* src, KUrl* url) {
 	if (memcmp(ss, "://", 3)) {
 		return false;
 	}
-	p_len = ss - src;
+	p_len = (int)(ss - src);
 	if (p_len == 4 && strncasecmp(src, "http", p_len) == 0) {
 		KBIT_CLR(url->flags, KGL_URL_ORIG_SSL);
 		url->port = 80;
-	}
-	else if (p_len == 5 && strncasecmp(src, "https", p_len) == 0) {
+	} else if (p_len == 5 && strncasecmp(src, "https", p_len) == 0) {
 		KBIT_SET(url->flags, KGL_URL_ORIG_SSL);
 		url->port = 443;
 	}
@@ -387,23 +390,23 @@ bool parse_url(const char* src, KUrl* url) {
 		se = strchr(ss, ']');
 		KBIT_SET(url->flags, KGL_URL_IPV6);
 		if (se && se < sx) {
-			p_len = se - ss;
+			p_len = (int)(se - ss);
 			se = strchr(se + 1, ':');
 			if (se && se < sx) {
 				url->port = atoi(se + 1);
 			}
 		}
-	}
-	else {
+	} else {
 		se = strchr(ss, ':');
 		if (se && se < sx) {
-			p_len = se - ss;
+			p_len = (int)(se - ss);
 			url->port = atoi(se + 1);
 		}
 	}
 	if (p_len == 0) {
-		p_len = sx - ss;
+		p_len = (int)(sx - ss);
 	}
+	assert(url->host == NULL);
 	url->host = (char*)malloc(p_len + 1);
 	kgl_memcpy(url->host, ss, p_len);
 	url->host[p_len] = 0;
@@ -411,17 +414,17 @@ only_path: const char* sp = strchr(sx, '?');
 	int path_len;
 	if (sp) {
 		char* param = strdup(sp + 1);
+		assert(url->param == NULL);
 		if (*param) {
 			url->param = param;
-		}
-		else {
+		} else {
 			free(param);
 		}
-		path_len = sp - sx;
+		path_len = (int)(sp - sx);
+	} else {
+		path_len = (int)strlen(sx);
 	}
-	else {
-		path_len = strlen(sx);
-	}
+	assert(url->path == NULL);
 	url->path = (char*)xmalloc(path_len + 1);
 	url->path[path_len] = '\0';
 	kgl_memcpy(url->path, sx, path_len);
@@ -481,4 +484,131 @@ int url_decode(char* str, int len, KUrl* url, bool space2plus)
 		*dest = '\0';
 	}
 	return (int)(dest - str);
+}
+
+
+
+
+unsigned int str_chr(const char* s, int c) {
+	register char ch;
+	register const char* t;
+
+	ch = c;
+	t = s;
+	for (;;) {
+		if (!*t)
+			break;
+		if (*t == ch)
+			break;
+		++t;
+		if (!*t)
+			break;
+		if (*t == ch)
+			break;
+		++t;
+		if (!*t)
+			break;
+		if (*t == ch)
+			break;
+		++t;
+		if (!*t)
+			break;
+		if (*t == ch)
+			break;
+		++t;
+	}
+	return (unsigned)(t - s);
+}
+
+char* b64decode(const unsigned char* in, int* l) {
+	int i, j;
+	//	int len;
+	unsigned char a[4];
+	unsigned char b[3];
+	char* s;
+	if (*l <= 0) {
+		*l = strlen((const char*)in);
+	}
+	char* out = (char*)xmalloc(2 * (*l) + 2);
+	if (out == NULL) {
+		return NULL;
+	}
+	s = out;
+	for (i = 0; i < *l; i += 4) {
+		for (j = 0; j < 4; j++)
+			if ((i + j) < *l && in[i + j] != B64PAD) {
+				a[j] = str_chr(b64alpha, in[i + j]);
+				if (a[j] > 63) {
+					//		printf("bad char=%c,j=%d\n",a[j],j);
+					free(out);
+					return NULL;
+					//	return -1;
+				}
+			} else {
+				a[j] = 0;
+			}
+
+		b[0] = (a[0] << 2) | (a[1] >> 4);
+		b[1] = (a[1] << 4) | (a[2] >> 2);
+		b[2] = (a[2] << 6) | (a[3]);
+
+		*s = b[0];
+		s++;
+
+		if (in[i + 1] == B64PAD)
+			break;
+		*s = b[1];
+		s++;
+
+		if (in[i + 2] == B64PAD)
+			break;
+		*s = b[2];
+		s++;
+	}
+
+	*l = s - out;
+	//  printf("len=%d\n",len);
+	while (*l && !out[*l - 1])
+		--* l;
+	out[*l] = 0;
+	//	string result = out;
+	//	free(out);
+	return out;
+	// return len;
+
+	//  return s.str();
+}
+
+std::string b64encode(const unsigned char* in, int len)
+/* not null terminated */
+{
+	unsigned char a, b, c;
+	int i;
+	// char *s;
+	std::stringstream s;
+	if (len == 0) {
+		len = strlen((const char*)in);
+	}
+
+	// if (!stralloc_ready(out,in->len / 3 * 4 + 4)) return -1;
+	// s = out->s;
+	for (i = 0; i < len; i += 3) {
+		a = in[i];
+		b = i + 1 < len ? in[i + 1] : 0;
+		c = i + 2 < len ? in[i + 2] : 0;
+
+		s << b64alpha[a >> 2];
+		s << b64alpha[((a & 3) << 4) | (b >> 4)];
+
+		if (i + 1 >= len)
+			s << B64PAD;
+		else
+			s << b64alpha[((b & 15) << 2) | (c >> 6)];
+
+		if (i + 2 >= len)
+			s << B64PAD;
+		else
+			s << b64alpha[c & 63];
+	}
+	return s.str();
 }

@@ -43,7 +43,7 @@ public:
 	inline KWriteStream & operator <<(const char *str)
 	{
 		if (KGL_OK != write_all(NULL, str, (int)strlen(str))) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to http stream\n");
 		}
 		return *this;
 	}
@@ -82,7 +82,7 @@ public:
 			return *this;
 		}
 		if (KGL_OK != write_all(NULL, buf, len)) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to http stream\n");
 		}
 		return *this;
 	}
@@ -91,7 +91,7 @@ public:
 		char buf[INT2STRING_LEN];
 		int2string(value, buf, false);
 		if (KGL_OK != write_all(NULL, buf, (int)strlen(buf))) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to http stream\n");
 		}
 		return *this;
 	}
@@ -114,7 +114,7 @@ public:
 			return *this;
 		}
 		if (KGL_OK != write_all(NULL, buf, len)) {
-			fprintf(stderr, "cann't write to stream\n");
+			fprintf(stderr, "cann't write to http stream\n");
 		}
 		return *this;
 	}

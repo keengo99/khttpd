@@ -59,8 +59,8 @@ public:
 	/*
 	 * ԭʼurl
 	 */
-	KUrl raw_url;
-	KUrl* url;
+	KUrl *raw_url;
+	KUrl *url;
 	KHttpOpaque* opaque;
 
 	friend class KSink;

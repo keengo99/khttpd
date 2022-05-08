@@ -1,5 +1,5 @@
 #ifndef KHTTP2SINK_H_99
-#define KHTTP2SINK_H_99
+#define KHTTP2SINK_H_99 1
 #include "KSink.h"
 #include "KHttp2.h"
 #ifdef ENABLE_HTTP2
@@ -14,24 +14,24 @@ public:
 	{
 		kassert(ctx == NULL);
 	}
-	bool SetTransferChunked()
+	bool SetTransferChunked() override
 	{
 		return false;
 	}
-	bool internal_response_status(uint16_t status_code)
+	bool internal_response_status(uint16_t status_code) override
 	{
 		return http2->add_status(ctx, status_code);
 	}
-	bool response_header(const char *name, int name_len, const char *val, int val_len)
+	bool response_header(const char *name, int name_len, const char *val, int val_len) override
 	{
 		return http2->add_header(ctx, name, name_len,val, val_len);
 	}
-	bool ResponseConnection(const char *val, int val_len)
+	bool ResponseConnection(const char *val, int val_len) override
 	{
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int StartResponseBody(int64_t body_size)
+	int StartResponseBody(int64_t body_size) override
 	{
 		ctx->SetContentLength(body_size);
 		return http2->send_header(ctx);
@@ -46,28 +46,28 @@ public:
 		}
 		return false;
 	}
-	bool ReadHup(void *arg, result_callback result)
+	bool read_hup(void *arg, result_callback result) override
 	{
 		http2->read_hup(ctx, result, arg);
 		return true;
 	}
-	void RemoveReadHup()
+	void RemoveReadHup() override
 	{
 		http2->remove_read_hup(ctx);
 	}
-	int internal_read(char *buf, int len)
+	int internal_read(char *buf, int len) override
 	{
 		WSABUF bufs;
 		bufs.iov_base = buf;
 		bufs.iov_len = len;
 		return http2->read(ctx, &bufs, 1);
 	}
-	int internal_write(WSABUF *buf, int bc)
+	int internal_write(WSABUF *buf, int bc) override
 	{
 		return http2->write(ctx, buf, bc);
 	}
 
-	int end_request()
+	int end_request() override
 	{
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		if (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE))) {

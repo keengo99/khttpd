@@ -25,6 +25,9 @@ void KRequestData::start_parse()
 	free_lazy_memory();
 	meth = METH_UNSET;
 	mark = 0;
+	assert(raw_url == NULL);
+	assert(url == NULL);
+	raw_url = new KUrl;
 }
 void KRequestData::free_lazy_memory()
 {
@@ -32,7 +35,10 @@ void KRequestData::free_lazy_memory()
 		xfree(client_ip);
 		client_ip = NULL;
 	}
-	raw_url.destroy();
+	if (raw_url) {
+		raw_url->relase();
+		raw_url = NULL;
+	}
 	free_header_list(header);
 	header = last = NULL;
 	mark = 0;
@@ -40,8 +46,7 @@ void KRequestData::free_lazy_memory()
 void KRequestData::clean()
 {
 	if (url) {
-		url->destroy();
-		delete url;
+		url->relase();
 		url = NULL;
 	}
 	while (fh) {
@@ -68,39 +73,39 @@ bool KRequestData::parse_connect_url(char* src) {
 	if (!ss) {
 		return false;
 	}
-	KBIT_CLR(raw_url.flags, KGL_URL_ORIG_SSL);
+	KBIT_CLR(raw_url->flags, KGL_URL_ORIG_SSL);
 	*ss = 0;
-	raw_url.host = strdup(src);
-	raw_url.port = atoi(ss + 1);
+	raw_url->host = strdup(src);
+	raw_url->port = atoi(ss + 1);
 	return true;
 }
 kgl_header_result KRequestData::parse_host(char* val)
 {
-	if (raw_url.host == NULL) {
+	if (raw_url->host == NULL) {
 		char* p = NULL;
 		if (*val == '[') {
-			KBIT_SET(raw_url.flags, KGL_URL_IPV6);
+			KBIT_SET(raw_url->flags, KGL_URL_IPV6);
 			val++;
-			raw_url.host = strdup(val);
-			p = strchr(raw_url.host, ']');
+			raw_url->host = strdup(val);
+			p = strchr(raw_url->host, ']');
 			if (p) {
 				*p = '\0';
 				p = strchr(p + 1, ':');
 			}
 		} else {
-			raw_url.host = strdup(val);
-			p = strchr(raw_url.host, ':');
+			raw_url->host = strdup(val);
+			p = strchr(raw_url->host, ':');
 			if (p) {
 				*p = '\0';
 			}
 		}
 		if (p) {
-			raw_url.port = atoi(p + 1);
+			raw_url->port = atoi(p + 1);
 		} else {
-			if (KBIT_TEST(raw_url.flags, KGL_URL_SSL)) {
-				raw_url.port = 443;
+			if (KBIT_TEST(raw_url->flags, KGL_URL_SSL)) {
+				raw_url->port = 443;
 			} else {
-				raw_url.port = 80;
+				raw_url->port = 80;
 			}
 		}
 	}

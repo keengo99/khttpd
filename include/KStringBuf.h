@@ -70,32 +70,32 @@ private:
 	char *hot;
 	int current_size;
 };
-class KFixString : public KWStream {
+class KFixString : public KRStream {
 public:
-	KFixString(char *buf,int len)
+	KFixString(const char *buf,int len)
 	{
 		this->buf = buf;
 		this->hot = buf;
 		this->left = len;
 	};
-	int getSize()
+	int64_t get_read_left() override
 	{
-		return (int)(hot-buf);
+		return (int64_t)left;
 	}
-	StreamState write_all(const char *str,int len)
+	int read(char* buf, int len) override
 	{
-		int send_len = MIN(len,left);
-		if(send_len<=0){
-			return STREAM_WRITE_FAILED;
+		int send_len = MIN(len, left);
+		if (send_len <= 0) {
+			return 0;
 		}
-		kgl_memcpy(hot,str,send_len);
+		kgl_memcpy(buf, hot, send_len);
 		hot += send_len;
 		left -= send_len;
-		return STREAM_WRITE_SUCCESS;
+		return send_len;
 	}
 private:
-	char *buf;
-	char *hot;
+	const char *buf;
+	const char *hot;
 	int left;
 };
 #endif /* KSTRING_H_ */

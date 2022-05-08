@@ -97,7 +97,7 @@ restart:
 	int checked = (int)(pn + 1 - *start);
 	parser->header_len += checked;
 	char *hot = *start;
-	int hot_len = pn - *start;
+	int hot_len = (int)(pn - *start);
 	*start += checked;
 	*len -= checked;
 	if (hot_len > 2 && *(pn-1)=='\r') {
