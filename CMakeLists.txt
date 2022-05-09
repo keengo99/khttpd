@@ -11,8 +11,7 @@ if (NOT KASYNC_DIR)
 	message(FATAL "config -DKASYNC_DIR")
 endif()
 add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/kasync EXCLUDE_FROM_ALL)
-
-
+set_source_files_properties(${KASYNC_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
 set(KHTTPD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 #message(STATUS ${KASYNC_SOURCE_FILES})
