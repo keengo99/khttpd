@@ -47,10 +47,7 @@ int client_http_test(void *arg,int got)
 	printf("read_header result=[%d]\n", result);
 	char buf[512];
 	for (;;) {
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = sizeof(buf) - 1;
-		int got = us->read(&bufs,1);
+		int got = us->read(buf, sizeof(buf));
 		if (got <= 0) {
 			printf("got=[%d]\n", got);
 			break;

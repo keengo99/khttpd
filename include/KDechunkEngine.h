@@ -9,7 +9,7 @@
 enum class KDechunkResult
 {
 	Success,//解码成功，有数据返回，但要继续解码
-	Continue,//解码成功，有数据返回，要继续喂数据
+	Continue,//解码成功，无数据返回，要继续喂数据
 	End,//解码成功，无数据返回，解码结束
 	Failed//解码错误
 };
