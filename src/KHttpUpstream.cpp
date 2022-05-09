@@ -136,12 +136,14 @@ KGL_RESULT KHttpUpstream::read_header()
 				}
 #endif
 				if (!stack.header(this, stack.arg, rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
+					result = KGL_EDATA_FORMAT;
 					goto out;
 				}
 				break;
 			}
-			case kgl_parse_finished:				
+			case kgl_parse_finished:
 				ks_save_point(ctx.read_buffer, hot, len);
+				//printf("us=[%p] read_buffer=[%p] used=[%d]\n", static_cast<KUpstream *>(this),ctx.read_buffer, ctx.read_buffer->used);
 				//if (ctx.dechunk_ctx) {
 				//	ctx.dechunk_ctx->start_read(ctx.read_buffer);
 				//}

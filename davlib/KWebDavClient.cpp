@@ -36,6 +36,7 @@ bool KWebDavClient::set_url(const char* url)
 		return false;
 	}
 	sock_pool = new KSockPoolHelper();
+	sock_pool->setLifeTime(30);
 	std::stringstream ports;
 	ports << this->url->port;
 	if (KBIT_TEST(this->url->flags, KGL_URL_ORIG_SSL)) {

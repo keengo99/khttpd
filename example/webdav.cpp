@@ -48,13 +48,14 @@ static void assert_dav_file_content(KWebDavClient* client, const char* path, con
 	KWebDavRequest* rq = nullptr;
 	test_assert(KGL_OK == client->get(path, nullptr, &rq));
 	char buf[512];
-	test_assert(rq->read_all(buf, content_length));
+	test_assert(rq->read_all(buf, content_length+1)==content_length);
 	test_assert(memcmp(buf, content, content_length) == 0);
 	delete rq;
 	return;
 }
 static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 {
+	printf("test_move_copy_lock\n");
 #define COPY_LOCKED_SRC DAV_PREFIX_DIR "/copy-locked-src.txt"
 	KStringBuf s;
 	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
@@ -83,7 +84,7 @@ static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 }
 static void test_lock(KWebDavClient* client, KWebDavClient* client2)
 {
-
+	printf("test_lock\n");
 	KStringBuf s;
 	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
 	test_assert(KGL_OK == client->lock(s.getString()));
@@ -128,6 +129,7 @@ static bool is_file_exsit(const char* path, KWebDavClient* provider)
 }
 static void clean_all_child(KWebDavClient* client, const char* path)
 {
+	printf("clean_all_child\n");
 	KWebDavFileList file_list;
 	test_assert(KGL_OK == client->list(path, file_list));
 	for (auto it = file_list.files.begin(); it != file_list.files.end(); it++) {
@@ -139,15 +141,24 @@ static void clean_all_child(KWebDavClient* client, const char* path)
 		client->_delete(s.getString());
 	}
 }
-static void test_lock3(KWebDavClient* client, KWebDavClient* client2)
+static void test_get_range(KWebDavClient* client)
 {
-	KStringBuf s;
-	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
-	test_assert(client->lock(s.getString()) == KGL_OK);
-	KFixString in2(kgl_expand_string(LOCKED_FILE_CONTENT));
-	test_assert(KGL_OK == client->put(COPY_LOCKED_SRC, &in2));
-	test_assert(KGL_OK == client->copy(COPY_LOCKED_SRC, s.getString(), true));
-	test_assert(KGL_OK == client->unlock());
+	printf("test_get_range\n");
+	KFixString in2(kgl_expand_string("test"));
+	test_assert(KGL_OK == client->put(DAV_PREFIX_DIR "/test.txt", &in2));
+	assert_dav_file_content(client, DAV_PREFIX_DIR "/test.txt", kgl_expand_string("test"));
+	KWebDavRequest* rq = nullptr;
+	KRequestRange range;
+	range.from = 1;
+	range.to = 2;
+	test_assert(KGL_OK == client->get(DAV_PREFIX_DIR "/test.txt", &range, &rq));
+	test_assert(rq->resp.status_code == 206);
+	char buf[512];
+	test_assert(rq->read_all(buf, 3) == 2);
+	test_assert(memcmp(buf, "es",2) == 0);
+	delete rq;
+	test_assert(client->_delete(DAV_PREFIX_DIR "/test.txt") == KGL_OK);
+	return;
 }
 static int webdav_main(void* arg, int argc)
 {
@@ -156,18 +167,21 @@ static int webdav_main(void* arg, int argc)
 		printf("Usage: %s test_webdav_url\n", argv[0]);
 		return 1;
 	}
-	selector_manager_set_timeout(60, 60);
+	selector_manager_set_timeout(5, 5);
 	KWebDavClient provider, provider2;
 	test_assert(provider.set_url(argv[1]));
 	test_assert(provider2.set_url(argv[1]));
 	provider.set_auth("test", "test");
 	provider2.set_auth("test", "test");
+	
+	//return 0;
 	//test_lock3(&provider, &provider2);
 	//return 0;
 	test_assert(KGL_OK == provider.option(DAV_PREFIX_DIR "/"));
 	KWebDavFileList file_list;
 	//clean
 	clean_all_child(&provider, DAV_PREFIX_DIR "/");
+	test_get_range(&provider);
 	KFixString in(kgl_expand_string("ss"));
 	test_assert(KGL_OK == provider.put(DAV_PREFIX_DIR "/test.txt", &in));
 	//‘Ÿ¥Œ∏≤∏«

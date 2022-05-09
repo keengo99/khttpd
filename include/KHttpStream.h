@@ -3,18 +3,17 @@
 #include "KStream.h"
 #include "kmalloc.h"
 
-class KHttpRequest;
 class KWriteStream
 {
 public:
 	virtual ~KWriteStream() {
 
 	}
-	virtual KGL_RESULT flush(KHttpRequest *rq)
+	virtual KGL_RESULT flush(void *arg)
 	{
 		return KGL_OK;
 	}
-	virtual KGL_RESULT write_all(KHttpRequest *rq, const char *buf, int len)
+	virtual KGL_RESULT write_all(void*rq, const char *buf, int len)
 	{
 		while (len > 0) {
 			int r = write(rq, buf, len);
@@ -25,7 +24,7 @@ public:
 		}
 		return STREAM_WRITE_SUCCESS;
 	}
-	virtual KGL_RESULT write_end(KHttpRequest *rq, KGL_RESULT result)
+	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result)
 	{
 		if (result != KGL_OK) {
 			flush(rq);
@@ -33,7 +32,7 @@ public:
 		}
 		return flush(rq);
 	}
-	virtual KGL_RESULT write_direct(KHttpRequest *rq, char *buf, int len) {
+	virtual KGL_RESULT write_direct(void*rq, char *buf, int len) {
 		KGL_RESULT result = write_all(rq, buf, len);
 		xfree(buf);
 		return result;
@@ -119,7 +118,7 @@ public:
 		return *this;
 	}
 protected:
-	virtual int write(KHttpRequest *rq, const char *buf, int len) {
+	virtual int write(void*rq, const char *buf, int len) {
 		return -1;
 	}
 };
@@ -199,19 +198,19 @@ public:
 			delete st;
 		}
 	}
-	virtual KGL_RESULT flush(KHttpRequest *rq) {
+	virtual KGL_RESULT flush(void*rq) {
 		if (st) {
 			return st->flush();
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(KHttpRequest *rq, const char *buf, int len) {
+	virtual KGL_RESULT write_all(void*rq, const char *buf, int len) {
 		if (st) {
 			return st->write_all(buf, len);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_end(KHttpRequest *rq, KGL_RESULT result) {
+	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result) {
 		if (st) {
 			return st->write_end(result);
 		}

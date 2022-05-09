@@ -42,18 +42,44 @@ public:
 	}
 	int read(char* buf, int len)
 	{
+		if (resp.left == 0) {
+			return 0;
+		}
+		if (resp.left > 0) {
+			assert(dechunk == nullptr);
+			len = MIN(resp.left, len);
+			int got = us->read(buf, len);
+			if (got <= 0) {
+				return -1;
+			}
+			resp.left -= got;
+			return got;
+		}
+		if (dechunk) {
+			int got = dechunk->read(buf, len);
+			if (got == 0) {
+				resp.left = 0;
+			}
+			return got;
+		}
 		return us->read(buf, len);
 	}
-	bool read_all(char* buf, int len) {
+	int read_all(char* buf, int len) 
+	{
+		int total_len = 0;
 		while (len > 0) {
 			int got = read(buf, len);
-			if (got <= 0) {
+			if (got == 0) {
+				return total_len;
+			}
+			if (got < 0) {
 				return false;
 			}
 			buf += got;
 			len -= got;
+			total_len += got;
 		}
-		return true;
+		return total_len;
 	}
 	int64_t get_left()
 	{

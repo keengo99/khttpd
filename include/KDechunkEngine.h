@@ -100,6 +100,7 @@ public:
 					return -1;
 				}
 				hot_len += got;
+				//fwrite(buffer, 1, hot_len, stdout);
 				continue;
 			}
 			case KDechunkResult::End:

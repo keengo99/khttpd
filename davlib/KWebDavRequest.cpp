@@ -12,9 +12,10 @@ bool webdav_header_callback(KUpstream* us, void* arg, const char* attr, int attr
 	}
 	if (strcasecmp(attr, "Transfer-Encoding") == 0) {
 		if (strcasecmp(val, "chunked") == 0 && rq->dechunk==nullptr) {
+			rq->resp.left = -1;
 			rq->dechunk = new KDechunkReader<KUpstream>(us);
-			return KGL_OK;
 		}
+		return true;
 	}
 	if (!strcasecmp(attr, "Content-length")) {
 		rq->resp.left = string2int(val);
@@ -36,7 +37,9 @@ KWebDavRequest::KWebDavRequest(KWebDavClient* client, KUpstream* us)
 }
 KWebDavRequest::~KWebDavRequest()
 {
-	this->us->gc(-1);
+	//printf("destroy webdav request=[%p]\n", this);
+	assert(resp.left == 0);
+	this->us->gc(resp.left==0?10:-1);
 	if (resp.header) {
 		free_header_list(resp.header);
 	}
@@ -46,7 +49,6 @@ KWebDavRequest::~KWebDavRequest()
 }
 KGL_RESULT KWebDavRequest::skip_body()
 {
-
 	for (;;) {
 		char buf[512];
 		int len = read(buf, sizeof(buf));
@@ -72,8 +74,8 @@ ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
 		return nullptr;
 	}
 	if (body_len > 0) {
-		ks_buffer* buffer = ks_buffer_new(body_len+1);
-		if (!read_all(buffer->buf, body_len)) {
+		ks_buffer* buffer = ks_buffer_new((int)(body_len+1));
+		if (!read_all(buffer->buf, (int)body_len)) {
 			ks_buffer_destroy(buffer);
 			result = KGL_ESOCKET_BROKEN;
 			return nullptr;
@@ -86,7 +88,7 @@ ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
 		int len;
 		char* buf = ks_get_write_buffer(buffer, &len);
 		//printf("before us_read buf=[%p] len=[%d]\n",buf, len);
-		int got = dechunk?dechunk->read(buf,len):us->read(buf, len);
+		int got = read(buf,len);
 		assert(got <= len);
 		//printf("got=[%d]\n", got);
 		if (got < 0) {

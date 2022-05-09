@@ -95,18 +95,11 @@ void KPoolableSocketContainer::unbind(KUpstream *st) {
 	release();
 }
 void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime) {
-	if (this->lifeTime <= 0) {
-		//debug("sorry the lifeTime is zero.we must close it\n");
-		//noticeEvent(0, st);
+	if (this->lifeTime <= 0 || lifeTime < 0) {
+		//printf("sorry the lifeTime is zero.we must close it us=[%p]\n",st);
 		st->Destroy();
 		return;
 	}
-	if (lifeTime<0) {
-		//debug("the poolableSocket have error,we close it\n");
-		//noticeEvent(0, st);
-		st->Destroy();
-		return;
-	}	
 	if (lifeTime == 0 || lifeTime>this->lifeTime) {
 		lifeTime = this->lifeTime;
 	}
