@@ -14,7 +14,7 @@ const char *mk1123time(time_t time, char *buf, int size);
 void makeLastModifiedTime(time_t *a, char *b, size_t l);
 void my_sleep(int);
 void init_time_zone();
-u_short string_hash(const char *str, u_short res = 1);
+uint16_t string_hash(const char *str, uint16_t res = 1);
 class KUrl;
 bool parse_url(const char* src, KUrl* url);
 int url_decode(char* str, int len, KUrl* url, bool space2plus);
