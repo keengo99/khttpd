@@ -139,6 +139,16 @@ static void clean_all_child(KWebDavClient* client, const char* path)
 		client->_delete(s.getString());
 	}
 }
+static void test_lock3(KWebDavClient* client, KWebDavClient* client2)
+{
+	KStringBuf s;
+	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
+	test_assert(client->lock(s.getString()) == KGL_OK);
+	KFixString in2(kgl_expand_string(LOCKED_FILE_CONTENT));
+	test_assert(KGL_OK == client->put(COPY_LOCKED_SRC, &in2));
+	test_assert(KGL_OK == client->copy(COPY_LOCKED_SRC, s.getString(), true));
+	test_assert(KGL_OK == client->unlock());
+}
 static int webdav_main(void* arg, int argc)
 {
 	char** argv = (char**)arg;
@@ -152,8 +162,9 @@ static int webdav_main(void* arg, int argc)
 	test_assert(provider2.set_url(argv[1]));
 	provider.set_auth("test", "test");
 	provider2.set_auth("test", "test");
+	//test_lock3(&provider, &provider2);
+	//return 0;
 	test_assert(KGL_OK == provider.option(DAV_PREFIX_DIR "/"));
-
 	KWebDavFileList file_list;
 	//clean
 	clean_all_child(&provider, DAV_PREFIX_DIR "/");
@@ -196,7 +207,5 @@ static int webdav_main(void* arg, int argc)
 }
 int main(int argc, char** argv)
 {
-	test_dechunk();
-	return 0;
 	return kasync_main(webdav_main, argv, argc);
 }

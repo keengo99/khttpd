@@ -67,8 +67,9 @@ ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
 	for (;;) {
 		int len;
 		char* buf = ks_get_write_buffer(buffer, &len);
-		//printf("before us_read len=[%d]\n", len);
+		//printf("before us_read buf=[%p] len=[%d]\n",buf, len);
 		int got = us->read(buf, len);
+		assert(got <= len);
 		//printf("got=[%d]\n", got);
 		if (got < 0) {
 			ks_buffer_destroy(buffer);
@@ -81,6 +82,7 @@ ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
 		}
 		ks_write_success(buffer, got);
 	}
+	return nullptr;
 }
 KGL_RESULT KWebDavRequest::read_body(KXmlDocument& body)
 {

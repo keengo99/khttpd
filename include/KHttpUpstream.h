@@ -3,7 +3,7 @@
 #include "KTcpUpstream.h"
 #include "kbuf.h"
 #include "KDechunkEngine.h"
-class KDechunkContext
+class KDechunkContext2
 {
 public:
 	void start_read(ks_buffer* buffer)
@@ -13,10 +13,12 @@ public:
 	}
 	void save_point(ks_buffer* buffer)
 	{
+		assert(hot);
 		ks_save_point(buffer, hot, len);
 	}
 	KDechunkResult dechunk(char** piece, int& piece_length)
 	{
+		assert(hot);
 		return engine.dechunk(&hot, len, piece, piece_length);
 	}
 	KDechunkEngine2 engine;
@@ -27,7 +29,7 @@ struct KUpstreamContext
 {
 	krw_buffer* send_header_buffer;
 	ks_buffer* read_buffer;
-	KDechunkContext* dechunk_ctx;
+	KDechunkContext2* dechunk_ctx;
 	int64_t left;
 };
 class KHttpUpstream : public KTcpUpstream

@@ -398,8 +398,7 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 	}
 	KXmlDocument body;
 	rq->read_body(body);
-	//printf("status_code=[%d]\n", rq->resp.status_code);
-	
+	//printf("status_code=[%d]\n", rq->resp.status_code);	
 	if (rq->resp.status_code == STATUS_MULTI_STATUS) {
 		if (!file_list.parse(body, (int)strlen(path))) {
 			return KGL_EDATA_FORMAT;

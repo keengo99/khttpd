@@ -99,7 +99,7 @@ KGL_RESULT KHttpUpstream::read_header()
 		khttp_parse_result rs;
 		char* hot = ctx.read_buffer->buf;
 		int len = ctx.read_buffer->used;
-		for(;;) {
+		for (;;) {
 			memset(&rs, 0, sizeof(rs));
 			kgl_parse_result parse_result = khttp_parse(&parser, &hot, &len, &rs);
 			switch (parse_result) {
@@ -118,14 +118,18 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_success:
 			{
-				if (ctx.dechunk_ctx==NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val,"chunked")==0) {
-					ctx.dechunk_ctx = new KDechunkContext;
+				if (ctx.dechunk_ctx == NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val, "chunked") == 0) {
+					ctx.dechunk_ctx = new KDechunkContext2;
 					ctx.dechunk_ctx->hot = nullptr;
 					ctx.left = -1;
 					break;
 				}
 				if (strcasecmp(rs.attr, "Content-Length") == 0) {
 					ctx.left = string2int(rs.val);
+					if (ctx.dechunk_ctx) {
+						delete ctx.dechunk_ctx;
+						ctx.dechunk_ctx = nullptr;
+					}
 				}
 				if (!stack.header(this, stack.arg, rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
 					goto out;
@@ -211,11 +215,11 @@ void KHttpUpstream::clean()
 	if (ctx.send_header_buffer) {
 		krw_buffer_destroy(ctx.send_header_buffer);
 	}
-	if (ctx.read_buffer) {
-		ks_buffer_destroy(ctx.read_buffer);
-	}
 	if (ctx.dechunk_ctx) {
 		delete ctx.dechunk_ctx;
+	}
+	if (ctx.read_buffer) {
+		ks_buffer_destroy(ctx.read_buffer);
 	}
 	memset(&ctx, 0, sizeof(ctx));
 }
