@@ -1,4 +1,73 @@
 #include "KDechunkEngine.h"
+
+
+KDechunkResult KDechunkEngine2::dechunk(char** buf, int& buf_len, char** piece, int& piece_length)
+{
+	char* next_line;
+	int length;
+restart:
+	switch (chunk_size) {
+	case status_is_failed:
+		assert(false);
+		return KDechunkResult::Failed;
+	case status_is_ended:
+		assert(false);
+		return KDechunkResult::End;
+	case status_read_last:
+	case status_read_end:
+	{
+		next_line = (char*)memchr(*buf, '\n', buf_len);
+		if (next_line == NULL) {
+			return KDechunkResult::Continue;
+		}
+		length = (int)(next_line - (*buf) + 1);
+		(*buf) += length;
+		buf_len -= length;
+		if (chunk_size == status_read_last) {
+			chunk_size = status_is_ended;
+			return KDechunkResult::End;
+		}
+		chunk_size = status_read_chunk_size;
+		//这里不加break直接fallthrough,到下面status_read_chunk_size
+	}
+	case status_read_chunk_size:
+	{
+		next_line = (char*)memchr(*buf, '\n', buf_len);
+		if (next_line == NULL) {
+			return KDechunkResult::Continue;
+		}
+		chunk_size = strtol(*buf, NULL, 16);
+		if (chunk_size > KHTTPD_MAX_CHUNK_SIZE) {
+			chunk_size = status_is_failed;
+			return KDechunkResult::Failed;
+		}
+		length = (int)(next_line - (*buf) + 1);
+		(*buf) += length;
+		buf_len -= length;
+		if (chunk_size == 0) {
+			chunk_size = status_read_last;
+			goto restart;
+		}
+		//这里不加break直接fallthrough,到下面default处理
+	}
+	default:
+		assert((int)chunk_size > 0);
+		length = MIN((int)chunk_size, buf_len);
+		if (length <= 0) {
+			return KDechunkResult::Continue;
+		}
+		length = MIN(piece_length, length);
+		*piece = *buf;
+		piece_length = length;
+		buf_len -= length;
+		(*buf) += length;
+		chunk_size -= length;
+		if (chunk_size == 0) {
+			chunk_size = status_read_end;
+		}
+		return KDechunkResult::Success;
+	}
+}
 dechunk_status KDechunkEngine::dechunk(ks_buffer* buf, char* out, int& out_len)
 {
 	char* hot = (char *)buf->buf;
@@ -103,7 +172,7 @@ restart:
 			free(work);
 			work = NULL;
 		}
-		if (chunk_size < 0 || chunk_size > 100000000) {
+		if (chunk_size < 0 || chunk_size > KHTTPD_MAX_CHUNK_SIZE) {
 			//assert(false);
 			//printf("chunk size 不正确,%d\n",chunk_size);
 			work_len = -5;

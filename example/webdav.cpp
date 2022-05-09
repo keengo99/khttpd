@@ -12,21 +12,26 @@
 static int total_passed = 0;
 static void test_dechunk()
 {
-	KDechunkEngine engine;
+	printf("sizeof(KDechunkEngine2)=[%d],sizeof(KDechunkEngine)=[%d]\n", sizeof(KDechunkEngine2), sizeof(KDechunkEngine));
+	KDechunkEngine2 engine;
 	ks_buffer* buffer = ks_buffer_new(512);
-	ks_write_str(buffer, kgl_expand_string("9\r\n123456789\r\n0\r\n\r\n"));
+	ks_write_str(buffer, kgl_expand_string("9\n123456789\n0\n\n"));
+	char* hot = buffer->buf;
+	int len = buffer->used;
 	for (;;) {
-		char buf[2];
-		int len = 1;
-		if (engine.dechunk(buffer, buf, len) == dechunk_end) {
+		char* piece = NULL;
+		int piece_len = 5;
+		if (engine.dechunk(&hot, len, &piece, piece_len) == KDechunkResult::End) {
+			assert(len==0);
 			break;
 		}
-		assert(len == 1);
-		buf[1] = '\0';
-		printf("[%s]\n", buf);
+		printf("piece_len=[%d]\n", piece_len);
+		fwrite(piece, 1, piece_len, stdout);
+		printf("\n");
 	}
+
 }
-static void test_assert2(bool condition,const char *file,int line)
+static void test_assert2(bool condition, const char* file, int line)
 {
 	if (condition) {
 		total_passed++;
@@ -38,7 +43,7 @@ static void test_assert2(bool condition,const char *file,int line)
 		abort();
 	}
 }
-static void assert_dav_file_content(KWebDavClient* client, const char* path, const char* content,int content_length)
+static void assert_dav_file_content(KWebDavClient* client, const char* path, const char* content, int content_length)
 {
 	KWebDavRequest* rq = nullptr;
 	test_assert(KGL_OK == client->get(path, nullptr, &rq));
@@ -46,7 +51,7 @@ static void assert_dav_file_content(KWebDavClient* client, const char* path, con
 	test_assert(rq->read_all(buf, content_length));
 	test_assert(memcmp(buf, content, content_length) == 0);
 	delete rq;
-	return ;
+	return;
 }
 static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 {
@@ -76,7 +81,7 @@ static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 	client->unlock();
 	client->_delete(s.getString());
 }
-static void test_lock(KWebDavClient* client,KWebDavClient *client2)
+static void test_lock(KWebDavClient* client, KWebDavClient* client2)
 {
 
 	KStringBuf s;
@@ -92,7 +97,7 @@ static void test_lock(KWebDavClient* client,KWebDavClient *client2)
 	test_assert(KGL_OK != client2->_delete(s.getString()));
 	test_assert(KGL_OK != client->move(s.getString(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
 	test_assert(KGL_OK != client2->move(s.getString(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
-	test_assert(KGL_OK == client2->copy(s.getString(), DAV_PREFIX_DIR "/copy-locked.txt",true));
+	test_assert(KGL_OK == client2->copy(s.getString(), DAV_PREFIX_DIR "/copy-locked.txt", true));
 	assert_dav_file_content(client, DAV_PREFIX_DIR "/copy-locked.txt", kgl_expand_string(LOCKED_FILE_CONTENT));
 	test_assert(KGL_OK == client->unlock());
 	test_assert(KGL_OK == client->_delete(s.getString()));
@@ -138,17 +143,17 @@ static int webdav_main(void* arg, int argc)
 {
 	char** argv = (char**)arg;
 	if (argc < 2) {
-		printf("Usage: %s test_webdav_url\n",argv[0]);
+		printf("Usage: %s test_webdav_url\n", argv[0]);
 		return 1;
 	}
 	selector_manager_set_timeout(60, 60);
-	KWebDavClient provider,provider2;
+	KWebDavClient provider, provider2;
 	test_assert(provider.set_url(argv[1]));
 	test_assert(provider2.set_url(argv[1]));
 	provider.set_auth("test", "test");
 	provider2.set_auth("test", "test");
 	test_assert(KGL_OK == provider.option(DAV_PREFIX_DIR "/"));
-	
+
 	KWebDavFileList file_list;
 	//clean
 	clean_all_child(&provider, DAV_PREFIX_DIR "/");
@@ -165,7 +170,7 @@ static int webdav_main(void* arg, int argc)
 	auto test_file = file_list.find("test.txt");
 	test_assert(test_file != nullptr && test_file->content_length == 4);
 	test_assert(KGL_OK == provider.move(DAV_PREFIX_DIR "/test.txt", DAV_PREFIX_DIR "/test2.txt"));
-	test_assert(KGL_OK == provider.move(DAV_PREFIX_DIR "/dir/",DAV_PREFIX_DIR "/dir2/"));
+	test_assert(KGL_OK == provider.move(DAV_PREFIX_DIR "/dir/", DAV_PREFIX_DIR "/dir2/"));
 	file_list.clean();
 	test_assert(KGL_OK == provider.list(DAV_PREFIX_DIR "/", file_list));
 	test_assert(file_list.find("dir") == nullptr);
@@ -191,6 +196,7 @@ static int webdav_main(void* arg, int argc)
 }
 int main(int argc, char** argv)
 {
-
+	test_dechunk();
+	return 0;
 	return kasync_main(webdav_main, argv, argc);
 }

@@ -118,8 +118,9 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_success:
 			{
-				if (ctx.dechunk==NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val,"chunked")==0) {
-					ctx.dechunk = new KDechunkEngine;
+				if (ctx.dechunk_ctx==NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val,"chunked")==0) {
+					ctx.dechunk_ctx = new KDechunkContext;
+					ctx.dechunk_ctx->hot = nullptr;
 					ctx.left = -1;
 					break;
 				}
@@ -133,6 +134,9 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_finished:
 				ks_save_point(ctx.read_buffer, hot, len);
+				if (ctx.dechunk_ctx) {
+					ctx.dechunk_ctx->start_read(ctx.read_buffer);
+				}
 				goto out;
 			default:
 				result = KGL_EDATA_FORMAT;
@@ -149,22 +153,19 @@ int KHttpUpstream::read(char* buf, int len)
 	if (ctx.left == 0) {
 		return 0;
 	}
-	if (ctx.dechunk) {
+	if (ctx.dechunk_ctx) {
 		assert(ctx.read_buffer);
 		assert(ctx.left < 0);
 		for (;;) {
-			int got = len;
-			switch (ctx.dechunk->dechunk(ctx.read_buffer, buf, got)) {
-			case dechunk_success:
-				if (got > 0) {
-					return got;
-				}
-				continue;
-			case dechunk_continue:
+			char* piece;
+			switch (ctx.dechunk_ctx->engine.dechunk(&ctx.dechunk_ctx->hot, ctx.dechunk_ctx->len, &piece, len)) {
+			case KDechunkResult::Success:
+				assert(piece && len > 0);
+				kgl_memcpy(buf, piece, len);
+				return len;
+			case KDechunkResult::Continue:
 			{
-				if (got > 0) {
-					return got;
-				}
+				ctx.dechunk_ctx->save_point(ctx.read_buffer);
 				int write_len;
 				char* write_buf = ks_get_write_buffer(ctx.read_buffer, &write_len);
 				int got = kfiber_net_read(cn, write_buf, write_len);
@@ -172,9 +173,10 @@ int KHttpUpstream::read(char* buf, int len)
 					return -1;
 				}
 				ks_write_success(ctx.read_buffer, got);
+				ctx.dechunk_ctx->start_read(ctx.read_buffer);
 				continue;
 			}
-			case dechunk_end:
+			case KDechunkResult::End:
 			{
 				ctx.left = 0;
 				return 0;
@@ -212,8 +214,8 @@ void KHttpUpstream::clean()
 	if (ctx.read_buffer) {
 		ks_buffer_destroy(ctx.read_buffer);
 	}
-	if (ctx.dechunk) {
-		delete ctx.dechunk;
+	if (ctx.dechunk_ctx) {
+		delete ctx.dechunk_ctx;
 	}
 	memset(&ctx, 0, sizeof(ctx));
 }
