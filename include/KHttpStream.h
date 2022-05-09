@@ -249,19 +249,19 @@ public:
 			delete st;
 		}
 	}
-	virtual KGL_RESULT flush(KHttpRequest *rq) {
+	virtual KGL_RESULT flush(void *rq) override {
 		if (st) {
 			return st->flush(rq);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(KHttpRequest *rq, const char *buf, int len) {
+	virtual KGL_RESULT write_all(void*rq, const char *buf, int len) override {
 		if (st) {
 			return st->write_all(rq, buf, len);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_end(KHttpRequest *rq, KGL_RESULT result) {
+	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result) override {
 		if (st) {
 			return st->write_end(rq, result);
 		}
