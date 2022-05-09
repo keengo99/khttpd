@@ -8,6 +8,9 @@ bool webdav_header_callback(KUpstream* us, void* arg, const char* attr, int attr
 	KWebDavRequest* rq = (KWebDavRequest*)arg;
 	if (is_first) {
 		rq->resp.status_code = atoi(val);
+		if (is_status_code_no_body(rq->resp.status_code)) {
+			rq->resp.left = 0;
+		}
 		return true;
 	}
 	if (strcasecmp(attr, "Transfer-Encoding") == 0) {

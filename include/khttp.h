@@ -176,6 +176,14 @@ typedef enum _KGL_RESULT
 	KGL_EUNKNOW = -99,
 	KGL_ENOT_SUPPORT = -100
 } KGL_RESULT;
-
+inline bool is_status_code_no_body(int status_code) {
+	if (status_code == 100
+		|| status_code == STATUS_NOT_MODIFIED
+		|| status_code == STATUS_NO_CONTENT) {
+		//no content,see rfc2616.
+		return true;
+	}
+	return false;
+}
 KEND_DECLS
 #endif
