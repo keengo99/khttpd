@@ -1,5 +1,6 @@
 #ifndef KHTTPHEADERMANAGER_H_99
 #define KHTTPHEADERMANAGER_H_99
+#include <ctype.h>
 #include "KHttpHeader.h"
 
 inline int attr_tolower(const char p) {
