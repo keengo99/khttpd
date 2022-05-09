@@ -40,7 +40,7 @@ public:
 	close,是否关闭
 	lifeTime 连接时间
 	*/
-	virtual void gcSocket(KUpstream *st,int lifeTime, time_t base_time);
+	virtual void gcSocket(KUpstream *st,int lifeTime);
 	void bind(KUpstream *st);
 	void unbind(KUpstream *st);
 	int getLifeTime() {

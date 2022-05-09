@@ -42,6 +42,7 @@ public:
 	{
 		return this->data;
 	}
+	/*
 	int64_t get_left() override
 	{
 		if (ctx->know_content_length) {
@@ -49,6 +50,7 @@ public:
 		}
 		return -1;
 	}
+	*/
 	int read(char *buf, int len) override
 	{
 		WSABUF bufs;
@@ -84,7 +86,7 @@ public:
 	{
 		http2->shutdown(ctx);
 	}
-	void Destroy()
+	void Destroy() override
 	{
 		kassert(http2);
 		kassert(ctx);
@@ -102,7 +104,7 @@ public:
 	{
 		return &http2->c->addr;
 	}
-	void gc(int life_time,time_t last_recv_time)
+	void gc(int life_time)
 	{
 		life_time = 30;
 		clean();
@@ -112,13 +114,13 @@ public:
 		}
 		if (ctx->admin_stream) {
 			http2->release_stream(ctx);
-			container->gcSocket(this, life_time, last_recv_time);
+			container->gcSocket(this, life_time);
 			return;
 		}
 		KHttp2Upstream *admin_stream = http2->get_admin_stream();
 		if (admin_stream) {
 			container->bind(admin_stream);
-			container->gcSocket(admin_stream, life_time, last_recv_time);
+			container->gcSocket(admin_stream, life_time);
 		}
 		Destroy();
 	}

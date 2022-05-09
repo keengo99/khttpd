@@ -10,7 +10,6 @@ struct KTsUpstreamParam {
 	union {
 		WSABUF* bufs;
 		char* buf;
-		time_t base_time;
 		KTsUpstream* ts;
 	};
 	union {
@@ -63,7 +62,7 @@ static int ts_write_end(void* arg, int len)
 static int ts_gc(void* arg, int len)
 {
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
-	param->us->gc(param->life_time, param->base_time);
+	param->us->gc(param->life_time);
 	return 0;
 }
 static int ts_read(void* arg, int len)
@@ -181,10 +180,9 @@ void KTsUpstream::Destroy()
 	}
 	delete this;
 }
-void KTsUpstream::gc(int life_time,time_t base_time)
+void KTsUpstream::gc(int life_time)
 {
 	KTsUpstreamParam param;
-	param.base_time = base_time;
 	param.life_time = life_time;
 	param.us = us;
 	kfiber* fiber = NULL;

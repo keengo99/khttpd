@@ -94,7 +94,7 @@ KPoolableSocketContainer::~KPoolableSocketContainer() {
 void KPoolableSocketContainer::unbind(KUpstream *st) {
 	release();
 }
-void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime,time_t base_time) {
+void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime) {
 	if (this->lifeTime <= 0) {
 		//debug("sorry the lifeTime is zero.we must close it\n");
 		//noticeEvent(0, st);
@@ -110,9 +110,13 @@ void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime,time_t base_t
 	if (lifeTime == 0 || lifeTime>this->lifeTime) {
 		lifeTime = this->lifeTime;
 	}
-	st->expire_time = base_time + lifeTime;
 	time_t now_time = kgl_current_sec;
-	if (st->expire_time < now_time || base_time > now_time) {
+	if (st->read_header_time > now_time) {
+		st->Destroy();
+		return;
+	}
+	st->expire_time = st->read_header_time + lifeTime;
+	if (st->expire_time < now_time) {
 		st->Destroy();
 		return;
 	}
@@ -207,6 +211,7 @@ KUpstream *KPoolableSocketContainer::get_pool_socket() {
 		//因为windows中socket一但绑定了iocp，无法解绑。
 		return new KTsUpstream(socket);
 	}
+	socket->read_header_time = kgl_current_sec;
 	return socket;
 }
 void KPoolableSocketContainer::clean()

@@ -77,6 +77,7 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 }
 KGL_RESULT KHttpUpstream::read_header()
 {
+	read_header_time = kgl_current_sec;
 	assert(ctx.read_buffer == NULL);
 	if (ctx.read_buffer != NULL) {
 		return KGL_EUNKNOW;
@@ -118,6 +119,7 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_success:
 			{
+#if 0
 				if (ctx.dechunk_ctx == NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val, "chunked") == 0) {
 					ctx.dechunk_ctx = new KDechunkContext2;
 					ctx.dechunk_ctx->hot = nullptr;
@@ -130,17 +132,19 @@ KGL_RESULT KHttpUpstream::read_header()
 						delete ctx.dechunk_ctx;
 						ctx.dechunk_ctx = nullptr;
 					}
+					break;
 				}
+#endif
 				if (!stack.header(this, stack.arg, rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
 					goto out;
 				}
 				break;
 			}
-			case kgl_parse_finished:
+			case kgl_parse_finished:				
 				ks_save_point(ctx.read_buffer, hot, len);
-				if (ctx.dechunk_ctx) {
-					ctx.dechunk_ctx->start_read(ctx.read_buffer);
-				}
+				//if (ctx.dechunk_ctx) {
+				//	ctx.dechunk_ctx->start_read(ctx.read_buffer);
+				//}
 				goto out;
 			default:
 				result = KGL_EDATA_FORMAT;
@@ -154,6 +158,7 @@ out:
 }
 int KHttpUpstream::read(char* buf, int len)
 {
+#if 0
 	if (ctx.left == 0) {
 		return 0;
 	}
@@ -191,23 +196,27 @@ int KHttpUpstream::read(char* buf, int len)
 		}
 	}
 	len = (int)MIN((int64_t)len, ctx.left);
+#endif
 	if (ctx.read_buffer) {
 		if (ctx.read_buffer->used > 0) {
 			len = MIN((int)len, (int)ctx.read_buffer->used);
 			kgl_memcpy(buf, ctx.read_buffer->buf, len);
 			ks_save_point(ctx.read_buffer, ctx.read_buffer->buf + len, ctx.read_buffer->used - len);
-			assert(len < ctx.left);
-			ctx.left -= len;
+			//assert(len <= ctx.left);
+			//ctx.left -= len;
 			return len;
 		}
 		ks_buffer_destroy(ctx.read_buffer);
 		ctx.read_buffer = NULL;
 	}
+#if 0
 	int got = KTcpUpstream::read(buf, len);
 	if (got > 0) {
 		ctx.left -= got;
 	}
 	return got;
+#endif
+	return KTcpUpstream::read(buf, len);
 }
 void KHttpUpstream::clean()
 {
@@ -215,9 +224,9 @@ void KHttpUpstream::clean()
 	if (ctx.send_header_buffer) {
 		krw_buffer_destroy(ctx.send_header_buffer);
 	}
-	if (ctx.dechunk_ctx) {
-		delete ctx.dechunk_ctx;
-	}
+	//if (ctx.dechunk_ctx) {
+	//	delete ctx.dechunk_ctx;
+	//}
 	if (ctx.read_buffer) {
 		ks_buffer_destroy(ctx.read_buffer);
 	}

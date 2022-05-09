@@ -38,6 +38,7 @@ private:
 	static constexpr auto status_is_ended{ static_cast<uint32_t>(-3) };
 	static constexpr auto status_is_failed{ static_cast<uint32_t>(-4) };
 };
+
 class KDechunkEngine {
 public:
 	KDechunkEngine() {
@@ -50,15 +51,14 @@ public:
 			free(work);
 		}
 	}
+	bool is_success() {
+		return work_len == -4;
+	}
 	//返回dechunk_continue表示还需要读数据，
 	dechunk_status dechunk(const char **buf, int&buf_len, const char **piece, int &piece_length,int max_piece_length=0);
-	dechunk_status dechunk(ks_buffer *buf, char* out,int& out_len);
 private:
 	bool is_failed() {
 		return work_len < -4;
-	}
-	bool is_success() {
-		return work_len == -4;
 	}
 	bool is_end() {
 		return work_len <= -4;
@@ -66,5 +66,56 @@ private:
 	int chunk_size ;
 	int work_len ;
 	char *work;
+};
+
+template<typename T>
+class KDechunkReader
+{
+public:
+	KDechunkReader(T* us)
+	{
+		this->us = us;
+		hot = buffer;
+		hot_len = 0;
+	}
+	~KDechunkReader()
+	{
+
+	}
+	int read(char* buf, int len)
+	{
+		char* piece;
+		for (;;) {
+			switch (engine.dechunk(&hot, hot_len, &piece, len)) {
+			case KDechunkResult::Success:
+				assert(piece && len > 0);
+				kgl_memcpy(buf, piece, len);
+				return len;
+			case KDechunkResult::Continue:
+			{
+				kgl_memcpy(buffer, hot, hot_len);
+				hot = buffer;
+				int got = us->read(buffer + hot_len, sizeof(buffer) - hot_len);
+				if (got <= 0) {
+					return -1;
+				}
+				hot_len += got;
+				continue;
+			}
+			case KDechunkResult::End:
+			{
+				return 0;
+			}
+			default:
+				return -1;
+			}
+		}
+	}
+private:
+	T* us;
+	KDechunkEngine2 engine;
+	char buffer[8192];
+	int hot_len;
+	char* hot;
 };
 #endif

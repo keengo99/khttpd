@@ -76,9 +76,9 @@ public:
 	int read(char* buf, int len) override;
 	int write(WSABUF* buf, int bc) override;
 	void BindSelector(kselector *selector);
-	void gc(int life_time,time_t last_recv_time) override;
+	void gc(int life_time) override;
 	void OnPushContainer();
-	void Destroy()
+	void Destroy() override
 	{
 		delete this;
 	}

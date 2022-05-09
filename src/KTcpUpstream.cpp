@@ -19,9 +19,10 @@ bool KTcpUpstream::set_header_callback(void* arg, kgl_header_callback cb)
 }
 KGL_RESULT KTcpUpstream::read_header()
 {
+	read_header_time = kgl_current_sec;
 	return KGL_ENOT_SUPPORT;
 }
-void KTcpUpstream::gc(int life_time,time_t base_time)
+void KTcpUpstream::gc(int life_time)
 {
 	clean();
 	if (container == NULL) {
@@ -33,7 +34,7 @@ void KTcpUpstream::gc(int life_time,time_t base_time)
 		kassert(cn->st.queue.next == NULL);
 	}
 #endif
-	container->gcSocket(this, life_time, base_time);
+	container->gcSocket(this, life_time);
 }
 int KTcpUpstream::read(char* buf, int len)
 {

@@ -51,10 +51,12 @@ public:
 	KGL_RESULT send_header_complete();
 	bool set_header_callback(void* arg, kgl_header_callback header_callback);
 	KGL_RESULT read_header();
+#if 0
 	int64_t get_left() override
 	{
 		return us->get_left();
 	}
+#endif
 	KOPAQUE GetOpaque()
 	{
 		return us->GetOpaque();
@@ -111,7 +113,7 @@ public:
 	{
 		return us->get_param();
 	}
-	void gc(int life_time,time_t last_recv_time);
+	void gc(int life_time) override;
 	KUpstreamCallBack stack;
 	KUpstream *us;
 	KHttpHeader *header;

@@ -4,6 +4,7 @@
 #include "KHttpHeaderManager.h"
 #include "KXmlDocument.h"
 #include "kbuf.h"
+#include "KDechunkEngine.h"
 
 class KWebDavLockToken;
 struct KWebDavAuth;
@@ -13,6 +14,7 @@ class KResponseData : public KHttpHeaderManager
 {
 public:
 	uint16_t status_code;
+	int64_t left;
 };
 class KWebDavRequest
 {
@@ -55,12 +57,13 @@ public:
 	}
 	int64_t get_left()
 	{
-		return us->get_left();
+		return resp.left;
 	}
 	KGL_RESULT skip_body();
 	ks_buffer *read_body(KGL_RESULT &result);
 	KGL_RESULT read_body(KXmlDocument &body);
 	KResponseData resp;
+	KDechunkReader<KUpstream>* dechunk;
 private:
 	KUpstream* us;
 	KWebDavClient* client;

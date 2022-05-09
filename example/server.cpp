@@ -40,7 +40,7 @@ int client_http_test(void *arg,int got)
 	us->set_content_length(0);
 	if (KGL_OK != us->send_header_complete()) {
 		printf("failed\n");
-		us->gc(-1,0);
+		us->gc(-1);
 		return -1;
 	}
 	KGL_RESULT result = us->read_header();
@@ -54,7 +54,7 @@ int client_http_test(void *arg,int got)
 		}
 		printf("got=[%d]\n", got);
 	}
-	us->gc(-1, 0);
+	us->gc(-1);
 	return 0;
 }
 kev_result on_ready(KOPAQUE data, void* arg, int got)

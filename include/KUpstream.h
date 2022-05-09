@@ -78,10 +78,6 @@ public:
 		}
 		return KGL_OK;
 	}
-	virtual int64_t get_left()
-	{
-		return -1;
-	}
 	virtual bool send_connection(const char* val, hlen_t val_len) = 0;
 	virtual bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) = 0;
@@ -142,9 +138,14 @@ public:
 		return ksocket_addr_port(&addr);
 	}
 	virtual kgl_refs_string* get_param();
-	virtual void gc(int life_time,time_t base_time) = 0;
+	virtual void gc(int life_time) = 0;
 	friend class KPoolableSocketContainer;
-	time_t expire_time;
+	union
+	{
+		time_t expire_time;
+		//记录开始读的时间，用于长连接计算超时用的。
+		time_t read_header_time;
+	};
 	KPoolableSocketContainer *container;
 protected:
 	virtual void clean()
