@@ -63,7 +63,7 @@ void KPoolableSocketContainerImp::refreshList(kgl_list *l,bool clean)
 }
 KPoolableSocketContainerImp::KPoolableSocketContainerImp()
 {
-	assert(is_selector_manager_init());
+	//assert(is_selector_manager_init());
 	size = 0;
 	klist_init(&head);
 }

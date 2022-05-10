@@ -47,7 +47,7 @@ public:
 		}
 		if (resp.left > 0) {
 			assert(dechunk == nullptr);
-			len = MIN(resp.left, len);
+			len = (int)(MIN(resp.left, len));
 			int got = us->read(buf, len);
 			if (got <= 0) {
 				return -1;

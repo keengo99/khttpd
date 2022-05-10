@@ -125,6 +125,7 @@ KGL_RESULT KWebDavClient::_delete(const char* path)
 	defer(delete rq);
 	rq->send_header_complete();
 	result = rq->read_header();
+	rq->skip_body();
 	if (result != KGL_OK) {
 		return result;
 	}

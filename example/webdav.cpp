@@ -12,7 +12,7 @@
 static int total_passed = 0;
 static void test_dechunk()
 {
-	printf("sizeof(KDechunkEngine2)=[%d],sizeof(KDechunkEngine)=[%d]\n", sizeof(KDechunkEngine2), sizeof(KDechunkEngine));
+	//printf("sizeof(KDechunkEngine2)=[%d],sizeof(KDechunkEngine)=[%d]\n", sizeof(KDechunkEngine2), sizeof(KDechunkEngine));
 	KDechunkEngine2 engine;
 	ks_buffer* buffer = ks_buffer_new(512);
 	ks_write_str(buffer, kgl_expand_string("9\n123456789\n0\n\n"));

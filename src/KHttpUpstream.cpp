@@ -160,45 +160,6 @@ out:
 }
 int KHttpUpstream::read(char* buf, int len)
 {
-#if 0
-	if (ctx.left == 0) {
-		return 0;
-	}
-	if (ctx.dechunk_ctx) {
-		assert(ctx.read_buffer);
-		assert(ctx.left < 0);
-		for (;;) {
-			char* piece;
-			switch (ctx.dechunk_ctx->engine.dechunk(&ctx.dechunk_ctx->hot, ctx.dechunk_ctx->len, &piece, len)) {
-			case KDechunkResult::Success:
-				assert(piece && len > 0);
-				kgl_memcpy(buf, piece, len);
-				return len;
-			case KDechunkResult::Continue:
-			{
-				ctx.dechunk_ctx->save_point(ctx.read_buffer);
-				int write_len;
-				char* write_buf = ks_get_write_buffer(ctx.read_buffer, &write_len);
-				int got = kfiber_net_read(cn, write_buf, write_len);
-				if (got <= 0) {
-					return -1;
-				}
-				ks_write_success(ctx.read_buffer, got);
-				ctx.dechunk_ctx->start_read(ctx.read_buffer);
-				continue;
-			}
-			case KDechunkResult::End:
-			{
-				ctx.left = 0;
-				return 0;
-			}
-			default:
-				return -1;
-			}
-		}
-	}
-	len = (int)MIN((int64_t)len, ctx.left);
-#endif
 	if (ctx.read_buffer) {
 		if (ctx.read_buffer->used > 0) {
 			len = MIN((int)len, (int)ctx.read_buffer->used);
@@ -211,13 +172,6 @@ int KHttpUpstream::read(char* buf, int len)
 		ks_buffer_destroy(ctx.read_buffer);
 		ctx.read_buffer = NULL;
 	}
-#if 0
-	int got = KTcpUpstream::read(buf, len);
-	if (got > 0) {
-		ctx.left -= got;
-	}
-	return got;
-#endif
 	return KTcpUpstream::read(buf, len);
 }
 void KHttpUpstream::clean()
