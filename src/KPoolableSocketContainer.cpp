@@ -170,7 +170,6 @@ void KPoolableSocketContainer::bind(KUpstream *st) {
 	kassert(st->container==NULL);
 	st->container = this;
 	addRef();
-	st->bind_selector(kgl_get_tls_selector());
 }
 void KPoolableSocketContainer::setLifeTime(int lifeTime) {
 	this->lifeTime = lifeTime;
@@ -187,10 +186,13 @@ void KPoolableSocketContainer::refresh(time_t nowTime) {
 }
 KUpstream* KPoolableSocketContainer::new_upstream(kconnection *cn)
 {
+	KUpstream* us;
 	if (tcp) {
-		return new KTcpUpstream(cn);
+		us = new KTcpUpstream(cn);
+	} else {
+		us = new KHttpUpstream(cn);
 	}
-	return new KHttpUpstream(cn);
+	return us;
 }
 KUpstream *KPoolableSocketContainer::get_pool_socket() {
 	lock.Lock();
@@ -199,13 +201,14 @@ KUpstream *KPoolableSocketContainer::get_pool_socket() {
 	if (socket==NULL) {
 		return NULL;
 	}
+	socket->read_header_time = kgl_current_sec;
 	kselector *selector = socket->GetConnection()->st.selector;
 	if (selector!=NULL && selector!=kgl_get_tls_selector()) {
 		//连接和当前selector不一致,一般发生在windows上，多线程情况上.
 		//因为windows中socket一但绑定了iocp，无法解绑。
 		return new KTsUpstream(socket);
 	}
-	socket->read_header_time = kgl_current_sec;
+	socket->bind_selector(kgl_get_tls_selector());
 	return socket;
 }
 void KPoolableSocketContainer::clean()

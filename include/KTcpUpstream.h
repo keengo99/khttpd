@@ -6,60 +6,46 @@
 
 class KTcpUpstream : public KUpstream {
 public:
-	KTcpUpstream(kconnection *cn)
+	KTcpUpstream(kconnection* cn)
 	{
 		this->cn = cn;
 		pool = NULL;
 		assert(cn);
+		bind_selector(kgl_get_tls_selector());
 	}
-	~KTcpUpstream()
-	{
-		if (cn) {
-			kfiber_net_close(cn);
-		}
-		assert(pool == NULL);
-	}
-	void BindOpaque(KOPAQUE data)
+	void BindOpaque(KOPAQUE data) override
 	{
 		selectable_bind_opaque(&cn->st, data, kgl_opaque_other);
 	}
-	sockaddr_i *GetAddr()
+	sockaddr_i *GetAddr() override
 	{
 		if (cn) {
 			return &cn->addr;
 		}
 		return NULL;
 	}
-	void EmptyConnection()
-	{
-		this->cn = NULL;
-	}
-	kconnection *GetConnection()
+	kconnection *GetConnection() override
 	{
 		return this->cn;
 	}
-	void SetDelay()
+	void SetDelay() override
 	{
 		ksocket_delay(cn->st.fd);
 	}
-	void SetNoDelay(bool forever)
+	void SetNoDelay(bool forever) override
 	{
 		ksocket_no_delay(cn->st.fd,forever);
 	}
-	void Shutdown()
+	void Shutdown() override
 	{
 		selectable_shutdown(&cn->st);
 	}
-	void SetTimeOut(int tmo)
+	void SetTimeOut(int tmo) override
 	{
 		cn->st.tmo = tmo;
 		cn->st.tmo_left = tmo;
 	}
-	bool IsLocked()
-	{
-		return KBIT_TEST(cn->st.st_flags, STF_LOCK)>0;
-	}
-	bool send_connection(const char* val, hlen_t val_len)
+	bool send_connection(const char* val, hlen_t val_len) override
 	{
 		return true;
 	}
@@ -82,7 +68,7 @@ public:
 	{
 		delete this;
 	}
-	void clean()
+	void clean() override
 	{
 		if (pool) {
 			kgl_destroy_pool(pool);
@@ -90,14 +76,23 @@ public:
 		}
 		memset(&stack, 0, sizeof(stack));
 	}
-	kgl_pool_t* GetPool()
+	kgl_pool_t* GetPool() override
 	{
 		if (pool == NULL) {
 			pool = kgl_create_pool(8192);
 		}
 		return pool;
 	}
+	friend class KPoolableSocketContainer;
 protected:
+
+	~KTcpUpstream()
+	{
+		if (cn) {
+			kfiber_net_close(cn);
+		}
+		assert(pool == NULL);
+	}
 	kconnection *cn;
 	KUpstreamCallBack stack;
 	kgl_pool_t* pool;
