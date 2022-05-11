@@ -117,7 +117,7 @@ void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime) {
 }
 void KPoolableSocketContainer::PutPoolSocket(KUpstream *st)
 {
-	st->OnPushContainer();
+	st->unbind_selector();
 	lock.Lock();
 	if (imp == NULL) {
 		imp = new KPoolableSocketContainerImp;
@@ -170,6 +170,7 @@ void KPoolableSocketContainer::bind(KUpstream *st) {
 	kassert(st->container==NULL);
 	st->container = this;
 	addRef();
+	st->bind_selector(kgl_get_tls_selector());
 }
 void KPoolableSocketContainer::setLifeTime(int lifeTime) {
 	this->lifeTime = lifeTime;

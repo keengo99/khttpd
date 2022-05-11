@@ -43,6 +43,7 @@ KWebDavRequest::~KWebDavRequest()
 	//printf("destroy webdav request=[%p]\n", this);
 	assert(resp.left == 0);
 	this->us->gc(resp.left==0?10:-1);
+	//this->us->gc(-1);
 	if (resp.header) {
 		free_header_list(resp.header);
 	}

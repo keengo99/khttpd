@@ -386,9 +386,10 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 	KWebDavRequest* rq = NULL;
 	auto result = new_request("PROPFIND", path, sizeof(PROB_FIND_BODY) - 1, &rq);
 	if (rq == nullptr) {
-		printf("webdav new_request failed error=[%d]\n", result);
+		//printf("webdav new_request failed error=[%d]\n", result);
 		return result;
 	}
+	//printf("new_request success this=[%p],rq=[%p]\n", this, rq);
 	defer(delete rq);
 	rq->send_header(kgl_expand_string("Depth"), kgl_expand_string("1"));
 	rq->send_header(kgl_expand_string("Content-Type"), kgl_expand_string("application/xml; charset=\"utf-8\""));

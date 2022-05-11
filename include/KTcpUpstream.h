@@ -75,9 +75,9 @@ public:
 	KGL_RESULT read_header() override;
 	int read(char* buf, int len) override;
 	int write(WSABUF* buf, int bc) override;
-	void BindSelector(kselector *selector);
+	void bind_selector(kselector *selector) override;
 	void gc(int life_time) override;
-	void OnPushContainer();
+	void unbind_selector() override;
 	void Destroy() override
 	{
 		delete this;

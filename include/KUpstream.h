@@ -104,12 +104,8 @@ public:
 	virtual void SetTimeOut(int tmo)
 	{
 	}
-	virtual void BindSelector(kselector *selector)
-	{
-	}
-	virtual void OnPushContainer()
-	{
-	}
+
+
 	virtual KUpstream *NewStream()
 	{
 		return NULL;
@@ -148,6 +144,12 @@ public:
 	};
 	KPoolableSocketContainer *container;
 protected:
+	virtual void unbind_selector()
+	{
+	}
+	virtual void bind_selector(kselector* selector)
+	{
+	}
 	virtual void clean()
 	{
 

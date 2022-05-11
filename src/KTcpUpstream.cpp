@@ -1,7 +1,7 @@
 #include "KTcpUpstream.h"
 #include "KPoolableSocketContainer.h"
 #include "khttp.h"
-void KTcpUpstream::OnPushContainer()
+void KTcpUpstream::unbind_selector()
 {
 #ifndef _WIN32
 	if (cn->st.selector) {
@@ -45,7 +45,7 @@ int KTcpUpstream::write(WSABUF* buf, int bc)
 	return kfiber_net_writev(cn, buf, bc);
 }
 
-void KTcpUpstream::BindSelector(kselector *selector)
+void KTcpUpstream::bind_selector(kselector *selector)
 {
 	kassert(cn->st.selector == NULL || cn->st.selector == selector);
 	selectable_bind(&cn->st, selector);
