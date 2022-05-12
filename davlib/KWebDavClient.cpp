@@ -361,8 +361,8 @@ KGL_RESULT KWebDavClient::put(const char* path, KRStream* in)
 KGL_RESULT KWebDavClient::get(const char* path, KRequestRange* range, KWebDavRequest** rq)
 {
 	auto result = new_request("GET", path, 0, rq);
-	if (rq == nullptr) {
-		printf("webdav new_request failed error=[%d]\n", result);
+	if ((*rq) == nullptr) {
+		//printf("webdav new_request failed error=[%d]\n", result);
 		return result;
 	}
 	if (range) {
