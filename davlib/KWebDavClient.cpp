@@ -324,7 +324,7 @@ KGL_RESULT KWebDavClient::put(const char* path, KRStream* in)
 	KWebDavRequest* rq = NULL;
 	int64_t content_length = 0;
 	if (in) {
-		content_length = in->get_read_left();
+		content_length = in->get_left();
 	}
 	auto result = new_request("PUT", path, content_length, &rq);
 	if (rq == nullptr) {

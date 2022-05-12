@@ -73,7 +73,7 @@ public:
 				return total_len;
 			}
 			if (got < 0) {
-				return false;
+				return -1;
 			}
 			buf += got;
 			len -= got;

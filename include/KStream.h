@@ -70,7 +70,7 @@ class KRStream {
 public:
 	virtual ~KRStream() {
 	}
-	virtual int64_t get_read_left() = 0;
+	virtual int64_t get_left() = 0;
 	virtual int read(char *buf, int len) = 0;
 	bool read_all(char *buf, int len);
 	char *read_line();

@@ -78,7 +78,7 @@ public:
 		this->hot = buf;
 		this->left = len;
 	};
-	int64_t get_read_left() override
+	int64_t get_left() override
 	{
 		return (int64_t)left;
 	}
