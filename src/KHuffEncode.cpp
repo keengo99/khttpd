@@ -210,7 +210,7 @@ size_t kgl_http_v2_huff_encode(u_char *src, size_t len, u_char *dst, uintptr_t l
 
 		buf |= code >> pending;
 
-		kgl_http_v2_huff_encode_buf(&dst[hlen], buf);
+		kgl_http_v2_huff_encode_buf(&dst[hlen], (uint32_t)buf);
 
 		hlen += sizeof(buf);
 

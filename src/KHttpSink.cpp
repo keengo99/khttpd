@@ -229,7 +229,7 @@ bool KHttpSink::response_header(const char *name, int name_len, const char *val,
 	rc->head_append(buf, len);
 	return true;
 }
-int KHttpSink::StartResponseBody(int64_t body_size)
+int KHttpSink::internal_start_response_body(int64_t body_size)
 {
 	if (rc == NULL) {
 		return 0;
@@ -259,10 +259,6 @@ int KHttpSink::StartResponseBody(int64_t body_size)
 		rc = NULL;
 	}
 	return header_len;
-}
-bool KHttpSink::IsLocked()
-{
-	return KBIT_TEST(cn->st.st_flags,STF_LOCK);
 }
 int KHttpSink::internal_read(char *buf, int len)
 {	

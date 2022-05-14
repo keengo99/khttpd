@@ -24,23 +24,23 @@ public:
 		}
 		return NULL;
 	}
-	kconnection *GetConnection() override
+	kconnection *get_connection() override
 	{
 		return this->cn;
 	}
-	void SetDelay() override
+	void set_delay() override
 	{
 		ksocket_delay(cn->st.fd);
 	}
-	void SetNoDelay(bool forever) override
+	void set_no_delay(bool forever) override
 	{
 		ksocket_no_delay(cn->st.fd,forever);
 	}
-	void Shutdown() override
+	void shutdown() override
 	{
 		selectable_shutdown(&cn->st);
 	}
-	void SetTimeOut(int tmo) override
+	void set_time_out(int tmo) override
 	{
 		cn->st.tmo = tmo;
 		cn->st.tmo_left = tmo;

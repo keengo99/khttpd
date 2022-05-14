@@ -21,7 +21,7 @@ public:
 		kassert(http2 == NULL);
 		kassert(ctx == NULL);
 	}
-	kconnection *GetConnection()
+	kconnection *get_connection()
 	{
 		return http2->c;
 	}
@@ -29,7 +29,7 @@ public:
 	{
 		http2->write_end(ctx);
 	}
-	void SetTimeOut(int tmo)
+	void set_time_out(int tmo)
 	{
 		ctx->tmo = tmo;
 		ctx->tmo_left = tmo;
@@ -82,7 +82,7 @@ public:
 		}
 		return pool;
 	}
-	void Shutdown()
+	void shutdown()
 	{
 		http2->shutdown(ctx);
 	}

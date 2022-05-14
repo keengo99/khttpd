@@ -527,7 +527,7 @@ char* b64decode(const unsigned char* in, int* l) {
 	unsigned char b[3];
 	char* s;
 	if (*l <= 0) {
-		*l = strlen((const char*)in);
+		*l = (int)strlen((const char*)in);
 	}
 	char* out = (char*)xmalloc(2 * (*l) + 2);
 	if (out == NULL) {
@@ -566,7 +566,7 @@ char* b64decode(const unsigned char* in, int* l) {
 		s++;
 	}
 
-	*l = s - out;
+	*l = (int)(s - out);
 	//  printf("len=%d\n",len);
 	while (*l && !out[*l - 1])
 		--* l;
@@ -587,7 +587,7 @@ std::string b64encode(const unsigned char* in, int len)
 	// char *s;
 	std::stringstream s;
 	if (len == 0) {
-		len = strlen((const char*)in);
+		len = (int)strlen((const char*)in);
 	}
 
 	// if (!stralloc_ready(out,in->len / 3 * 4 + 4)) return -1;

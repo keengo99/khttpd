@@ -48,20 +48,20 @@ public:
 		expire_time = 0;
 		container = NULL;
 	}
-	virtual void SetDelay()
+	virtual void set_delay()
 	{
 
 	}
-	virtual void SetNoDelay(bool forever)
+	virtual void set_no_delay(bool forever)
 	{
 	}
 	virtual KOPAQUE GetOpaque()
 	{
-		return GetConnection()->st.data;
+		return get_connection()->st.data;
 	}
-	kselector* GetSelector()
+	kselector* get_selector()
 	{
-		return GetConnection()->st.selector;
+		return get_connection()->st.selector;
 	}
 	KGL_RESULT write_all(const char* buf, int len)
 	{
@@ -88,20 +88,20 @@ public:
 	virtual bool set_header_callback(void* arg, kgl_header_callback header_callback) = 0;
 	virtual KGL_RESULT read_header() = 0;
 	virtual kgl_pool_t* GetPool() = 0;
-	virtual kconnection *GetConnection() = 0;
+	virtual kconnection *get_connection() = 0;
 	virtual void write_end()
 	{
 
 	}
 	virtual int read(char *buf, int len) = 0;
 	virtual int write(WSABUF *buf, int bc) = 0;
-	virtual void Shutdown() = 0;
+	virtual void shutdown() = 0;
 	virtual void Destroy() = 0;
 	virtual bool IsMultiStream()
 	{
 		return false;
 	}
-	virtual void SetTimeOut(int tmo)
+	virtual void set_time_out(int tmo)
 	{
 	}
 
@@ -119,7 +119,7 @@ public:
 	virtual sockaddr_i *GetAddr() = 0;
 	bool GetSelfAddr(sockaddr_i *addr)
 	{
-		kconnection *cn = GetConnection();
+		kconnection *cn = get_connection();
 		if (cn == NULL) {
 			return false;
 		}

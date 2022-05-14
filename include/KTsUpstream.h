@@ -16,21 +16,21 @@ public:
 	{
 		kassert(us == NULL);
 	}
-	void SetDelay()
+	void set_delay()
 	{
-		us->SetDelay();
+		us->set_delay();
 	}
-	void SetNoDelay(bool forever)
+	void set_no_delay(bool forever)
 	{
-		us->SetNoDelay(forever);
+		us->set_no_delay(forever);
 	}
-	kconnection *GetConnection()
+	kconnection *get_connection()
 	{
-		return us->GetConnection();
+		return us->get_connection();
 	}
-	void SetTimeOut(int tmo)
+	void set_time_out(int tmo)
 	{
-		return us->SetTimeOut(tmo);
+		return us->set_time_out(tmo);
 	}
 	void set_content_length(int64_t content_length)
 	{
@@ -95,7 +95,7 @@ public:
 		return us->IsBad(stage);
 	}
 	void write_end();
-	void Shutdown();
+	void shutdown();
 	void Destroy();
 	sockaddr_i *GetAddr()
 	{

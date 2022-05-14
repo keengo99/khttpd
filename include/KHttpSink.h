@@ -13,69 +13,60 @@ class KHttpSink : public KSink {
 public:
 	KHttpSink(kconnection *c,kgl_pool_t *pool);
 	~KHttpSink();
-	
-	bool response_header(const char *name, int name_len, const char *val, int val_len);
-	bool ResponseConnection(const char *val, int val_len) {
+	bool is_locked() override
+	{
+		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
+	}
+	bool response_header(const char *name, int name_len, const char *val, int val_len) override;
+	bool response_connection(const char *val, int val_len) override {
 		return response_header(kgl_expand_string("Connection"), val, val_len);
 	}
-	void AddTimer(result_callback result, void *arg, int msec)
-	{
-		kselector_add_timer(cn->st.selector, result, arg, msec, &cn->st);
-	}
 
-	int StartResponseBody(int64_t body_size);
-	bool IsLocked();
-	int internal_read(char *buf, int len) override;
-	int internal_write(WSABUF *buf, int bc) override;
-	bool read_hup(void *arg, result_callback result)
+	bool read_hup(void *arg, result_callback result) override
 	{
 		return selectable_readhup(&cn->st, result, arg);
 	}
-	void RemoveReadHup()
+	void remove_read_hup() override
 	{
 		selectable_remove_readhup(&cn->st);
 	}
-	void AddSync()
+	void add_sync() override
 	{
 		selectable_add_sync(&cn->st);
 	}
-	void RemoveSync()
+	void remove_sync() override
 	{
 		selectable_remove_sync(&cn->st);
 	}
-	void SetDelay()
+	void set_delay() override
 	{
 		ksocket_delay(cn->st.fd);
 	}
-	void SetNoDelay(bool forever)
+	void set_no_delay(bool forever) override
 	{
 		ksocket_no_delay(cn->st.fd,forever);
 	}
-	void Shutdown()
+	void shutdown() override
 	{
 		selectable_shutdown(&cn->st);
 	}
-	void SetTimeOut(int tmo)
+	void set_time_out(int tmo) override
 	{
 		cn->st.tmo = tmo;
 		cn->st.tmo_left = tmo;
 	}
-	int GetTimeOut()
+	int get_time_out() override
 	{
 		return cn->st.tmo;
 	}
-	int end_request();
-	KOPAQUE GetOpaque()
-	{
-		return cn->st.data;
-	}
+	int end_request() override;
 	ks_buffer buffer;
 	kev_result ReadHeader();
 	kev_result Parse();
 	KResponseContext *rc;
 	kconnection *cn;
 	kev_result ResultResponseContext(int got);
-	kconnection *GetConnection()
+	kconnection *get_connection() override
 	{
 		return cn;
 	}
@@ -87,9 +78,12 @@ public:
 	int StartPipeLine();
 	void EndFiber();
 protected:
+	int internal_start_response_body(int64_t body_size) override;
+	int internal_read(char* buf, int len) override;
+	int internal_write(WSABUF* buf, int bc) override;
+protected:
 	void start_header();
-	//@overide
-	bool internal_response_status(uint16_t status_code);
+	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext *dechunk;
 	khttp_parser parser;
 };

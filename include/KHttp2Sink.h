@@ -15,7 +15,7 @@ public:
 	{
 		kassert(ctx == NULL);
 	}
-	bool SetTransferChunked() override
+	bool set_transfer_chunked() override
 	{
 		return false;
 	}
@@ -27,17 +27,17 @@ public:
 	{
 		return http2->add_header(ctx, name, name_len,val, val_len);
 	}
-	bool ResponseConnection(const char *val, int val_len) override
+	bool response_connection(const char *val, int val_len) override
 	{
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int StartResponseBody(int64_t body_size) override
+	int internal_start_response_body(int64_t body_size) override
 	{
 		ctx->SetContentLength(body_size);
 		return http2->send_header(ctx);
 	}
-	bool IsLocked()
+	bool is_locked() override
 	{
 		if (ctx->read_wait) {
 			return true;
@@ -52,7 +52,7 @@ public:
 		http2->read_hup(ctx, result, arg);
 		return true;
 	}
-	void RemoveReadHup() override
+	void remove_read_hup() override
 	{
 		http2->remove_read_hup(ctx);
 	}
@@ -83,30 +83,30 @@ public:
 		delete this;
 		return 0;
 	}
-	void AddSync()
+	void add_sync() override
 	{
 	}
-	void RemoveSync()
+	void remove_sync() override
 	{
 	}
-	void Shutdown()
+	void shutdown() override
 	{
 		return http2->shutdown(ctx);
 	}
-	kconnection *GetConnection()
+	kconnection *get_connection() override
 	{
 		return http2->c;
 	}
-	void SetTimeOut(int tmo_count)
+	void set_time_out(int tmo_count) override
 	{
 		ctx->tmo = tmo_count;
 		ctx->tmo_left = tmo_count;
 	}
-	int GetTimeOut()
+	int get_time_out() override
 	{
 		return ctx->tmo;
 	}
-	void Flush()
+	void flush() override
 	{
 	}
 #ifdef ENABLE_PROXY_PROTOCOL
@@ -116,13 +116,6 @@ public:
 	};
 #endif
 protected:
-	void SetReadDelay(bool delay_flag)
-	{
-	}
-	void SetWriteDelay(bool delay_flag)
-	{
-
-	}
 	friend class KHttp2;
 private:
 	KHttp2Context *ctx;

@@ -13,7 +13,7 @@ bool KSink::start_response_body(INT64 body_len)
 	if (data.meth == METH_HEAD) {
 		body_len = 0;
 	}
-	int header_len = StartResponseBody(body_len);
+	int header_len = internal_start_response_body(body_len);
 	add_down_flow(header_len, true);
 	return header_len > 0;
 }
@@ -353,7 +353,7 @@ bool KSink::adjust_range(int64_t* len)
 }
 void KSink::start_parse() {
 	data.start_parse();
-	if (KBIT_TEST(GetBindServer()->flags, WORK_MODEL_SSL)) {
+	if (KBIT_TEST(get_bind_server()->flags, WORK_MODEL_SSL)) {
 		KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
 	}
 }
@@ -370,7 +370,7 @@ bool KSink::response_content_length(int64_t content_len)
 		//A HTTP/1.0 client no support TE head.
 		//The connection MUST close
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-	} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && SetTransferChunked()) {
+	} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && set_transfer_chunked()) {
 		KBIT_SET(data.flags, RQ_TE_CHUNKED);
 	}
 	return true;
@@ -398,7 +398,7 @@ int KSink::read(char* buf, int len)
 		KBIT_CLR(data.flags, RQ_HAVE_EXPECT);
 		response_status(100);
 		start_response_body(0);
-		Flush();
+		flush();
 		start_header();
 	}
 	int length;

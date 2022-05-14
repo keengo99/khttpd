@@ -55,15 +55,15 @@ public:
 		}
 #endif
 		if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
-			return ResponseConnection(kgl_expand_string("upgrade"));
+			return response_connection(kgl_expand_string("upgrade"));
 		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
-			return ResponseConnection(kgl_expand_string("close"));
+			return response_connection(kgl_expand_string("close"));
 		}
 		if (data.http_major == 1 && data.http_minor >= 1) {
 			//HTTP/1.1 default keep-alive
 			return true;
 		}
-		return ResponseConnection(kgl_expand_string("keep-alive"));
+		return response_connection(kgl_expand_string("keep-alive"));
 	}
 	bool response_content_length(int64_t content_len);
 
@@ -79,18 +79,18 @@ public:
 		return internal_response_status(status_code);
 	}
 	virtual bool read_hup(void* arg, result_callback result) = 0;
-	virtual void RemoveReadHup() = 0;
-	virtual bool SetTransferChunked() {
+	virtual void remove_read_hup() = 0;
+	virtual bool set_transfer_chunked() {
 		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
 	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
-	kgl_pool_t* GetConnectionPool()
+	kgl_pool_t* get_connection_pool()
 	{
-		return GetConnection()->pool;
+		return get_connection()->pool;
 	}
 	virtual sockaddr_i* get_peer_addr()
 	{
-		kconnection* cn = GetConnection();
+		kconnection* cn = get_connection();
 		return &cn->addr;
 	}
 	bool get_peer_ip(char* ips, int ips_len)
@@ -143,35 +143,35 @@ public:
 	}
 	const char* get_state();
 	void set_state(uint8_t state);
-	virtual void AddSync() = 0;
-	virtual void RemoveSync() = 0;
-	kselector* GetSelector()
+	virtual void add_sync() = 0;
+	virtual void remove_sync() = 0;
+	kselector* get_selector()
 	{
-		return GetConnection()->st.selector;
+		return get_connection()->st.selector;
 	}
-	virtual void Shutdown() = 0;
-	kserver* GetBindServer()
+	virtual void shutdown() = 0;
+	kserver* get_bind_server()
 	{
-		return GetConnection()->server;
+		return get_connection()->server;
 	}
-	virtual kconnection* GetConnection() = 0;
-	virtual void SetTimeOut(int tmo_count) = 0;
+	virtual kconnection* get_connection() = 0;
+	virtual void set_time_out(int tmo_count) = 0;
 
-	virtual int GetTimeOut() = 0;
-	virtual void SetDelay()
+	virtual int get_time_out() = 0;
+	virtual void set_delay()
 	{
 	}
-	virtual void SetNoDelay(bool forever)
+	virtual void set_no_delay(bool forever)
 	{
 	}
-	void Flush()
+	virtual void flush()
 	{
-		SetNoDelay(false);
-		SetDelay();
+		set_no_delay(false);
+		set_delay();
 	}
 #ifdef KSOCKET_SSL
-	kssl_session* GetSSL() {
-		kconnection* cn = GetConnection();
+	kssl_session* get_ssl() {
+		kconnection* cn = get_connection();
 		return cn->st.ssl;
 	}
 #endif
@@ -203,6 +203,7 @@ public:
 	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
 	void begin_request();
 	virtual int end_request() = 0;
+	virtual bool is_locked() = 0;
 	void set_if_none_match(const char* etag, int len)
 	{
 		data.if_none_match = (kgl_str_t*)kgl_pnalloc(pool, sizeof(kgl_str_t));
@@ -216,7 +217,7 @@ public:
 	}
 	virtual bool get_self_addr(sockaddr_i* addr)
 	{
-		return 0 == kconnection_self_addr(GetConnection(), addr);
+		return 0 == kconnection_self_addr(get_connection(), addr);
 	}
 	kgl_pool_t* pool;
 	KRequestData data;
@@ -233,7 +234,7 @@ protected:
 	virtual int internal_write(WSABUF* buf, int bc) = 0;
 	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
-	virtual bool ResponseConnection(const char* val, int val_len) = 0;
-	virtual int StartResponseBody(int64_t body_size) = 0;
+	virtual bool response_connection(const char* val, int val_len) = 0;
+	virtual int internal_start_response_body(int64_t body_size) = 0;
 };
 #endif

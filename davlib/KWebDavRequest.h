@@ -28,9 +28,11 @@ public:
 	KGL_RESULT send_header_complete()
 	{
 		return us->send_header_complete();
+		
 	}
 	KGL_RESULT read_header()
 	{
+		us->set_no_delay(false);
 		return us->read_header();
 	}
 	bool send_http_auth(KWebDavAuth* auth);

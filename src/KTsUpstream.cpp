@@ -24,7 +24,7 @@ void http2_header_callback(KOPAQUE data, void* arg, const char* attr, int attr_l
 #if 0
 		KHttpRequest* rq = (KHttpRequest*)arg;
 		KAsyncFetchObject* fo = (KAsyncFetchObject*)data;
-		assert(kselector_is_same_thread(rq->sink->GetSelector()));
+		assert(kselector_is_same_thread(rq->sink->get_selector()));
 		fo->PushHeader(rq, attr, attr_len, val, val_len, false);
 #endif
 }
@@ -50,7 +50,7 @@ static int ts_send_header_complete(void* arg, int len)
 static int ts_shutdown(void* arg, int len)
 {
 	KUpstream* us = (KUpstream*)arg;
-	us->Shutdown();
+	us->shutdown();
 	return 0;
 }
 static int ts_write_end(void* arg, int len)
@@ -95,7 +95,7 @@ static int ts_set_http2_parser(void* arg, int len)
 KGL_RESULT KTsUpstream::read_header()
 {
 	kfiber* fiber = NULL;
-	if (kfiber_create2(us->GetSelector(), ts_read_http_header, us, 0, http_config.fiber_stack_size, &fiber) != 0) {
+	if (kfiber_create2(us->get_selector(), ts_read_http_header, us, 0, http_config.fiber_stack_size, &fiber) != 0) {
 		return KGL_ESYSCALL;
 	}
 	int ret;
@@ -116,7 +116,7 @@ int KTsUpstream::write(WSABUF* buf, int bc)
 	param.len = bc;
 	assert(buf[0].iov_len > 0);
 	kfiber* fiber = NULL;
-	if (kfiber_create2(us->GetSelector(), ts_write, &param, 0, 0, &fiber) != 0) {
+	if (kfiber_create2(us->get_selector(), ts_write, &param, 0, 0, &fiber) != 0) {
 		return -1;
 	}
 	int ret;
@@ -130,7 +130,7 @@ int KTsUpstream::read(char* buf, int len)
 	param.buf = buf;
 	param.len = len;
 	kfiber* fiber = NULL;
-	if (kfiber_create2(us->GetSelector(), ts_read, &param, 0, 0, &fiber) != 0) {
+	if (kfiber_create2(us->get_selector(), ts_read, &param, 0, 0, &fiber) != 0) {
 		return -1;
 	}
 	int ret;
@@ -144,18 +144,18 @@ void KTsUpstream::write_end()
 		return;
 	}
 	kfiber* fiber = NULL;
-	kfiber_create2(us->GetSelector(), ts_write_end, us, 0, http_config.fiber_stack_size, &fiber);
+	kfiber_create2(us->get_selector(), ts_write_end, us, 0, http_config.fiber_stack_size, &fiber);
 	int ret;
 	kfiber_join(fiber, &ret);
 }
-void KTsUpstream::Shutdown()
+void KTsUpstream::shutdown()
 {
 	if (!us->IsMultiStream()) {
-		us->Shutdown();
+		us->shutdown();
 		return;
 	}
 	kfiber* fiber = NULL;
-	kfiber_create2(us->GetSelector(), ts_shutdown, us, 0, http_config.fiber_stack_size, &fiber);
+	kfiber_create2(us->get_selector(), ts_shutdown, us, 0, http_config.fiber_stack_size, &fiber);
 	int ret;
 	kfiber_join(fiber, &ret);
 }
@@ -165,7 +165,7 @@ KGL_RESULT KTsUpstream::send_header_complete()
 		return us->send_header_complete();
 	}
 	kfiber* fiber = NULL;
-	kfiber_create2(us->GetSelector(), ts_send_header_complete, us, 0, http_config.fiber_stack_size, &fiber);
+	kfiber_create2(us->get_selector(), ts_send_header_complete, us, 0, http_config.fiber_stack_size, &fiber);
 	int ret = KGL_EUNKNOW;
 	kfiber_join(fiber, &ret);
 	return (KGL_RESULT)ret;
@@ -175,7 +175,7 @@ void KTsUpstream::Destroy()
 	fprintf(stderr, "never goto here.\n");
 	kassert(false);
 	if (us) {
-		selectable_next(&us->GetConnection()->st, next_ts_destroy, us, 0);
+		selectable_next(&us->get_connection()->st, next_ts_destroy, us, 0);
 		us = NULL;
 	}
 	delete this;
@@ -186,7 +186,7 @@ void KTsUpstream::gc(int life_time)
 	param.life_time = life_time;
 	param.us = us;
 	kfiber* fiber = NULL;
-	kfiber_create2(us->GetSelector(), ts_gc, &param, 0, http_config.fiber_stack_size, &fiber);
+	kfiber_create2(us->get_selector(), ts_gc, &param, 0, http_config.fiber_stack_size, &fiber);
 	int ret;
 	kfiber_join(fiber, &ret);
 	us = NULL;
@@ -202,7 +202,7 @@ bool KTsUpstream::set_header_callback(void* arg, kgl_header_callback header)
 	param.ts = this;
 
 	kfiber* fiber = NULL;
-	if (kfiber_create2(us->GetSelector(), ts_set_http2_parser, &param, 0, http_config.fiber_stack_size, &fiber) != 0) {
+	if (kfiber_create2(us->get_selector(), ts_set_http2_parser, &param, 0, http_config.fiber_stack_size, &fiber) != 0) {
 		return false;
 	}
 	int ret;

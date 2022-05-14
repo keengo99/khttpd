@@ -13,7 +13,7 @@ using namespace std;
 static kev_result monitor_connect_result(KOPAQUE data, void *arg, int got)
 {
 	KUpstream *us = (KUpstream *)arg;
-	kconnection *c = us->GetConnection();
+	kconnection *c = us->get_connection();
 	KSockPoolHelper *sph = static_cast<KSockPoolHelper *>(us->container);
 	if (got < 0) {
 		sph->disable();
@@ -161,7 +161,7 @@ void KSockPoolHelper::checkActive()
 	start_monitor_call_back();
 }
 #if 0
-KUpstream *KSockPoolHelper::GetConnection(KHttpRequest *rq, bool &half, bool &need_name_resolved)
+KUpstream *KSockPoolHelper::get_connection(KHttpRequest *rq, bool &half, bool &need_name_resolved)
 {
 	KUpstream *socket = NULL;
 	if (!KBIT_TEST(rq->req.flags, RQ_UPSTREAM_ERROR|RQ_HAS_CONNECTION_UPGRADE)) {
@@ -189,7 +189,7 @@ KUpstream *KSockPoolHelper::newConnection(KHttpRequest *rq,bool &need_name_resol
 			socket->Destroy();
 			return NULL;
 		}
-		kconnection *cn = socket->GetConnection();
+		kconnection *cn = socket->get_connection();
 		cn->st.fd = fd;
 		return socket;
 	}

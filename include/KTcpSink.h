@@ -8,74 +8,74 @@ class KTcpSink : public KSink {
 public:
 	KTcpSink(kconnection *cn,kgl_pool_t *pool);
 	~KTcpSink();
-	bool IsLocked()
+	bool is_locked() override
 	{
 		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
 	}
-	void SetTimeOut(int tmo)
+	void set_time_out(int tmo) override
 	{
 		cn->st.tmo = tmo;
 		cn->st.tmo_left = tmo;
 	}
-	int GetTimeOut()
+	int get_time_out() override
 	{
 		return cn->st.tmo;
 	}
-	bool read_hup(void *arg, result_callback result)
+	bool read_hup(void *arg, result_callback result) override
 	{
 		return selectable_readhup(&cn->st, result, arg);
 	}
-	void RemoveReadHup()
+	void remove_read_hup() override
 	{
 		selectable_remove_readhup(&cn->st);
 	}
-	void Shutdown()
+	void shutdown() override
 	{
 		selectable_shutdown(&cn->st);
 	}
-	int internal_read(char *buf, int len)
+	int internal_read(char *buf, int len) override
 	{
 		return kfiber_net_read(cn, buf, len);
 	}
-	int internal_write(LPWSABUF buf, int bc)
+	int internal_write(LPWSABUF buf, int bc) override
 	{
 		return kfiber_net_writev(cn, buf, bc);
 	}
-	void AddSync()
+	void add_sync() override
 	{
 		selectable_add_sync(&cn->st);
 	}
-	void RemoveSync()
+	void remove_sync() override
 	{
 		selectable_remove_sync(&cn->st);
 	}
-	kconnection *GetConnection()
+	kconnection *get_connection() override
 	{
 		return cn;
 	}
 	kev_result StartRequest();
-	int end_request();
-	bool internal_response_status(uint16_t status_code)
+	int end_request() override;
+	bool internal_response_status(uint16_t status_code) override
 	{
 		return false;
 	}
-	bool response_header(const char *name, int name_len, const char *val, int val_len)
+	bool response_header(const char *name, int name_len, const char *val, int val_len) override
 	{
 		return false;
 	}
-	bool ResponseConnection(const char *val, int val_len)
+	bool response_connection(const char *val, int val_len) override
 	{
 		return false;
 	}
-	int StartResponseBody(int64_t body_size)
+	int internal_start_response_body(int64_t body_size) override
 	{
 		return 0;
 	}
-	void SetDelay()
+	void set_delay() override
 	{
 		ksocket_delay(cn->st.fd);
 	}
-	void SetNoDelay(bool forever)
+	void set_no_delay(bool forever) override
 	{
 		ksocket_no_delay(cn->st.fd, forever);
 	}
