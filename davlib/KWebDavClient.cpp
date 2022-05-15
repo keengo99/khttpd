@@ -168,7 +168,7 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 	if (result != KGL_OK) {
 		return result;
 	}
-	if (rq->resp.status_code != STATUS_OK) {
+	if (rq->resp.status_code != STATUS_OK && rq->resp.status_code != STATUS_CREATED) {
 		return KGL_EDATA_FORMAT;
 	}
 	KHttpHeader* header = rq->resp.FindHeader(kgl_expand_string("Lock-Token"));
