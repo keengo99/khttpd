@@ -16,88 +16,84 @@ public:
 	{
 		kassert(us == NULL);
 	}
-	void set_delay()
+	void set_delay() override
 	{
 		us->set_delay();
 	}
-	void set_no_delay(bool forever)
+	void set_no_delay(bool forever) override
 	{
 		us->set_no_delay(forever);
 	}
-	kconnection *get_connection()
+	kconnection *get_connection() override
 	{
 		return us->get_connection();
 	}
-	void set_time_out(int tmo)
+	void set_time_out(int tmo) override
 	{
 		return us->set_time_out(tmo);
 	}
-	void set_content_length(int64_t content_length)
+	void set_content_length(int64_t content_length) override
 	{
 		return us->set_content_length(content_length);
 	}
-	bool send_connection(const char* val, hlen_t val_len)
+	bool send_connection(const char* val, hlen_t val_len) override
 	{
 		return us->send_connection(val, val_len);
 	}
-	bool send_host(const char* host, hlen_t host_len)
+	bool send_host(const char* host, hlen_t host_len) override
 	{
 		return us->send_host(host, host_len);
 	}
-	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len)
+	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override
 	{
 		return us->send_method_path(meth, path, path_len);
 	}
-	KGL_RESULT send_header_complete();
-	bool set_header_callback(void* arg, kgl_header_callback header_callback);
-	KGL_RESULT read_header();
+	KGL_RESULT send_header_complete() override;
+	bool set_header_callback(void* arg, kgl_header_callback header_callback) override;
+	KGL_RESULT read_header() override;
 #if 0
 	int64_t get_left() override
 	{
 		return us->get_left();
 	}
 #endif
-	KOPAQUE GetOpaque()
+	KOPAQUE GetOpaque() override
 	{
 		return us->GetOpaque();
 	}
-	void BindOpaque(KOPAQUE data)
+	void BindOpaque(KOPAQUE data) override
 	{
 		us->BindOpaque(data);
 	}
-	int read(char* buf, int len);
-	int write(WSABUF* buf, int bc);
-	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
+	int read(char* buf, int len) override;
+	int write(WSABUF* buf, int bc) override;
+	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override
 	{
 		return us->send_header(attr, attr_len, val, val_len);
 	}
-	bool send_method_path(uint16_t meth, const char* path, int path_len)
-	{
-		return us->send_method_path(meth, path, path_len);
-	}
-	bool IsMultiStream()
+	bool IsMultiStream() override
 	{
 		return us->IsMultiStream();
 	}
-	bool IsNew() {
+	bool IsNew() override{
 		return us->IsNew();
 	}
-	int GetLifeTime()
+	int GetLifeTime() override
 	{
 		return us->GetLifeTime();
 	}
-	void IsGood()
+	void IsGood() override
 	{
 		return us->IsGood();
 	}
-	void IsBad(BadStage stage)
+	void IsBad(BadStage stage) override
 	{
 		return us->IsBad(stage);
 	}
-	void write_end();
-	void shutdown();
-	void Destroy();
-	sockaddr_i *GetAddr()
+	void write_end() override;
+	void shutdown() override;
+	void Destroy() override;
+	sockaddr_i *GetAddr() override
 	{
 		return us->GetAddr();
 	}
@@ -105,11 +101,11 @@ public:
 	{
 		return 0;
 	}
-	kgl_pool_t *GetPool()
+	kgl_pool_t *GetPool() override
 	{
 		return us->GetPool();
 	}
-	kgl_refs_string* get_param()
+	kgl_refs_string* get_param() override
 	{
 		return us->get_param();
 	}

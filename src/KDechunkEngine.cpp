@@ -156,7 +156,7 @@ restart:
 			free(work);
 			work = NULL;
 		}
-		if (chunk_size < 0 || chunk_size > KHTTPD_MAX_CHUNK_SIZE) {
+		if (chunk_size < 0 || chunk_size > (int)KHTTPD_MAX_CHUNK_SIZE) {
 			//assert(false);
 			//printf("chunk size ²»ÕýÈ·,%d\n",chunk_size);
 			work_len = -5;

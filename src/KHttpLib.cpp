@@ -21,6 +21,7 @@
 #endif
 #ifndef 	_WIN32
 #include	<syslog.h>
+#include <unistd.h>
 #endif
 #include	<time.h>
 #include 	<ctype.h>
@@ -243,21 +244,21 @@ const char* mk1123time(time_t time, char* buf, int size) {
 	make_http_time(time, buf, size);
 	return buf;
 }
-#if 0
 void my_msleep(int msec) {
-#if	defined(OSF)
-	/* DU don't want to sleep in poll when number of descriptors is 0 */
-	usleep(msec * 1000);
-#elif	defined(_WIN32)
+#if defined(_WIN32)
 	Sleep(msec);
 #else
+	/* DU don't want to sleep in poll when number of descriptors is 0 */
+	usleep(msec * 1000);
+
+#endif
+	/*
 	struct timeval tv;
 	tv.tv_sec = msec / 1000;
 	tv.tv_usec = (msec % 1000) * 1000;
 	select(1, NULL, NULL, NULL, &tv);
-#endif
+	*/
 }
-#endif
 #define	BU_FREE	1
 #define	BU_BUSY	2
 const char* log_request_time(time_t time, char* buf, size_t buf_size) {
@@ -491,8 +492,8 @@ int url_decode(char* str, int len, KUrl* url, bool space2plus)
 
 
 unsigned int str_chr(const char* s, int c) {
-	register char ch;
-	register const char* t;
+	char ch;
+	const char* t;
 
 	ch = c;
 	t = s;

@@ -5,7 +5,7 @@
 #include <string.h>
 #include "kmalloc.h"
 #include "kbuf.h"
-#define KHTTPD_MAX_CHUNK_SIZE 0x100000000
+#define KHTTPD_MAX_CHUNK_SIZE 0x10000000
 enum class KDechunkResult
 {
 	Success,//解码成功，有数据返回，但要继续解码

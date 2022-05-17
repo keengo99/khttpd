@@ -61,7 +61,7 @@ public:
 	/*
 	 * 得到连接数
 	 */
-	unsigned getSize() {
+	 unsigned getSize() {
 		unsigned size = 0;
 		lock.Lock();
 		if (imp) {

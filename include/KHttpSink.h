@@ -82,7 +82,7 @@ protected:
 	int internal_read(char* buf, int len) override;
 	int internal_write(WSABUF* buf, int bc) override;
 protected:
-	void start_header();
+	void start_header() override;
 	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext *dechunk;
 	khttp_parser parser;
