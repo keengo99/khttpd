@@ -2,11 +2,11 @@
 #define KHTTPPARSER_H
 #include "kfeature.h"
 typedef enum {
-	kgl_parse_error,
-	kgl_parse_success,
-	kgl_parse_finished,
+	kgl_parse_error,//protocol error
+	kgl_parse_success,//have header parsed in result
+	kgl_parse_finished,//no header finished
 	kgl_parse_want_read,
-	kgl_parse_continue
+	kgl_parse_continue //no data parsed, need more data
 } kgl_parse_result;
 
 typedef enum {

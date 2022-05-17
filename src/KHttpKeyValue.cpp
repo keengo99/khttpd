@@ -10,11 +10,11 @@
 #include "kforwin32.h"
 #include "kmalloc.h"
 static const char *http_methods[MAX_METHOD] = {
-		"UNSET",
-		"OPTIONS",
+		"UNSET",		
 		"GET",
 		"HEAD",
 		"POST",
+		"OPTIONS",
 		"PUT",
 		"DELETE",
 		"TRACE",
@@ -40,7 +40,9 @@ static const char *http_methods[MAX_METHOD] = {
 		"MKACTIVITY",
 		"CONNECT",
 		"PURGE",
-		"PATCH"
+		"PATCH",
+		"SUBSCRIBE",
+		"UNSUBSCRIBE"
 };
 #if 0
 static keyvalue http_status[] = {

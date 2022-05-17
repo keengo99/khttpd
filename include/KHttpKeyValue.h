@@ -12,10 +12,10 @@
 #include "kmalloc.h"
 
 #define METH_UNSET      0
-#define METH_OPTIONS    1
-#define METH_GET        2
-#define METH_HEAD       3
-#define METH_POST       4
+#define METH_GET        1
+#define METH_HEAD       2
+#define METH_POST       3
+#define METH_OPTIONS    4
 #define METH_PUT        5
 #define METH_DELETE     6
 #define METH_TRACE      7
@@ -42,7 +42,9 @@
 #define METH_CONNECT    28
 #define METH_PURGE      29
 #define METH_PATCH      30
-#define MAX_METHOD      31
+#define METH_SUBSCRIBE  31
+#define METH_UNSUBSCRIBE 32
+#define MAX_METHOD      33
 
 typedef struct {
 	int key;
