@@ -161,7 +161,7 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 		printf("webdav new_request failed error=[%d]\n", result);
 		return result;
 	}
-	defer(delete rq);
+	defer(rq->skip_body();delete rq);
 	rq->send_header_complete();
 	rq->write_all(body.getBuf(), body.getSize());
 	result = rq->read_header();
@@ -189,7 +189,6 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 	current_lock_token->path = path;
 	current_lock_token->token = (char*)pos;
 
-	rq->skip_body();
 	return KGL_OK;
 }
 KGL_RESULT KWebDavClient::unlock()
