@@ -70,7 +70,6 @@ kev_result on_ready(KOPAQUE data, void* arg, int got)
 }
 int main(int argc, char** argv)
 {
-	printf("sizeof(KRequest)=[%d]\n", sizeof(KRequestData));
 	kasync_init();
 	selector_manager_on_ready(on_ready, NULL);
 	selector_manager_init(1, true);

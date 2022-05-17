@@ -22,6 +22,9 @@ void KSink::begin_request()
 	katom_inc64((void*)&kgl_total_requests);
 	set_state(STATE_RECV);
 	assert(data.url == NULL);
+	if (data.raw_url==nullptr) {
+		return;
+	}
 	data.url = new KUrl;
 	if (data.raw_url->host) {
 		data.url->host = xstrdup(data.raw_url->host);

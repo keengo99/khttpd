@@ -164,11 +164,12 @@ kev_result KHttpSink::Parse()
 	khttp_parse_result rs;
 	char *hot = buffer.buf;
 	int len = buffer.used;
+	//fwrite(hot, 1, len, stdout);
 	for (;;) {
 		memset(&rs, 0, sizeof(rs));
 		kgl_parse_result result = khttp_parse(&parser, &hot, &len, &rs);
 		//printf("len=[%d],result=[%d]\n", len,result);
-		//fwrite(hot, 1, len, stdout);
+		
 		switch (result) {
 		case kgl_parse_continue:
 		{
@@ -234,9 +235,11 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 	if (rc == NULL) {
 		return 0;
 	}
+/*
 	if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
 		ksocket_delay(cn->st.fd);
 	}
+*/
 	rc->head_append_const("\r\n", 2);
 	rc->SwitchRead();
 	int header_len = rc->GetLen();

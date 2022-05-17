@@ -58,7 +58,7 @@ static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 	printf("test_move_copy_lock\n");
 #define COPY_LOCKED_SRC DAV_PREFIX_DIR "/copy-locked-src.txt"
 	KStringBuf s;
-	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
+	s << DAV_PREFIX_DIR "/lock-" << (int64_t)time(NULL) << "_" << __LINE__ << ".txt";
 	test_assert(KGL_OK == client->lock(s.getString()));
 	KFixString in(kgl_expand_string(LOCKED_FILE_CONTENT));
 	test_assert(KGL_OK == client2->put(COPY_LOCKED_SRC, &in));
@@ -86,7 +86,7 @@ static void test_lock(KWebDavClient* client, KWebDavClient* client2)
 {
 	printf("test_lock\n");
 	KStringBuf s;
-	s << DAV_PREFIX_DIR "/lock-" << time(NULL) << "_" << __LINE__ << ".txt";
+	s << DAV_PREFIX_DIR "/lock-" << (int64_t)time(NULL) << "_" << __LINE__ << ".txt";
 	test_assert(KGL_OK == client->lock(s.getString()));
 	KFixString in(kgl_expand_string(LOCKED_FILE_CONTENT));
 	KFixString in2(kgl_expand_string(LOCKED_FILE_CONTENT));
@@ -138,7 +138,7 @@ static void clean_all_child(KWebDavClient* client, const char* path)
 		if ((*it)->is_directory) {
 			s << "/";
 		}
-		client->_delete(s.getString());
+		client->_delete(url_encode(s.getString(),s.getSize()).c_str());
 	}
 }
 static void test_get_range(KWebDavClient* client)

@@ -5,7 +5,7 @@ file(GLOB KHTTPD_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 file(GLOB KDAVLIB_SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/davlib/*.cpp)
 file(GLOB KDAVLIB_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/davlib/*.h)
-
+set(CMAKE_CXX_STANDARD 14)
 #set(USE_CXX ON)
 if (NOT KASYNC_DIR) 
 	message(FATAL "config -DKASYNC_DIR")
@@ -13,7 +13,6 @@ endif()
 add_subdirectory(${KASYNC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/kasync EXCLUDE_FROM_ALL)
 set_source_files_properties(${KASYNC_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
 set(KHTTPD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 #message(STATUS ${KASYNC_SOURCE_FILES})
 list(APPEND KHTTPD_SOURCE_FILES ${KASYNC_SOURCE_FILES})
 list(APPEND KHTTPD_INCLUDE_DIR ${KASYNC_INCLUDE_DIR})
@@ -37,7 +36,7 @@ target_link_libraries(server_example khttpd)
 
 add_executable(webdav_client_example ${CMAKE_CURRENT_SOURCE_DIR}/example/webdav.cpp)
 target_include_directories(webdav_client_example PUBLIC ${KDAVLIB_INCLUDE_DIR})
-target_link_libraries(webdav_client_example ${KHTTPD_LIBS} khttpd davlib)
+target_link_libraries(webdav_client_example khttpd davlib)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)

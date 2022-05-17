@@ -243,7 +243,7 @@ const char* mk1123time(time_t time, char* buf, int size) {
 	make_http_time(time, buf, size);
 	return buf;
 }
-
+#if 0
 void my_msleep(int msec) {
 #if	defined(OSF)
 	/* DU don't want to sleep in poll when number of descriptors is 0 */
@@ -257,6 +257,7 @@ void my_msleep(int msec) {
 	select(1, NULL, NULL, NULL, &tv);
 #endif
 }
+#endif
 #define	BU_FREE	1
 #define	BU_BUSY	2
 const char* log_request_time(time_t time, char* buf, size_t buf_size) {
