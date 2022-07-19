@@ -3,6 +3,7 @@
 #include "KAtomCountable.h"
 #include "kmalloc.h"
 #include "KHttp3.h"
+#ifdef ENABLE_HTTP3
 class KHttp3Connection : public KAtomCountable
 {
 public:
@@ -52,4 +53,5 @@ protected:
 	lsquic_conn_t* c;
 	void* sni;
 };
+#endif
 #endif

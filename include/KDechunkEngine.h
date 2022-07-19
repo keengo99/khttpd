@@ -32,11 +32,11 @@ public:
 	KDechunkResult dechunk(char ** buf, int& buf_len, char** piece, int& piece_length);
 	uint32_t chunk_size;
 private:
-	static constexpr auto status_read_chunk_size{ static_cast<uint32_t>(0) };
-	static constexpr auto status_read_end{ static_cast<uint32_t>(-1) };
-	static constexpr auto status_read_last{ static_cast<uint32_t>(-2) };
-	static constexpr auto status_is_ended{ static_cast<uint32_t>(-3) };
-	static constexpr auto status_is_failed{ static_cast<uint32_t>(-4) };
+	static constexpr uint32_t status_read_chunk_size{ static_cast<uint32_t>(0) };
+	static constexpr uint32_t status_read_end{ static_cast<uint32_t>(-1) };
+	static constexpr uint32_t status_read_last{ static_cast<uint32_t>(-2) };
+	static constexpr uint32_t status_is_ended{ static_cast<uint32_t>(-3) };
+	static constexpr uint32_t status_is_failed{ static_cast<uint32_t>(-4) };
 };
 
 class KDechunkEngine {

@@ -66,9 +66,9 @@ static void ssl_free_sni(void* sni)
 {
 
 }
-#ifdef ENABLE_HTTP3
 static u_char h3_alpn = KGL_ALPN_HTTP3|KGL_ALPN_HTTP2;
 kgl_ssl_ctx* ssl_ctx = NULL;
+#ifdef ENABLE_HTTP3
 int h3_server(void* arg, int got)
 {
 	
