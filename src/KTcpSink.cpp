@@ -3,7 +3,7 @@
 #include "kfiber.h"
 #include "KHttpServer.h"
 
-KTcpSink::KTcpSink(kconnection *cn,kgl_pool_t *pool) : KSink(pool)
+KTcpSink::KTcpSink(kconnection *cn,kgl_pool_t *pool) : KTcpServerSink(pool)
 {
 	this->cn = cn;
 }

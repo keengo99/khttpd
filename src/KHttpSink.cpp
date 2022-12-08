@@ -127,7 +127,7 @@ kev_result KHttpSink::ResultResponseContext(int got)
 	}
 	return result(cn->st.data, arg, got);
 }
-KHttpSink::KHttpSink(kconnection *c,kgl_pool_t *pool) : KSink(pool)
+KHttpSink::KHttpSink(kconnection *c,kgl_pool_t *pool) : KTcpServerSink(pool)
 {
 	this->cn = c;
 	ks_buffer_init(&buffer, MAX_HTTP_CHUNK_SIZE);

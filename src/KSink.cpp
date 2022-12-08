@@ -356,7 +356,7 @@ bool KSink::adjust_range(int64_t* len)
 }
 void KSink::start_parse() {
 	data.start_parse();
-	if (KBIT_TEST(get_bind_server()->flags, WORK_MODEL_SSL)) {
+	if (KBIT_TEST(get_server_model(), WORK_MODEL_SSL)) {
 		KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
 	}
 }

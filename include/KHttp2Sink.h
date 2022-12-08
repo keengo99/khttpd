@@ -1,11 +1,12 @@
 #ifndef KHTTP2SINK_H_99
 #define KHTTP2SINK_H_99 1
-#include "KSink.h"
+#include "KTcpServerSink.h"
 #include "KHttp2.h"
 #ifdef ENABLE_HTTP2
-class KHttp2Sink : public KSink {
+class KHttp2Sink : public KTcpServerSink
+{
 public:
-	KHttp2Sink(KHttp2 *http2,KHttp2Context *ctx,kgl_pool_t *pool): KSink(pool)
+	KHttp2Sink(KHttp2 *http2,KHttp2Context *ctx,kgl_pool_t *pool): KTcpServerSink(pool)
 	{
 		this->http2 = http2;
 		this->ctx = ctx;

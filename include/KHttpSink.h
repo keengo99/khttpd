@@ -1,6 +1,6 @@
 #ifndef KHTTPSINK_H_99
 #define KHTTPSINK_H_99
-#include "KSink.h"
+#include "KTcpServerSink.h"
 #include "kconnection.h"
 #include "KHttpParser.h"
 #include "KResponseContext.h"
@@ -9,7 +9,8 @@
 //处理http1协议的
 int buffer_read_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bufCount);
 
-class KHttpSink : public KSink {
+class KHttpSink : public KTcpServerSink
+{
 public:
 	KHttpSink(kconnection *c,kgl_pool_t *pool);
 	~KHttpSink();

@@ -1,10 +1,11 @@
 #ifndef KTCPSINK_H_99
 #define KTCPSINK_H_99
-#include "KSink.h"
+#include "KTcpServerSink.h"
 #include "kconnection.h"
 #include "kfiber.h"
 
-class KTcpSink : public KSink {
+class KTcpSink : public KTcpServerSink
+{
 public:
 	KTcpSink(kconnection *cn,kgl_pool_t *pool);
 	~KTcpSink();

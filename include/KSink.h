@@ -150,10 +150,14 @@ public:
 		return get_connection()->st.selector;
 	}
 	virtual void shutdown() = 0;
+	virtual uint8_t get_server_model() = 0;
+	virtual KOPAQUE get_server_opaque() = 0;
+	/*
 	kserver* get_bind_server()
 	{
 		return get_connection()->server;
 	}
+	*/
 	virtual kconnection* get_connection() = 0;
 	virtual void set_time_out(int tmo_count) = 0;
 
