@@ -84,12 +84,6 @@ public:
 		delete this;
 		return 0;
 	}
-	void add_sync() override
-	{
-	}
-	void remove_sync() override
-	{
-	}
 	void shutdown() override
 	{
 		return http2->shutdown(ctx);

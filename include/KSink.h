@@ -143,8 +143,6 @@ public:
 	}
 	const char* get_state();
 	void set_state(uint8_t state);
-	virtual void add_sync() = 0;
-	virtual void remove_sync() = 0;
 	kselector* get_selector()
 	{
 		return get_connection()->st.selector;

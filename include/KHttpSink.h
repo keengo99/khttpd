@@ -31,14 +31,6 @@ public:
 	{
 		selectable_remove_readhup(&cn->st);
 	}
-	void add_sync() override
-	{
-		selectable_add_sync(&cn->st);
-	}
-	void remove_sync() override
-	{
-		selectable_remove_sync(&cn->st);
-	}
 	void set_delay() override
 	{
 		ksocket_delay(cn->st.fd);

@@ -42,14 +42,6 @@ public:
 	{
 		return kfiber_net_writev(cn, buf, bc);
 	}
-	void add_sync() override
-	{
-		selectable_add_sync(&cn->st);
-	}
-	void remove_sync() override
-	{
-		selectable_remove_sync(&cn->st);
-	}
 	kconnection *get_connection() override
 	{
 		return cn;
