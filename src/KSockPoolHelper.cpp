@@ -306,9 +306,9 @@ bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
 	}
 	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
-	this->http2 = false;
+	this->http2 = KGL_ALPN_HTTP1;
 	if (ssl_buf && strchr(ssl_buf, 'p')) {
-		this->http2 = true;
+		this->http2 = KGL_ALPN_HTTP2;
 	}
 #endif//}}
 	if (ssl_buf && strchr(ssl_buf, 'n')) {

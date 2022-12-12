@@ -3,6 +3,7 @@
 #include "KSink.h"
 #include "kselector_manager.h"
 #include "KSockPoolHelper.h"
+#include "KHttp3.h"
 
 void on_new_http_request(KSink *rq, int header_size)
 {
@@ -57,20 +58,40 @@ int client_http_test(void *arg,int got)
 	us->gc(-1);
 	return 0;
 }
-kev_result on_ready(KOPAQUE data, void* arg, int got)
+#ifdef ENABLE_HTTP3
+static u_char h3_alpn = KGL_ALPN_HTTP3|KGL_ALPN_HTTP2;
+int h3_server(void* arg, int got)
 {
-	init_http_server_callback(NULL, on_new_http_request);
+	auto ssl_ctx = kgl_ssl_ctx_new_server("D:\\project\\kangle\\etc\\server.crt", "D:\\project\\kangle\\etc\\server.key", NULL, NULL, &h3_alpn);
+	auto h3_server = kgl_h3_new_server("0.0.0.0", 4433, ssl_ctx, 0);
+	if (h3_server == nullptr) {
+		perror("cann't init h3 server");
+		return -1;
+	}
+	h3_server->start();
+	kfiber_msleep(5000);
+	//printf("now shutdown h3 test engine\n");
+	//h3_server->shutdown();
+	return 0;
+}
+#endif
+kev_result on_ready(KOPAQUE data, void* arg, int got)
+{	
 	http_config.time_out = 30;
 	kserver* server = kserver_init();
-	kserver_bind(server, "127.0.0.1", 8888, NULL);
+	kserver_bind(server, "127.0.0.1", 8800, NULL);
+	KBIT_SET(server->flags, WORK_MODEL_ALT_H3);
 	start_http_server(server,0);
 	kserver_release(server);
-	//kfiber_create(client_http_test, NULL, 0, 0, NULL);
+#ifdef ENABLE_HTTP3
+	kfiber_create(h3_server, NULL, 0, 0, NULL);
+#endif
 	return kev_ok;
 }
 int main(int argc, char** argv)
 {
-	kasync_init();
+	kasync_init();	
+	init_http_server_callback(NULL, on_new_http_request);
 	selector_manager_on_ready(on_ready, NULL);
 	selector_manager_init(1, true);
 	selector_manager_set_timeout(10, 10);

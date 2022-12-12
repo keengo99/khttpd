@@ -4,6 +4,7 @@
 #ifdef KSOCKET_SSL
 	#define ENABLE_UPSTREAM_SSL   1
 	#define ENABLE_HTTP2          1
+    //#define ENABLE_HTTP3          1
 	#ifdef ENABLE_HTTP2
 		#define ENABLE_UPSTREAM_HTTP2 1
 	#endif
@@ -115,6 +116,7 @@
 #define WORK_MODEL_MANAGE    (1<<1)
 #define WORK_MODEL_SSL       (1<<2)
 #define WORK_MODEL_TCP       (1<<3)
+#define WORK_MODEL_ALT_H3    (1<<4)
 #ifdef  ENABLE_PROXY_PROTOCOL
 #define WORK_MODEL_PROXY     (1<<5)
 //proxy in ssl
@@ -185,5 +187,12 @@ inline bool is_status_code_no_body(int status_code) {
 	}
 	return false;
 }
+#define KGL_HTTP_V2_NPN_ADVERTISE        "\x02h2"
+#define KGL_HTTP_V3_NPN_ADVERTISE        "\x02h3\x05h3-29"
+#define KGL_HTTP_V2_NPN_NEGOTIATED       "h2"
+
+#define KGL_ALPN_HTTP1   0
+#define KGL_ALPN_HTTP2   1
+#define KGL_ALPN_HTTP3   2
 KEND_DECLS
 #endif

@@ -127,6 +127,15 @@ int KHttpKeyValue::getMethod(const char *src) {
 	}
 	return 0;
 }
+int KHttpKeyValue::get_method(const char* src, int len)
+{
+	for (int i = 1; i < MAX_METHOD; i++) {
+		if (strncasecmp(src, http_methods[i], len) == 0) {
+			return i;
+		}
+	}
+	return 0;
+}
 #if 0
 const char *KHttpKeyValue::getStatus(int status) {
 	const char *v = keyvalue_get_value(http_status, status);

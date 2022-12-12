@@ -231,7 +231,7 @@ protected:
 	}
 	void start_parse();
 	void reset_pipeline();
-	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int* val_len, bool is_first);
+	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
 	void init_pool(kgl_pool_t* pool);
 	virtual int internal_write(WSABUF* buf, int bc) = 0;
 	virtual int internal_read(char* buf, int len) = 0;

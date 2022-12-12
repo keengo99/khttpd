@@ -79,34 +79,11 @@ bool KRequestData::parse_connect_url(char* src) {
 	raw_url->port = atoi(ss + 1);
 	return true;
 }
-kgl_header_result KRequestData::parse_host(char* val)
+kgl_header_result KRequestData::parse_host(char* val,size_t len)
 {
 	if (raw_url->host == NULL) {
-		char* p = NULL;
-		if (*val == '[') {
-			KBIT_SET(raw_url->flags, KGL_URL_IPV6);
-			val++;
-			raw_url->host = strdup(val);
-			p = strchr(raw_url->host, ']');
-			if (p) {
-				*p = '\0';
-				p = strchr(p + 1, ':');
-			}
-		} else {
-			raw_url->host = strdup(val);
-			p = strchr(raw_url->host, ':');
-			if (p) {
-				*p = '\0';
-			}
-		}
-		if (p) {
-			raw_url->port = atoi(p + 1);
-		} else {
-			if (KBIT_TEST(raw_url->flags, KGL_URL_SSL)) {
-				raw_url->port = 443;
-			} else {
-				raw_url->port = 80;
-			}
+		if (!raw_url->parse_host(val, len)) {
+			return kgl_header_failed;
 		}
 	}
 	return kgl_header_no_insert;

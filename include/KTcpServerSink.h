@@ -16,7 +16,7 @@ public:
 	{
 		return get_server()->flags;
 	}
-	virtual KOPAQUE get_server_opaque()
+	virtual KOPAQUE get_server_opaque() override
 	{
 		return kserver_get_opaque(get_server());
 	}

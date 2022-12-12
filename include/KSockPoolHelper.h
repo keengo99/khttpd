@@ -122,7 +122,7 @@ public:
 	};
 #ifdef ENABLE_UPSTREAM_SSL
 #ifdef ENABLE_UPSTREAM_HTTP2
-	bool http2;
+	u_char http2;
 #endif
 	bool IsSslVerify()
 	{

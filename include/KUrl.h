@@ -185,6 +185,45 @@ public:
 		}
 		delete this;
 	}
+	bool parse_host(const char* val, size_t len)
+	{
+		assert(this->host == NULL);
+		char* port;
+		if (*val == '[') {
+			KBIT_SET(this->flags, KGL_URL_IPV6);
+			val++;
+			len--;
+			char* host_end = (char*)memchr(val, ']', len);
+			if (host_end == NULL) {
+				return false;
+			}
+			size_t host_len = host_end - val;
+			port = (char*)memchr(host_end, ':', len - host_len);
+			if (port) {
+				size_t port_len = len - host_len;
+				port_len -= (port - host_end);
+				this->port = kgl_atoi((u_char*)port + 1, port_len - 1);
+			}
+			len = host_len;
+		} else {
+			port = (char*)memchr(val, ':', len);
+			if (port) {
+				size_t port_len = len;
+				len = port - val;
+				port_len -= len;
+				this->port = kgl_atoi((u_char*)port + 1, port_len - 1);
+			}
+		}
+		this->host = kgl_strndup(val, len);
+		if (port == NULL) {
+			if (KBIT_TEST(this->flags, KGL_URL_ORIG_SSL)) {
+				this->port = 443;
+			} else {
+				this->port = 80;
+			}
+		}
+		return true;
+	}
 	char *host;
 	char *path;
 	char *param;

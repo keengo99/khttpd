@@ -56,8 +56,7 @@ public:
 	virtual ~KHttpKeyValue();
 	static const char *getMethod(int meth);
 	static int getMethod(const char *src);
-	//static const char *getStatus(int status);
-
+	static int get_method(const char* src,int len);
 };
 inline void getRequestLine(kgl_pool_t *pool,int status,kgl_str_t *ret)
 {

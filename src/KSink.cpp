@@ -2,7 +2,34 @@
 #include "klog.h"
 #include "KHttpFieldValue.h"
 #include "kfiber.h"
+bool mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
+{
+	if (attr_len != val_len) {
+		return false;
+	}
+	return memcmp(attr, val, attr_len)==0;
+}
+bool mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
+{
+	if (attr_len != val_len) {
+		return false;
+	}	
+	u_char  c1, c2;
+	while (attr_len>0) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
 
+		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+
+		if (c1 == c2) {
+			attr_len--;
+			continue;
+		}
+		return false;
+	}
+	return true;
+}
 bool KSink::start_response_body(INT64 body_len)
 {
 	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
@@ -13,6 +40,13 @@ bool KSink::start_response_body(INT64 body_len)
 	if (data.meth == METH_HEAD) {
 		body_len = 0;
 	}
+#if 0
+	if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && KBIT_TEST(get_bind_server()->flags,WORK_MODEL_ALT_H3)) {
+		char alt_port[16];
+		int alt_len = snprintf(alt_port, sizeof(alt_port), ":%d", get_self_port());
+		response_header(kgl_expand_string("Alt-Svc"), alt_port, alt_len);
+	}
+#endif
 	int header_len = internal_start_response_body(body_len);
 	add_down_flow(header_len, true);
 	return header_len > 0;
@@ -50,7 +84,7 @@ bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len,
 		start_parse();
 	}
 	//printf("%s%s%s\n", attr, is_first ? " " : ": ", val);
-	kgl_header_result ret = internal_parse_header(attr, attr_len, val, &val_len, is_first);
+	kgl_header_result ret = internal_parse_header(attr, attr_len, val, val_len, is_first);
 	switch (ret) {
 	case kgl_header_failed:
 		return false;
@@ -63,30 +97,29 @@ bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len,
 	}
 }
 
-kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, char* val, int* val_len, bool is_first)
+kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
 {
 #ifdef ENABLE_HTTP2
 	if (data.http_major > 1 && *attr == ':') {
-		attr++;
-		if (strcmp(attr, "method") == 0) {
+		if (mem_same(attr,attr_len,kgl_expand_string(":method"))){
 			if (!data.parse_method(val)) {
 				klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 				return kgl_header_failed;
 			}
 			return kgl_header_no_insert;
 		}
-		if (strcmp(attr, "version") == 0) {
+		if (mem_same(attr, attr_len, kgl_expand_string(":version"))) {
 			data.parse_http_version(val);
 			return kgl_header_no_insert;
 		}
-		if (strcmp(attr, "path") == 0) {
-			parse_url(val, data.raw_url);
+		if (mem_same(attr, attr_len, kgl_expand_string(":path"))) {
+			parse_url(val,val_len, data.raw_url);
 			return kgl_header_no_insert;
 		}
-		if (strcmp(attr, "authority") == 0) {
-			if (kgl_header_success == data.parse_host(val)) {
+		if (mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
+			if (kgl_header_success == data.parse_host(val,val_len)) {
 				//转换成HTTP/1的http头
-				data.AddHeader(kgl_expand_string("Host"), val, *val_len, true);
+				data.AddHeader(kgl_expand_string("Host"), val, val_len, true);
 			}
 			return kgl_header_no_insert;
 		}
@@ -113,7 +146,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		if (data.meth == METH_CONNECT) {
 			result = data.parse_connect_url(val);
 		} else {
-			result = parse_url(val, data.raw_url);
+			result = parse_url(val,val_len, data.raw_url);
 		}
 		if (!result) {
 			klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
@@ -129,7 +162,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_no_insert;
 	}
 	if (!strcasecmp(attr, "Host")) {
-		return data.parse_host(val);
+		return data.parse_host(val,val_len);
 	}
 	if (!strcasecmp(attr, "Connection")
 		//{{ent
@@ -174,7 +207,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		if (try_time == -1) {
 			data.flags |= RQ_IF_RANGE_ETAG;
 			if (data.if_none_match == NULL) {
-				set_if_none_match(val, *val_len);
+				set_if_none_match(val, val_len);
 			}
 		} else {
 			data.if_modified_since = try_time;
@@ -190,7 +223,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 	if (!strcasecmp(attr, "If-None-Match")) {
 		data.flags |= RQ_HAS_IF_NONE_MATCH;
 		if (data.if_none_match == NULL) {
-			set_if_none_match(val, *val_len);
+			set_if_none_match(val, val_len);
 		}
 		return kgl_header_no_insert;
 	}

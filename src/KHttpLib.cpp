@@ -307,7 +307,40 @@ char* url_value_encode(const char* s, size_t len, size_t* new_length) {
 	}
 	return (char*)start;
 }
+int kgl_atoi(const u_char* line, size_t n)
+{
+	int  value;
+	if (n == 0) {
+		return 0;
+	}
+	for (value = 0; n--; line++) {
+		if (*line < '0' || *line > '9') {
+			return value;
+		}	
+		value = value * 10 + (*line - '0');
+	}
+	return value;
+}
+void kgl_strlow(u_char* dst, u_char* src, size_t n)
+{
+	while (n) {
+		*dst = kgl_tolower(*src);
+		dst++;
+		src++;
+		n--;
+	}
+}
 
+
+const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen)
+{
+	const char* p;
+	for (p = (char *)haystack; p <= (haystack - needlen + haystacklen); p++) {
+		if (memcmp(p, needle, needlen) == 0)
+			return p; /* found */
+	}
+	return NULL;
+}
 char* url_encode(const char* s, size_t len, size_t* new_length) {
 	unsigned char c;
 	unsigned char* to, * start;
@@ -357,80 +390,63 @@ std::string url_encode(const char* str, size_t len_string) {
 	return s;
 }
 
-bool parse_url(const char* src, KUrl* url) {
-	const char* ss, * se, * sx;
-	//memset(url, 0, sizeof(KUrl));
-	int p_len;
-	if (*src == '/') {/* this is 'GET /path HTTP/1.x' request */
-		sx = src;
+bool parse_url(const char* src, size_t len, KUrl* url) {
+	const char* host, * path;
+	if (len == 0) {
+		return false;
+	}
+	size_t p_len;
+	if (*src == '/') {
+		path = src;
 		goto only_path;
 	}
-	ss = strchr(src, ':');
-	if (!ss) {
+	host = kgl_memstr(src, len, kgl_expand_string("://"));	
+	if (!host) {
 		return false;
 	}
-	if (memcmp(ss, "://", 3)) {
-		return false;
-	}
-	p_len = (int)(ss - src);
+	p_len = (host - src);
 	if (p_len == 4 && strncasecmp(src, "http", p_len) == 0) {
 		KBIT_CLR(url->flags, KGL_URL_ORIG_SSL);
-		url->port = 80;
+		//url->port = 80;
 	} else if (p_len == 5 && strncasecmp(src, "https", p_len) == 0) {
 		KBIT_SET(url->flags, KGL_URL_ORIG_SSL);
-		url->port = 443;
+		//url->port = 443;
 	}
+	
 	//host start
-	ss += 3;
-	sx = strchr(ss, '/');
-	if (sx == NULL) {
+	host += 3;
+	len -= (p_len + 3);
+	path = (char*)memchr(host, '/', len);
+	if (path == NULL) {
 		return false;
 	}
-	p_len = 0;
-	if (*ss == '[') {
-		ss++;
-		se = strchr(ss, ']');
-		KBIT_SET(url->flags, KGL_URL_IPV6);
-		if (se && se < sx) {
-			p_len = (int)(se - ss);
-			se = strchr(se + 1, ':');
-			if (se && se < sx) {
-				url->port = atoi(se + 1);
-			}
-		}
-	} else {
-		se = strchr(ss, ':');
-		if (se && se < sx) {
-			p_len = (int)(se - ss);
-			url->port = atoi(se + 1);
-		}
+	size_t host_len = path - host;
+	len -= host_len;
+	if (!url->parse_host(host, host_len)) {
+		return false;
 	}
-	if (p_len == 0) {
-		p_len = (int)(sx - ss);
-	}
-	assert(url->host == NULL);
-	url->host = (char*)malloc(p_len + 1);
-	kgl_memcpy(url->host, ss, p_len);
-	url->host[p_len] = 0;
-only_path: const char* sp = strchr(sx, '?');
-	int path_len;
+only_path: const char* sp = (char *)memchr(path, '?', len);	
+	size_t path_len;
 	if (sp) {
-		char* param = strdup(sp + 1);
+		path_len = sp - path;
+		sp++;
+		len--;
+		char* param = kgl_strndup(sp,len);
 		assert(url->param == NULL);
 		if (*param) {
 			url->param = param;
 		} else {
 			free(param);
 		}
-		path_len = (int)(sp - sx);
 	} else {
-		path_len = (int)strlen(sx);
+		path_len = len;
 	}
 	assert(url->path == NULL);
-	url->path = (char*)xmalloc(path_len + 1);
-	url->path[path_len] = '\0';
-	kgl_memcpy(url->path, sx, path_len);
+	url->path = kgl_strndup(path, path_len);
 	return true;
+}
+bool parse_url(const char* src, KUrl* url) {
+	return parse_url(src, strlen(src), url);
 }
 
 

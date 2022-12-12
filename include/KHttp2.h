@@ -24,10 +24,9 @@
 #define  KGL_ABORT      -6
 class KRequestData;
 class KUpstream;
-#ifdef TLSEXT_TYPE_next_proto_neg
-#define KGL_HTTP_V2_NPN_NEGOTIATED       "h2"
-#define KGL_HTTP_V2_NPN_ADVERTISE        "\x02h2"
-#endif
+
+
+
 #define KGL_HTTP_V2_STATE_BUFFER_SIZE    16
 
 #define KGL_HTTP_V2_MAX_FRAME_SIZE       ((1 << 24) - 1)
