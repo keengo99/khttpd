@@ -395,7 +395,7 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 	if (len == 0) {
 		return false;
 	}
-	size_t p_len;
+	size_t p_len,host_len;
 	if (*src == '/') {
 		path = src;
 		goto only_path;
@@ -420,7 +420,7 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 	if (path == NULL) {
 		return false;
 	}
-	size_t host_len = path - host;
+	host_len = path - host;
 	len -= host_len;
 	if (!url->parse_host(host, host_len)) {
 		return false;

@@ -113,6 +113,7 @@
 #define  RQF_CC_PASS         (1<<30)
 #define  RQF_CC_HIT          (1<<31)
 
+#define WORK_MODEL_UNIX      (1<<0)
 #define WORK_MODEL_MANAGE    (1<<1)
 #define WORK_MODEL_SSL       (1<<2)
 #define WORK_MODEL_TCP       (1<<3)
