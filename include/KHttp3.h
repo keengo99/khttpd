@@ -9,6 +9,14 @@
 #ifdef ENABLE_HTTP3
 #include "lsquic.h"
 #define MAX_QUIC_UDP_SIZE 4096
+#pragma pack(push,1)
+struct kgl_h3_cid_header
+{
+    uint8_t port_id;
+    uint32_t seq;
+};
+#pragma pack(pop)
+
 bool init_khttp3();
 struct lsquic_conn_ctx
 {
@@ -108,9 +116,9 @@ public:
 		return KBIT_TEST(flags,KGL_SERVER_START)==0;
 	}
 	int start_engine(int index);
-	int get_engine_index(uint8_t port_id)
+	int get_engine_index(kgl_h3_cid_header *header)
 	{
-		return (int)port_id % engine_count;
+		return (int)header->port_id % engine_count;
 	}
 	KHttp3ServerEngine* refs_engine(int index)
 	{

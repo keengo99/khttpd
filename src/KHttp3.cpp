@@ -19,13 +19,6 @@
 #if ECN_SUPPORTED
 #define  CW_ECN       (1 << 1)
 #endif
-#pragma pack(push,1)
-struct kgl_cid_header
-{
-    uint8_t port_id;
-    uint32_t seq;
-};
-#pragma pack(pop)
 struct kgl_quic_package
 {
     sockaddr_i local_addr;
@@ -184,7 +177,7 @@ setup_control_msg(
         if (cw & CW_SENDADDR) {
             if (AF_INET == spec->dest_sa->sa_family) {
                 local_sa = (struct sockaddr_in*)spec->local_sa;
-#if LINUX || __APPLE__
+#if defined(LINUX) || defined(__APPLE__)
                 memset(&info, 0, sizeof(info));
                 info.ipi_spec_dst = local_sa->sin_addr;
                 cmsg->cmsg_level = IPPROTO_IP;
@@ -280,7 +273,7 @@ int send_packets_out(
     union
     {
         /* cmsg(3) recommends union for proper alignment */
-#if LINUX || _WIN32
+#if defined(LINUX) || defined(_WIN32)
 #	define SIZE1 sizeof(struct in_pktinfo)
 #else
 #	define SIZE1 sizeof(struct in_addr)
@@ -308,12 +301,12 @@ int send_packets_out(
     do {
         h3_engine = (KHttp3ServerEngine*)specs[n].peer_ctx;
         kconnection* uc = h3_engine->uc;
-#ifndef WIN32
+#ifndef _WIN32
         msg.msg_name = (void*)specs[n].dest_sa;
         msg.msg_namelen = (AF_INET == specs[n].dest_sa->sa_family ?
             sizeof(struct sockaddr_in) :
-            sizeof(struct sockaddr_in6)),
-            msg.msg_iov = specs[n].iov;
+            sizeof(struct sockaddr_in6));
+        msg.msg_iov = specs[n].iov;
         msg.msg_iovlen = specs[n].iovlen;
         msg.msg_flags = 0;
 #else
@@ -381,7 +374,7 @@ int send_packets_out(
     assert(s < 0);
     return -1;
  }
- int parse_local_addr(kgl_quic_package* package, kconnection* uc)
+ static int parse_local_addr(kgl_quic_package* package, kconnection* uc)
  {
      package->local_addr.v4.sin_family = package->peer_addr->v4.sin_family;
      if (AF_INET == package->peer_addr->v4.sin_family) {
@@ -424,12 +417,11 @@ int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int go
     if (h3_engine->is_multi()) {
         lsquic_cid_t cid;
         cid.len = 0;
-        if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->udp_buffer, got, &cid) || cid.len < sizeof(kgl_cid_header)) {
+        if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->udp_buffer, got, &cid) || cid.len < sizeof(kgl_h3_cid_header)) {
             return -1;
 
         }
-        kgl_cid_header* header = (kgl_cid_header*)cid.idbuf;
-        int index = h3_engine->server->get_engine_index(header->port_id);
+        int index = h3_engine->server->get_engine_index((kgl_h3_cid_header*)cid.idbuf);
         //printf("package index=[%d] current selector=[%p] sid=[%d]\n", index, kgl_get_tls_selector(), kgl_get_tls_selector()->sid);
         if (index != kgl_get_tls_selector()->sid) {
             kselector* selector = get_selector_by_index(index);
@@ -572,10 +564,10 @@ void kgl_h3_generate_scid(void* ctx,lsquic_conn_t* cn, lsquic_cid_t* cid, unsign
 {
     KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)ctx;
     kselector* selector = kgl_get_tls_selector();
-    kgl_cid_header* header = (kgl_cid_header*)cid->idbuf;
+    kgl_h3_cid_header* header = (kgl_h3_cid_header*)cid->idbuf;
     header->port_id = (uint8_t)selector->sid;
     header->seq = h3_engine->seq++;
-    RAND_bytes(cid->idbuf + sizeof(kgl_cid_header), len-sizeof(kgl_cid_header));
+    RAND_bytes(cid->idbuf + sizeof(kgl_h3_cid_header), len-sizeof(kgl_h3_cid_header));
     cid->len = len;
 }
 int h3_new_server_engine(void* arg, int got)
