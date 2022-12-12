@@ -125,6 +125,9 @@
 #endif
 #define WORK_MODEL_TPROXY    (1<<7)
 
+#define KGL_SERVER_DYNAMIC   (1<<8)
+#define KGL_SERVER_GLOBAL    (1<<9)
+
 #define  NBUFF_SIZE     8192
 
 #define KGL_REQUEST_POOL_SIZE 4096
