@@ -99,13 +99,13 @@ public:
 	{
 		return data;
 	}
-	int init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint8_t model);
+	int init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint32_t model);
 	int init_engine(int index);
 	bool start();
 	int shutdown();
 	bool is_shutdown()
 	{
-		return started == 0;
+		return KBIT_TEST(flags,KGL_SERVER_START)==0;
 	}
 	int start_engine(int index);
 	int get_engine_index(uint8_t port_id)
@@ -121,17 +121,8 @@ public:
 	friend class KHttp3ServerEngine;
 	sockaddr_i addr;
 	kgl_ssl_ctx* ssl_ctx;
-protected:
-	union
-	{
-		struct
-		{
-			uint8_t model;
-			uint8_t started : 1;
-			uint8_t inited : 1;
-		};
-		uint32_t flags;
-	};
+	uint32_t flags;
+protected:	
 	int engine_count;
 	kserver_free_opaque free_opaque;
 	KOPAQUE data;
@@ -156,6 +147,6 @@ protected:
 	}
 	KHttp3ServerEngine** engines;
 };
-KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx, uint8_t model);
+KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx, uint32_t model);
 #endif
 #endif

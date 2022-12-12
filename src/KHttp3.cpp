@@ -607,7 +607,7 @@ void kgl_h3_engine_tick(void* arg, int event_count)
     }
     h3_engine->ticked();
 }
-KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint8_t model)
+KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx, uint32_t model)
 {
     auto selector_count = get_selector_count();
     if (selector_count > MAX_SELECTOR_COUNT) {
@@ -622,10 +622,10 @@ KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_
 }
 int KHttp3Server::shutdown()
 {
-    if (!started) {
-        return -1;
+    if (!KBIT_TEST(flags, KGL_SERVER_START)) {
+        return false;
     }
-    started = 0;
+    KBIT_CLR(flags, KGL_SERVER_START);
     for (int i = 0; i < engine_count; i++) {
         auto selector = get_selector_by_index(i);
         kfiber* fiber = NULL;
@@ -635,12 +635,12 @@ int KHttp3Server::shutdown()
     }
     return 0;
 }
-int KHttp3Server::init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint8_t model)
+int KHttp3Server::init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint32_t model)
 {
     if (!ssl_ctx) {
         return -1;
     }
-    if (inited || this->ssl_ctx) {
+    if (this->ssl_ctx) {
         return -1;
     }
     if (!ksocket_getaddr(ip, port, PF_UNSPEC, AI_NUMERICHOST, &addr)) {
@@ -648,7 +648,7 @@ int KHttp3Server::init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint8
     }
     kgl_add_ref_ssl_ctx(ssl_ctx);
     this->ssl_ctx = ssl_ctx;
-    this->model = model;
+    this->flags = model;
     for (int i = 0; i < engine_count; i++) {
         auto selector = get_selector_by_index(i);
         kfiber* fiber = NULL;
@@ -658,19 +658,18 @@ int KHttp3Server::init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint8
         if (retval != 0) {
             return retval;
         }
-    }
-    inited = 1;
+    } 
     return 0;
 }
 bool KHttp3Server::start()
 {
-    if (started) {
+    if (KBIT_TEST(flags,KGL_SERVER_START)) {
         return false;
     }
-    if (!inited) {
+    if (this->ssl_ctx == nullptr) {
         return false;
     }
-    started = 1;
+    KBIT_SET(flags, KGL_SERVER_START);
     for (int i = 0; i < engine_count; i++) {
         auto selector = get_selector_by_index(i);
         kfiber* fiber = NULL;
