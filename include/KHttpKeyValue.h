@@ -46,16 +46,9 @@
 #define METH_UNSUBSCRIBE 32
 #define MAX_METHOD      33
 
-typedef struct {
-	int key;
-	const char *value;
-} keyvalue;
 class KHttpKeyValue {
 public:
-	KHttpKeyValue();
-	virtual ~KHttpKeyValue();
-	static const char *getMethod(int meth);
-	static int getMethod(const char *src);
+	static kgl_str_t *getMethod(int meth);
 	static int get_method(const char* src,int len);
 };
 inline void getRequestLine(kgl_pool_t *pool,int status,kgl_str_t *ret)

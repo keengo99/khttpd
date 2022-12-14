@@ -18,12 +18,32 @@ struct kgl_h3_cid_header
 #pragma pack(pop)
 
 bool init_khttp3();
-struct lsquic_conn_ctx
-{
 
-};
 class KHttp3Server;
-
+class KHttp3CachedSni
+{
+public:
+	KHttp3CachedSni(const char* hostname, void* sni)
+	{
+		this->hostname = strdup(hostname);
+		this->sni = sni;
+	}
+	~KHttp3CachedSni()
+	{
+		xfree(hostname);
+		if (sni && kgl_ssl_free_sni) {
+			kgl_ssl_free_sni(sni);
+		}
+	}
+	void* get_sni()
+	{
+		void* data = sni;
+		sni = nullptr;
+		return data;
+	}
+	char* hostname;
+	void* sni;
+};
 class KHttp3ServerEngine
 {
 public:
@@ -60,15 +80,37 @@ public:
 		return old_buffer;
 	}
 	int start();
-	int init();
+	int init(kselector *selector, int udp_flag);
 	void release();
+	int add_refs();
 	int shutdown();
+	void* get_cache_sni(const char* hostname)
+	{
+		if (last_sni == nullptr || hostname == nullptr) {
+			return nullptr;
+		}
+		if (strcasecmp(last_sni->hostname, hostname) == 0) {
+			void* sni = last_sni->get_sni();
+			delete last_sni;
+			last_sni = nullptr;
+			return sni;
+		}
+		return nullptr;
+	}
+	void cache_sni(const char *hostname, void* sni)
+	{
+		if (last_sni != nullptr) {
+			delete last_sni;
+		}
+		last_sni = new KHttp3CachedSni(hostname, sni);
+	}
 	char* udp_buffer;
 	kconnection* uc;
 	lsquic_engine* engine;
 	uint32_t seq;
 	KHttp3Server* server;
 	kselector_tick* selector_tick;
+	KHttp3CachedSni* last_sni = nullptr;
 	friend class KHttp3Server;
 protected:
 	~KHttp3ServerEngine()
@@ -81,12 +123,15 @@ protected:
 		}
 		xfree(udp_buffer);
 		assert(selector_tick == NULL);
+		if (last_sni) {
+			delete last_sni;
+		}
 	}
 };
 class KHttp3Server : public KAtomCountable
 {
 public:
-	KHttp3Server(int count)
+	KHttp3Server(uint16_t count)
 	{
 		flags = 0;
 		ssl_ctx = nullptr;
@@ -94,7 +139,7 @@ public:
 		data = NULL;
 		engine_count = count;
 		engines = (KHttp3ServerEngine **)malloc(sizeof(KHttp3ServerEngine*)*count);
-		for (int i = 0; i < count; i++) {
+		for (int i = 0; i < (int)count; i++) {
 			engines[i] = new KHttp3ServerEngine(this);
 		}
 	}
@@ -107,8 +152,11 @@ public:
 	{
 		return data;
 	}
-	int init(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx,uint32_t model);
-	int init_engine(int index);
+	void update_ssl_ctx(kgl_ssl_ctx* ssl_ctx)
+	{
+		//TODO: update ssl_ctx
+	}
+	int init(const char *ip,uint16_t port,int sock_flags, kgl_ssl_ctx* ssl_ctx,uint32_t model);
 	bool start();
 	int shutdown();
 	bool is_shutdown()
@@ -118,7 +166,7 @@ public:
 	int start_engine(int index);
 	int get_engine_index(kgl_h3_cid_header *header)
 	{
-		return (int)header->port_id % engine_count;
+		return (int)header->port_id % (int)engine_count;
 	}
 	KHttp3ServerEngine* refs_engine(int index)
 	{
@@ -131,7 +179,7 @@ public:
 	kgl_ssl_ctx* ssl_ctx;
 	uint32_t flags;
 protected:	
-	int engine_count;
+	uint16_t engine_count;
 	kserver_free_opaque free_opaque;
 	KOPAQUE data;
 	void try_free_data()
@@ -155,6 +203,6 @@ protected:
 	}
 	KHttp3ServerEngine** engines;
 };
-KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, kgl_ssl_ctx* ssl_ctx, uint32_t model);
+KHttp3Server* kgl_h3_new_server(const char *ip, uint16_t port, int sock_flags, kgl_ssl_ctx* ssl_ctx, uint32_t model);
 #endif
 #endif

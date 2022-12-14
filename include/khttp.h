@@ -113,7 +113,7 @@
 #define  RQF_CC_PASS         (1<<30)
 #define  RQF_CC_HIT          (1<<31)
 
-#define WORK_MODEL_UNIX      (1<<0)
+#define WORK_MODEL_UNIX      KGL_SERVER_UNIX
 #define WORK_MODEL_MANAGE    (1<<1)
 #define WORK_MODEL_SSL       (1<<2)
 #define WORK_MODEL_TCP       (1<<3)
@@ -198,5 +198,6 @@ inline bool is_status_code_no_body(int status_code) {
 #define KGL_ALPN_HTTP1   0
 #define KGL_ALPN_HTTP2   1
 #define KGL_ALPN_HTTP3   2
+
 KEND_DECLS
 #endif

@@ -84,18 +84,13 @@ public:
 		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
 	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
-	kgl_pool_t* get_connection_pool()
-	{
-		return get_connection()->pool;
-	}
-	virtual sockaddr_i* get_peer_addr()
-	{
-		kconnection* cn = get_connection();
-		return &cn->addr;
-	}
+	virtual sockaddr_i* get_peer_addr() = 0;
 	bool get_peer_ip(char* ips, int ips_len)
 	{
 		sockaddr_i* addr = get_peer_addr();
+		if (addr == nullptr) {
+			return false;
+		}
 		return ksocket_sockaddr_ip(addr, ips, ips_len);
 	}
 	uint16_t get_self_port() {
@@ -143,22 +138,12 @@ public:
 	}
 	const char* get_state();
 	void set_state(uint8_t state);
-	kselector* get_selector()
-	{
-		return get_connection()->st.selector;
-	}
+	virtual kselector* get_selector() = 0;
 	virtual void shutdown() = 0;
 	virtual uint32_t get_server_model() = 0;
 	virtual KOPAQUE get_server_opaque() = 0;
-	/*
-	kserver* get_bind_server()
-	{
-		return get_connection()->server;
-	}
-	*/
-	virtual kconnection* get_connection() = 0;
 	virtual void set_time_out(int tmo_count) = 0;
-
+	virtual kgl_pool_t* get_connection_pool() = 0;
 	virtual int get_time_out() = 0;
 	virtual void set_delay()
 	{
@@ -172,9 +157,8 @@ public:
 		set_delay();
 	}
 #ifdef KSOCKET_SSL
-	kssl_session* get_ssl() {
-		kconnection* cn = get_connection();
-		return cn->st.ssl;
+	virtual kssl_session* get_ssl() {
+		return nullptr;
 	}
 #endif
 	const char* get_client_ip()
@@ -217,10 +201,15 @@ public:
 	{
 		data.if_none_match = NULL;
 	}
-	virtual bool get_self_addr(sockaddr_i* addr)
+	virtual kgl_proxy_protocol* get_proxy_info()
 	{
-		return 0 == kconnection_self_addr(get_connection(), addr);
+		return nullptr;
 	}
+	virtual void* get_sni()
+	{
+		return nullptr;
+	}
+	virtual bool get_self_addr(sockaddr_i* addr) = 0;
 	kgl_pool_t* pool;
 	KRequestData data;
 	friend class KHttp2;
@@ -239,4 +228,5 @@ protected:
 	virtual bool response_connection(const char* val, int val_len) = 0;
 	virtual int internal_start_response_body(int64_t body_size) = 0;
 };
+int kgl_get_alt_svc_value(kserver* server, char* buf, int buf_size);
 #endif

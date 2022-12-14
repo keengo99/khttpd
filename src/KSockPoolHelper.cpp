@@ -111,10 +111,9 @@ KSockPoolHelper::KSockPoolHelper() {
 	weight = 1;
 	avg_monitor_tick = 0;
 #ifdef ENABLE_UPSTREAM_SSL
-	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
-	http2 = false;
-#endif//}}
+	alpn = 0;
+#endif
 	ssl_ctx = NULL;
 #endif
 	total_error = 0;
@@ -246,7 +245,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 		}
 #ifdef ENABLE_UPSTREAM_HTTP2
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
-		if (http2 && cn->st.ssl && KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
+		if (alpn>0 && cn->st.ssl && KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
 			//websocket will turn off http2
 			SSL_set_alpn_protos(cn->st.ssl->ssl, (unsigned char*)KGL_HTTP_NPN_ADVERTISE, sizeof(KGL_HTTP_NPN_ADVERTISE) - 1);
 		}
@@ -304,13 +303,12 @@ bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
 	} else {
 		this->ssl.clear();
 	}
-	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
-	this->http2 = KGL_ALPN_HTTP1;
+	this->alpn = KGL_ALPN_HTTP1;
 	if (ssl_buf && strchr(ssl_buf, 'p')) {
-		this->http2 = KGL_ALPN_HTTP2;
+		this->alpn = KGL_ALPN_HTTP2;
 	}
-#endif//}}
+#endif
 	if (ssl_buf && strchr(ssl_buf, 'n')) {
 		this->no_sni = 1;
 	}
@@ -321,7 +319,7 @@ bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
 	if (ssl) {
 		void *ssl_ctx_data = NULL;
 #ifdef ENABLE_UPSTREAM_HTTP2
-		ssl_ctx_data = &http2;
+		ssl_ctx_data = &alpn;
 #endif
 		std::string ssl_client_chiper;
 		std::string ssl_client_protocols ;

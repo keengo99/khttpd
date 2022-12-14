@@ -52,6 +52,7 @@ class KUpstream;
 #define KGL_HTTP_V2_GOAWAY_FRAME         0x7
 #define KGL_HTTP_V2_WINDOW_UPDATE_FRAME  0x8
 #define KGL_HTTP_V2_CONTINUATION_FRAME   0x9
+#define KGL_HTTP_V2_ALTSVC_FRAME         0xa
 
 /* frame flags */
 #define KGL_HTTP_V2_NO_FLAG              0x00
@@ -121,7 +122,7 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 #define KGL_HTTP_V2_PING_SIZE                    8
 #define KGL_HTTP_V2_GOAWAY_SIZE                  8
 #define KGL_HTTP_V2_WINDOW_UPDATE_SIZE           4
-
+#define KGL_HTTP_V2_ALTSVC_SIZE                  2
 #define KGL_HTTP_V2_STREAM_ID_SIZE               4
 
 #define KGL_HTTP_V2_SETTINGS_PARAM_SIZE          6
@@ -181,6 +182,10 @@ struct http2_frame_rst_stream
 {
 	uint32_t status;
 };
+struct http2_frame_altsvc
+{
+	uint16_t origin_length;
+};
 struct http2_frame_ping
 {
 	uint64_t opaque;
@@ -205,18 +210,7 @@ typedef struct
 	kgl_str_t         value;
 	u_char* lowcase_key;
 } kgl_table_elt_t;
-#if 0
-class kgl_sync_result
-{
-public:
-	KHttp2* http2;
-	KHttp2Context* ctx;
-	KCondWait cond;
-	LPWSABUF buf;
-	int bufCount;
-	int got;
-};
-#endif
+
 typedef struct
 {
 	kgl_str_t                        name;
@@ -302,10 +296,10 @@ public:
 	uint16_t  out_closed : 1;
 	uint16_t  rst : 1;
 	uint16_t  parsed_header : 1;
-	//{{ent
+
 #ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t  admin_stream : 1;
-#endif//}}
+#endif
 	uint16_t  destroy_by_http2 : 1;
 	uint16_t  skip_data : 1;
 	uint16_t  know_content_length : 1;
@@ -467,6 +461,7 @@ public:
 	bool add_method(KHttp2Context* ctx, u_char meth);
 	bool add_header(KHttp2Context* ctx, kgl_header_type name, const char* val, hlen_t val_len);
 	bool add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, const char* val, hlen_t val_len);
+	bool send_altsvc(KHttp2Context* ctx, const char* val, int val_len);
 	//kev_result read(KHttp2Context *ctx,result_callback result,buffer_callback buffer,void *arg);
 	void read_hup(KHttp2Context* ctx, result_callback result, void* arg);
 	void remove_read_hup(KHttp2Context* ctx);
@@ -504,6 +499,7 @@ private:
 	u_char* state_goaway(u_char* pos, u_char* end);
 	u_char* state_window_update(u_char* pos, u_char* end);
 	u_char* state_continuation(u_char* pos, u_char* end);
+	u_char* state_altsvc(u_char* pos, u_char* end);
 private:
 	bool ReadHeaderSuccess(KHttp2Context* stream);
 	bool check_recv_window(KHttp2Context* ctx);
@@ -585,7 +581,7 @@ private:
 	bool terminate_stream(KHttp2Context* stream, uint32_t status);
 private:
 	bool get_indexed_header(uintptr_t index, bool name_only);
-	void CheckStreamTimeout();
+	void check_stream_timeout();
 	void AddQueue(KHttp2Context* stream)
 	{
 		stream->RemoveQueue();

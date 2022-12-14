@@ -12,9 +12,24 @@ krequest_start_func http2https_error = NULL;
 khttp_server_config http_config;
 
 #ifdef KSOCKET_SSL
-void khttp_server_alpn(void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen)
+static bool ssl_is_quic(SSL* ssl) {
+#ifdef ENABLE_HTTP3
+	const uint8_t* data;
+	size_t param = 0;
+	SSL_get_peer_quic_transport_params(ssl, &data, &param);
+	return param > 0;
+#else
+	return false;
+#endif
+}
+void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen)
 {
 	u_char* alpn = (u_char*)ssl_ctx_data;
+	if (ssl && ssl_is_quic(ssl)) {
+		*out = (unsigned char*)KGL_HTTP_V3_NPN_ADVERTISE;
+		*outlen = sizeof(KGL_HTTP_V3_NPN_ADVERTISE) - 1;
+		return;
+	}
 	if (alpn) {
 		switch (*alpn) {
 #ifdef ENABLE_HTTP2

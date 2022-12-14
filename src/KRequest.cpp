@@ -63,20 +63,20 @@ void KRequestData::init()
 }
 
 
-bool KRequestData::parse_method(const char* src) {
-	meth = KHttpKeyValue::getMethod(src);
+bool KRequestData::parse_method(const char* src, int len) {
+	meth = KHttpKeyValue::get_method(src, len);
 	return meth >= 0;
 }
-bool KRequestData::parse_connect_url(char* src) {
-	char* ss;
-	ss = strchr(src, ':');
+bool KRequestData::parse_connect_url(u_char *src, size_t len) {
+	u_char* ss = (u_char *)memchr(src, ':', len);
 	if (!ss) {
 		return false;
 	}
 	KBIT_CLR(raw_url->flags, KGL_URL_ORIG_SSL);
-	*ss = 0;
-	raw_url->host = strdup(src);
-	raw_url->port = atoi(ss + 1);
+	
+	raw_url->host = kgl_strndup((char *)src, ss - src);
+	len -= (ss - src);
+	raw_url->port = kgl_atoi(ss + 1, len - 1);
 	return true;
 }
 kgl_header_result KRequestData::parse_host(char* val,size_t len)
@@ -88,12 +88,14 @@ kgl_header_result KRequestData::parse_host(char* val,size_t len)
 	}
 	return kgl_header_no_insert;
 }
-bool KRequestData::parse_http_version(char* ver) {
-	char* dot = strchr(ver, '.');
+bool KRequestData::parse_http_version(u_char* ver, size_t len) {
+	u_char* dot = (u_char*)memchr(ver, '.', len);
 	if (dot == NULL) {
 		return false;
 	}
 	http_major = *(dot - 1) - 0x30;//major;
-	http_minor = *(dot + 1) - 0x30;//minor;
+	if ((size_t)(dot - ver) < len) {
+		http_minor = *(dot + 1) - 0x30;//minor;
+	}
 	return true;
 }

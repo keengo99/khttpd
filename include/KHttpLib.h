@@ -23,6 +23,8 @@ bool parse_url(const char* src, size_t len, KUrl* url);
 int kgl_atoi(const u_char* line, size_t n);
 const char* kgl_memstr(const char* haystack, size_t haystacklen,const char* needle, size_t needlen);
 void kgl_strlow(u_char* dst, u_char* src, size_t n);
+bool mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len);
+bool mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len);
 int url_decode(char* str, int len, KUrl* url, bool space2plus);
 void CTIME_R(time_t* a, char* b, size_t l);
 /*

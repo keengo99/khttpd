@@ -52,6 +52,34 @@ static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", 
 static int make_month(const char* s);
 static int make_num(const char* s);
 static int timz_minutes = 0;
+bool mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
+{
+	if (attr_len != val_len) {
+		return false;
+	}
+	return memcmp(attr, val, attr_len) == 0;
+}
+bool mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
+{
+	if (attr_len != val_len) {
+		return false;
+	}
+	u_char  c1, c2;
+	while (attr_len > 0) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
+
+		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+
+		if (c1 == c2) {
+			attr_len--;
+			continue;
+		}
+		return false;
+	}
+	return true;
+}
 void init_time_zone()
 {
 	time_t tt = time(NULL);

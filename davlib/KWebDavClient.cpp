@@ -73,7 +73,7 @@ KGL_RESULT KWebDavClient::new_request(const char* method, const char* path, int6
 	*rq = new KWebDavRequest(this, us);
 	us->set_delay();
 	us->set_header_callback(*rq, webdav_header_callback);
-	if (!us->send_method_path(KHttpKeyValue::getMethod(method), path, (hlen_t)strlen(path))) {
+	if (!us->send_method_path(KHttpKeyValue::get_method(method, strlen(method)), path, (hlen_t)strlen(path))) {
 		delete (*rq);
 		*rq = nullptr;
 		return KGL_ESOCKET_BROKEN;

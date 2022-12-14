@@ -58,12 +58,21 @@ int client_http_test(void *arg,int got)
 	us->gc(-1);
 	return 0;
 }
+static void* ssl_create_sni(SSL* ssl, KOPAQUE server_ctx, const char* hostname)
+{
+	return NULL;
+}
+static void ssl_free_sni(void* sni)
+{
+
+}
 #ifdef ENABLE_HTTP3
 static u_char h3_alpn = KGL_ALPN_HTTP3|KGL_ALPN_HTTP2;
+kgl_ssl_ctx* ssl_ctx = NULL;
 int h3_server(void* arg, int got)
 {
-	auto ssl_ctx = kgl_ssl_ctx_new_server("server.crt", "server.key", NULL, NULL, &h3_alpn);
-	auto h3_server = kgl_h3_new_server("0.0.0.0", 4433, ssl_ctx, 0);
+	
+	auto h3_server = kgl_h3_new_server("0.0.0.0", 4433, 0, ssl_ctx, 0);
 	if (h3_server == nullptr) {
 		perror("cann't init h3 server");
 		return -1;
@@ -78,8 +87,9 @@ int h3_server(void* arg, int got)
 kev_result on_ready(KOPAQUE data, void* arg, int got)
 {	
 	http_config.time_out = 30;
+	ssl_ctx = kgl_new_ssl_ctx(kgl_ssl_ctx_new_server("server.crt", "server.key", NULL, NULL, &h3_alpn));
 	kserver* server = kserver_init();
-	kserver_bind(server, "127.0.0.1", 8800, NULL);
+	kserver_bind(server, "0.0.0.0", 4433, ssl_ctx);
 	KBIT_SET(server->flags, WORK_MODEL_ALT_H3);
 	start_http_server(server,0);
 	kserver_release(server);
@@ -90,7 +100,8 @@ kev_result on_ready(KOPAQUE data, void* arg, int got)
 }
 int main(int argc, char** argv)
 {
-	kasync_init();	
+	kasync_init();
+	kssl_set_sni_callback(ssl_create_sni, ssl_free_sni);
 	init_http_server_callback(NULL, on_new_http_request);
 	selector_manager_on_ready(on_ready, NULL);
 	selector_manager_init(1, true);

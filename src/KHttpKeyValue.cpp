@@ -8,140 +8,57 @@
 #include <string.h>
 #include "KHttpKeyValue.h"
 #include "kforwin32.h"
+#include "kstring.h"
 #include "kmalloc.h"
-static const char *http_methods[MAX_METHOD] = {
-		"UNSET",		
-		"GET",
-		"HEAD",
-		"POST",
-		"OPTIONS",
-		"PUT",
-		"DELETE",
-		"TRACE",
-		"PROPFIND",
-		"PROPPATCH",
-		"MKCOL",
-		"COPY",
-		"MOVE",
-		"LOCK",
-		"UNLOCK",
-		"ACL",
-		"REPORT",
-		"VERSION_CONTROL",
-		"CHECKIN",
-		"CHECKOUT",
-		"UNCHECKOUT",
-		"SEARCH",
-		"MKWORKSPACE",
-		"UPDATE",
-		"LABEL",
-		"MERGE",
-		"BASELINE_CONTROL",
-		"MKACTIVITY",
-		"CONNECT",
-		"PURGE",
-		"PATCH",
-		"SUBSCRIBE",
-		"UNSUBSCRIBE"
-};
-#if 0
-static keyvalue http_status[] = {
-		//把最常用的放在最前面，提高效率
-		{ 200, "OK" },
-		{ 304, "Not Modified" },
-		{ 404, "Not Found" },
-		{ 302, "Found" },
-		{ 206, "Partial Content" },
-		{ 500, "Internal Server Error" },
-		{ 504,	"Gateway Timeout" },
-		{ 401,	"Unauthorized" },
-		{ 303, "See Other" },
+#include "KHttpLib.h"
 
-		{ 100, "Continue" },
-		{ 101, "Switching Protocols" },
-		{ 102, "Processing" }, /* WebDAV */
-		{ 201, "Created" },
-		{ 202, "Accepted" },
-		{ 203,	"Non-Authoritative Information" },
-		{ 204, "No Content" },
-		{ 205, "Reset Content" },
-		{ 207, "Multi-status" }, /* WebDAV */
-		{ 300, "Multiple Choices" },
-		{ 301, "Moved Permanently" },
-		{ 305,	"Use Proxy" },
-		{ 306, "(Unused)" },
-		{ 307, "Temporary Redirect" },
-		{ 400, "Bad Request" },
-		{ 402, "Payment Required" },
-		{ 403,	"Forbidden" },
-		{ 405, "Method Not Allowed" },
-		{ 406, "Not Acceptable" },
-		{ 407,	"Proxy Authentication Required" },
-		{ 408, "Request Timeout" },
-		{ 409, "Conflict" },
-		{ 410, "Gone" },
-		{ 411, "Length Required" },
-		{ 412, "Precondition Failed" },
-		{ 413, "Request Entity Too Large" },
-		{ 414, "Request-URI Too Long" },
-		{ 415, "Unsupported Media Type" },
-		{ 416,	"Requested Range Not Satisfiable" },
-		{ 417,	"Expectation Failed" },
-		{ 422, "Unprocessable Entity" }, /* WebDAV */
-		{ 423, "Locked" }, /* WebDAV */
-		{ 424, "Failed Dependency" }, /* WebDAV */
-		{ 426, "Upgrade Required" }, /* TLS */
-		{ 451,"Unavailable For Legal Reasons"},
-		{ 501, "Not Implemented" },
-		{ 502,	"Bad Gateway" },
-		{ 503, "Service Not Available" },
-		{ 505, "HTTP Version Not Supported" },
-		{ 507, "Insufficient Storage" }, /* WebDAV */
-		{ -1, NULL }
+static kgl_str_t http_methods[MAX_METHOD] = {
+	kgl_string("UNSET"),
+		kgl_string("GET"),
+		kgl_string("HEAD"),
+		kgl_string("POST"),
+		kgl_string("OPTIONS"),
+		kgl_string("PUT"),
+		kgl_string("DELETE"),
+		kgl_string("TRACE"),
+		kgl_string("PROPFIND"),
+		kgl_string("PROPPATCH"),
+		kgl_string("MKCOL"),
+		kgl_string("COPY"),
+		kgl_string("MOVE"),
+		kgl_string("LOCK"),
+		kgl_string("UNLOCK"),
+		kgl_string("ACL"),
+		kgl_string("REPORT"),
+		kgl_string("VERSION_CONTROL"),
+		kgl_string("CHECKIN"),
+		kgl_string("CHECKOUT"),
+		kgl_string("UNCHECKOUT"),
+		kgl_string("SEARCH"),
+		kgl_string("MKWORKSPACE"),
+		kgl_string("UPDATE"),
+		kgl_string("LABEL"),
+		kgl_string("MERGE"),
+		kgl_string("BASELINE_CONTROL"),
+		kgl_string("MKACTIVITY"),
+		kgl_string("CONNECT"),
+		kgl_string("PURGE"),
+		kgl_string("PATCH"),
+		kgl_string("SUBSCRIBE"),
+		kgl_string("UNSUBSCRIBE")
 };
-const char *keyvalue_get_value(keyvalue *kv, int k) {
-	int i;
-	for (i = 0; kv[i].value; i++) {
-		if (kv[i].key == k)
-			return kv[i].value;
-	}
-	return NULL;
-}
-#endif
-KHttpKeyValue::KHttpKeyValue() {
-
-}
-KHttpKeyValue::~KHttpKeyValue() {
-}
-const char *KHttpKeyValue::getMethod(int meth) {
+kgl_str_t *KHttpKeyValue::getMethod(int meth) {
 	if (meth < 0 || meth >= MAX_METHOD) {
-		return "UNSET";
+		meth = 0;
 	}
-	return http_methods[meth];
-}
-int KHttpKeyValue::getMethod(const char *src) {
-	for (int i = 1; i < MAX_METHOD; i++) {
-		if (strcasecmp(src, http_methods[i]) == 0) {
-			return i;
-		}
-	}
-	return 0;
+	return &http_methods[meth];
 }
 int KHttpKeyValue::get_method(const char* src, int len)
 {
 	for (int i = 1; i < MAX_METHOD; i++) {
-		if (strncasecmp(src, http_methods[i], len) == 0) {
+		if (mem_case_same(src, len, http_methods[i].data, http_methods[i].len)) {
 			return i;
 		}
 	}
 	return 0;
 }
-#if 0
-const char *KHttpKeyValue::getStatus(int status) {
-	const char *v = keyvalue_get_value(http_status, status);
-	if(v){
-		return v;
-	}
-	return "Unknow";
-}
-#endif

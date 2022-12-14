@@ -2,34 +2,7 @@
 #include "klog.h"
 #include "KHttpFieldValue.h"
 #include "kfiber.h"
-bool mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
-{
-	if (attr_len != val_len) {
-		return false;
-	}
-	return memcmp(attr, val, attr_len)==0;
-}
-bool mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
-{
-	if (attr_len != val_len) {
-		return false;
-	}	
-	u_char  c1, c2;
-	while (attr_len>0) {
-		c1 = (u_char)*s1++;
-		c2 = (u_char)*s2++;
 
-		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-
-		if (c1 == c2) {
-			attr_len--;
-			continue;
-		}
-		return false;
-	}
-	return true;
-}
 bool KSink::start_response_body(INT64 body_len)
 {
 	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
@@ -102,14 +75,14 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 #ifdef ENABLE_HTTP2
 	if (data.http_major > 1 && *attr == ':') {
 		if (mem_same(attr,attr_len,kgl_expand_string(":method"))){
-			if (!data.parse_method(val)) {
+			if (!data.parse_method(val, val_len)) {
 				klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 				return kgl_header_failed;
 			}
 			return kgl_header_no_insert;
 		}
 		if (mem_same(attr, attr_len, kgl_expand_string(":version"))) {
-			data.parse_http_version(val);
+			data.parse_http_version((u_char *)val, val_len);
 			return kgl_header_no_insert;
 		}
 		if (mem_same(attr, attr_len, kgl_expand_string(":path"))) {
@@ -117,7 +90,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 			return kgl_header_no_insert;
 		}
 		if (mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
-			if (kgl_header_success == data.parse_host(val,val_len)) {
+			if (kgl_header_success == data.parse_host(val, val_len)) {
 				//转换成HTTP/1的http头
 				data.AddHeader(kgl_expand_string("Host"), val, val_len, true);
 			}
@@ -127,32 +100,31 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 	}
 #endif
 	if (is_first && data.http_major <= 1) {
-		if (!data.parse_method(attr)) {
+		if (!data.parse_method(attr, attr_len)) {
 			klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 			return kgl_header_failed;
 		}
-		char* space = strchr(val, ' ');
+		u_char* space = (u_char *)memchr(val, ' ', val_len);
 		if (space == NULL) {
 			klog(KLOG_DEBUG, "httpparse:cann't get space seperator to parse HTTP/1.1 [%s]\n", val);
 			return kgl_header_failed;
-		}
+		}		
 		*space = 0;
-		space++;
-
+		size_t url_len = space - (u_char*)val;
 		while (*space && IS_SPACE(*space)) {
 			space++;
 		}
 		bool result;
 		if (data.meth == METH_CONNECT) {
-			result = data.parse_connect_url(val);
+			result = data.parse_connect_url((u_char *)val, url_len);
 		} else {
-			result = parse_url(val,val_len, data.raw_url);
+			result = parse_url(val, url_len, data.raw_url);
 		}
 		if (!result) {
 			klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
 			return kgl_header_failed;
 		}
-		if (!data.parse_http_version(space)) {
+		if (!data.parse_http_version(space, val_len - url_len)) {
 			klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
 			return kgl_header_failed;
 		}
@@ -161,13 +133,13 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "Host")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Host"))) {
 		return data.parse_host(val,val_len);
 	}
-	if (!strcasecmp(attr, "Connection")
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Connection"))
 		//{{ent
 #ifdef HTTP_PROXY
-		|| !strcasecmp(attr, "proxy-connection")
+		|| mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
 #endif//}}
 		) {
 		KHttpFieldValue field(val);
@@ -182,7 +154,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (!strcasecmp(attr, "Accept-Encoding")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
 		if (!*val) {
 			return kgl_header_no_insert;
 		}
@@ -202,7 +174,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (!strcasecmp(attr, "If-Range")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
 		time_t try_time = parse1123time(val);
 		if (try_time == -1) {
 			data.flags |= RQ_IF_RANGE_ETAG;
@@ -215,12 +187,12 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "If-Modified-Since")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
 		data.if_modified_since = parse1123time(val);
 		data.flags |= RQ_HAS_IF_MOD_SINCE;
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "If-None-Match")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
 		data.flags |= RQ_HAS_IF_NONE_MATCH;
 		if (data.if_none_match == NULL) {
 			set_if_none_match(val, val_len);
@@ -228,39 +200,40 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_no_insert;
 	}
 	//	printf("attr=[%s],val=[%s]\n",attr,val);
-	if (!strcasecmp(attr, "Content-length")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
 		data.content_length = string2int(val);
 		data.left_read = data.content_length;
 		data.flags |= RQ_HAS_CONTENT_LEN;
 		return kgl_header_no_insert;
 	}
-	if (strcasecmp(attr, "Transfer-Encoding") == 0) {
-		if (strcasecmp(val, "chunked") == 0) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
+		if (mem_case_same(val,val_len, kgl_expand_string("chunked"))) {
 			KBIT_SET(data.flags, RQ_INPUT_CHUNKED);
 			data.content_length = -1;
 		}
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "Expect")) {
-		if (strstr(val, "100-continue") != NULL) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Expect"))) {
+		if (kgl_memstr(val, val_len, kgl_expand_string("100-continue")) != NULL) {
 			data.flags |= RQ_HAVE_EXPECT;
 		}
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "X-Forwarded-Proto")) {
-		if (strcasecmp(val, "https") == 0) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
+		if (mem_case_same(val, val_len, kgl_expand_string("https"))) {
 			KBIT_SET(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		} else {
 			KBIT_CLR(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		}
 		return kgl_header_no_insert;
 	}
-	if (!strcasecmp(attr, "Pragma")) {
-		if (strstr(val, "no-cache"))
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Pragma"))) {
+		if (kgl_memstr(val, val_len, kgl_expand_string("no-cache"))) {
 			data.flags |= RQ_HAS_NO_CACHE;
+		}
 		return kgl_header_success;
 	}
-	if (!strcasecmp(attr, "Cache-Control")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
 		KHttpFieldValue field(val);
 		do {
 			if (field.is("no-store") || field.is("no-cache")) {
@@ -271,7 +244,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (!strcasecmp(attr, "Range")) {
+	if (mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
 		if (!strncasecmp(val, "bytes=", 6)) {
 			val += 6;
 			data.range_from = -1;
@@ -475,4 +448,11 @@ bool KSink::write_all(const char* buf, int len)
 		buf += this_len;
 	}
 	return true;
+}
+int kgl_get_alt_svc_value(kserver* server, char* buf, int buf_size)
+{
+	if (!KBIT_TEST(server->flags, WORK_MODEL_ALT_H3)) {
+		return 0;
+	}
+	return snprintf(buf, buf_size, "h3=\":%d\"", ksocket_addr_port(&server->addr));
 }

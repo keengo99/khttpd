@@ -5,6 +5,7 @@
 #ifdef ENABLE_HTTP3
 #include "lsxpack_header.h"
 #include "kfiber_sync.h"
+#include "KHttp3Connection.h"
 #include "KObjArray.h"
 #include "kfiber.h"
 
@@ -24,8 +25,10 @@ struct kgl_fiber_event
 class KHttp3Sink : public KSink
 {
 public:
-	KHttp3Sink() : KSink(NULL), response_headers(8)
+	KHttp3Sink(KHttp3Connection *cn) : KSink(NULL), response_headers(8)
 	{
+		cn->addRef();
+		this->cn = cn;
 		this->st = NULL;
 		this->data.raw_url = new KUrl;
 		data.http_major = 3;
@@ -42,6 +45,8 @@ public:
 		}
 		assert(!is_processing());
 		assert(st == NULL);
+		assert(cn);
+		cn->release();
 	}
 	void detach_stream()
 	{
@@ -158,13 +163,36 @@ public:
 		delete this;
 		return 0;
 	}
+	kgl_pool_t* get_connection_pool() override 
+	{
+		return cn->get_pool();
+	}
+	void* get_sni() override
+	{
+		return cn->get_sni();
+	}
+	bool get_self_addr(sockaddr_i* addr) override
+	{
+		if (cn->c && cn->local_addr) {
+			memcpy(addr, cn->local_addr, ksocket_addr_len((sockaddr_i*)cn->local_addr));
+			return true;
+		}
+		return false;
+	}
 	void shutdown() override
 	{
 		//lsquic_stream_shutdown(st,SHUT_RDWR);
 	}
-	kconnection* get_connection() override
+	sockaddr_i* get_peer_addr() override
 	{
+		if (cn->c) {
+			return (sockaddr_i *)cn->peer_addr;
+		}
 		return nullptr;
+	}
+	kselector* get_selector() override
+	{
+		return cn->engine->uc->st.selector;
 	}
 	void set_time_out(int tmo_count) override
 	{
@@ -182,11 +210,11 @@ public:
 	}
 	uint32_t get_server_model() override
 	{
-		return 0;
+		return cn->engine->server->flags;
 	}
 	KOPAQUE get_server_opaque() override
 	{
-		return 0;
+		return cn->engine->server->get_data();
 	}
 private:
 	void build_header(lsxpack_header* header,const char* name, int name_len, const char* val, int val_len)
@@ -204,6 +232,7 @@ private:
 	KObjArray<lsxpack_header> response_headers;
 	uint32_t st_flags;
 	lsquic_stream_t* st;
+	KHttp3Connection* cn;
 	kgl_fiber_event ev[2];
 };
 struct header_decoder
