@@ -126,6 +126,7 @@ static bool is_file_exsit(const char* path, KWebDavClient* provider)
 		}
 		printf("%s\t" INT64_FORMAT "\n", (*it)->path.c_str(), (*it)->content_length);
 	}
+	return true;
 }
 static void clean_all_child(KWebDavClient* client, const char* path)
 {

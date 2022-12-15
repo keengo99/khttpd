@@ -572,7 +572,7 @@ void kgl_h3_engine_tick(void* arg, int event_count)
     KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)arg;
     assert(h3_engine->selector_tick);
     if (h3_engine->server->is_shutdown() && !h3_engine->has_active_connection()) {
-        kselector_unregister_tick(h3_engine->selector_tick);
+        kselector_close_tick(h3_engine->selector_tick);
         h3_engine->selector_tick = NULL;
         h3_engine->release();
         return;
@@ -660,10 +660,15 @@ int KHttp3ServerEngine::start()
         return -1;
     }
    
-    if (selector_tick == NULL) {
-        selector_tick = kselector_register_tick(kgl_h3_engine_tick, this);
+    if (selector_tick == nullptr) {
+        selector_tick = kselector_new_tick(kgl_h3_engine_tick, this);
         if (selector_tick) {
-            server->addRef();
+            if (kselector_register_tick(selector_tick)) {
+                server->addRef();
+            } else {
+                kselector_close_tick(selector_tick);
+                selector_tick = nullptr;
+            }
         }
     }
     h3_recv_package(this, uc);
