@@ -21,24 +21,24 @@ public:
 		kassert(http2 == NULL);
 		kassert(ctx == NULL);
 	}
-	kconnection *get_connection()
+	kconnection *get_connection() override
 	{
 		return http2->c;
 	}
-	void write_end()
+	void write_end() override
 	{
 		http2->write_end(ctx);
 	}
-	void set_time_out(int tmo)
+	void set_time_out(int tmo) override
 	{
 		ctx->tmo = tmo;
 		ctx->tmo_left = tmo;
 	}
-	void BindOpaque(KOPAQUE data)
+	void BindOpaque(KOPAQUE data) override
 	{
 		this->data = data;
 	}
-	KOPAQUE GetOpaque()
+	KOPAQUE GetOpaque() override
 	{
 		return this->data;
 	}
@@ -62,27 +62,27 @@ public:
 	{
 		return http2->write(ctx, buf, bc);
 	}
-	bool send_connection(const char* val, hlen_t val_len)
+	bool send_connection(const char* val, hlen_t val_len) override
 	{
 		return true;
 	}
-	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len);
-	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len);
-	bool send_host(const char* host, hlen_t host_len);
-	void set_content_length(int64_t content_length);
-	KGL_RESULT send_header_complete();
+	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override;
+	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override;
+	bool send_host(const char* host, hlen_t host_len) override;
+	void set_content_length(int64_t content_length) override;
+	KGL_RESULT send_header_complete() override;
 
-	KGL_RESULT read_header();
-	bool set_header_callback(void *arg, kgl_header_callback header);
-	KUpstream *NewStream();
-	kgl_pool_t *GetPool()
+	KGL_RESULT read_header() override;
+	bool set_header_callback(void *arg, kgl_header_callback header) override;
+	KUpstream *NewStream() override;
+	kgl_pool_t *GetPool() override
 	{
 		if (pool == NULL) {
 			pool = kgl_create_pool(8192);
 		}
 		return pool;
 	}
-	void shutdown()
+	void shutdown() override
 	{
 		http2->shutdown(ctx);
 	}
@@ -95,16 +95,16 @@ public:
 		http2 = NULL;
 		delete this;
 	}
-	bool IsMultiStream()
+	bool IsMultiStream() override
 	{
 		return true;
 	}
 
-	sockaddr_i *GetAddr()
+	sockaddr_i *GetAddr() override
 	{
 		return &http2->c->addr;
 	}
-	void gc(int life_time)
+	void gc(int life_time) override
 	{
 		life_time = 30;
 		clean();
@@ -125,7 +125,7 @@ public:
 		Destroy();
 	}
 	friend class KHttp2Env;
-	void clean()
+	void clean() override
 	{
 		if (pool) {
 			kgl_destroy_pool(pool);
