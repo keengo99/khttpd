@@ -187,7 +187,7 @@ public:
 	int read(char* buf, int len);
 	bool write_all(const char* buf, int len);
 	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
-	void begin_request();
+	bool begin_request();
 	virtual int end_request() = 0;
 	virtual bool is_locked() = 0;
 	void set_if_none_match(const char* etag, int len)

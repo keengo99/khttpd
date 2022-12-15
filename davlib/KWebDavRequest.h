@@ -5,6 +5,7 @@
 #include "KXmlDocument.h"
 #include "kbuf.h"
 #include "KDechunkEngine.h"
+#include "KHttpLib.h"
 
 class KWebDavLockToken;
 struct KWebDavAuth;

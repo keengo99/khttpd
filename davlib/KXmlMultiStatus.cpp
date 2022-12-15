@@ -45,7 +45,7 @@ bool KWebDavFileList::parse(KXmlDocument& document,int strip_prefix)
 		}
 		auto content_length = propstat->getChild("prop/getcontentlength");
 		if (content_length) {
-			file->content_length = string2int(content_length->getCharacter().c_str());
+			file->content_length = kgl_atol((u_char *)content_length->getCharacter().c_str(), content_length->getCharacter().size());
 		} else {
 			file->content_length = 0;
 		}

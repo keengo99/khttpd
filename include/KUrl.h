@@ -202,7 +202,7 @@ public:
 			if (port) {
 				size_t port_len = len - host_len;
 				port_len -= (port - host_end);
-				this->port = kgl_atoi((u_char*)port + 1, port_len - 1);
+				this->port = (uint16_t)kgl_atoi((u_char*)port + 1, port_len - 1);
 			}
 			len = host_len;
 		} else {
@@ -211,7 +211,7 @@ public:
 				size_t port_len = len;
 				len = port - val;
 				port_len -= len;
-				this->port = kgl_atoi((u_char*)port + 1, port_len - 1);
+				this->port = (uint16_t)kgl_atoi((u_char*)port + 1, port_len - 1);
 			}
 		}
 		this->host = kgl_strndup(val, len);

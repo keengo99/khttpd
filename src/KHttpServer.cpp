@@ -59,12 +59,17 @@ void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, 
 int khttp_server_new_request(void* arg, int got)
 {
 	KSink* sink = (KSink*)arg;
-	sink->begin_request();
+	if (!sink->begin_request()) {
+		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
+		sink->end_request();
+		return 0;
+	}
 	server_on_new_request(sink, got);
 	return 0;
 }
 void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request)
 {
+	init_time_zone();
 	memset(&http_config, 0, sizeof(http_config));
 	http_config.time_out = 60;
 	server_on_new_connection = on_new_connection;

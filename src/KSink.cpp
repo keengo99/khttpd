@@ -24,13 +24,13 @@ bool KSink::start_response_body(INT64 body_len)
 	add_down_flow(header_len, true);
 	return header_len > 0;
 }
-void KSink::begin_request()
+bool KSink::begin_request()
 {
 	katom_inc64((void*)&kgl_total_requests);
 	set_state(STATE_RECV);
 	assert(data.url == NULL);
 	if (data.raw_url==nullptr) {
-		return;
+		return false;
 	}
 	data.url = new KUrl;
 	if (data.raw_url->host) {
@@ -50,6 +50,7 @@ void KSink::begin_request()
 	} else {
 		data.left_read = data.content_length;
 	}
+	return true;
 }
 bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
 {
@@ -74,22 +75,22 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 {
 #ifdef ENABLE_HTTP2
 	if (data.http_major > 1 && *attr == ':') {
-		if (mem_same(attr,attr_len,kgl_expand_string(":method"))){
+		if (kgl_mem_same(attr,attr_len,kgl_expand_string(":method"))){
 			if (!data.parse_method(val, val_len)) {
 				klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 				return kgl_header_failed;
 			}
 			return kgl_header_no_insert;
 		}
-		if (mem_same(attr, attr_len, kgl_expand_string(":version"))) {
+		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":version"))) {
 			data.parse_http_version((u_char *)val, val_len);
 			return kgl_header_no_insert;
 		}
-		if (mem_same(attr, attr_len, kgl_expand_string(":path"))) {
+		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":path"))) {
 			parse_url(val,val_len, data.raw_url);
 			return kgl_header_no_insert;
 		}
-		if (mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
+		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
 			if (kgl_header_success == data.parse_host(val, val_len)) {
 				//转换成HTTP/1的http头
 				data.AddHeader(kgl_expand_string("Host"), val, val_len, true);
@@ -133,49 +134,49 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Host"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Host"))) {
 		return data.parse_host(val,val_len);
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Connection"))
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Connection"))
 		//{{ent
 #ifdef HTTP_PROXY
 		|| mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
 #endif//}}
 		) {
-		KHttpFieldValue field(val);
+		KHttpFieldValue2 field(val, val+val_len);
 		do {
-			if (field.is2("keep-alive", 10)) {
+			if (field.is(_KS("keep-alive"))) {
 				data.flags |= RQ_HAS_KEEP_CONNECTION;
-			} else if (field.is2("upgrade", 7)) {
+			} else if (field.is(_KS("upgrade"))) {
 				data.flags |= RQ_HAS_CONNECTION_UPGRADE;
-			} else if (field.is2(kgl_expand_string("close"))) {
+			} else if (field.is(_KS("close"))) {
 				KBIT_CLR(data.flags, RQ_HAS_KEEP_CONNECTION);
 			}
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
 		if (!*val) {
 			return kgl_header_no_insert;
 		}
-		KHttpFieldValue field(val);
+		KHttpFieldValue2 field(val, val+val_len);
 		do {
-			if (field.is2(kgl_expand_string("gzip"))) {
+			if (field.is(kgl_expand_string("gzip"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
-			} else if (field.is2(kgl_expand_string("deflate"))) {
+			} else if (field.is(kgl_expand_string("deflate"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_DEFLATE);
-			} else if (field.is2(kgl_expand_string("compress"))) {
+			} else if (field.is(kgl_expand_string("compress"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_COMPRESS);
-			} else if (field.is2(kgl_expand_string("br"))) {
+			} else if (field.is(kgl_expand_string("br"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_BR);
-			} else if (!field.is2(kgl_expand_string("identity"))) {
+			} else if (!field.is(kgl_expand_string("identity"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
 			}
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
-		time_t try_time = parse1123time(val);
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
+		time_t try_time = kgl_parse_http_time((u_char *)val, val_len);
 		if (try_time == -1) {
 			data.flags |= RQ_IF_RANGE_ETAG;
 			if (data.if_none_match == NULL) {
@@ -187,12 +188,12 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
-		data.if_modified_since = parse1123time(val);
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
+		data.if_modified_since = kgl_parse_http_time((u_char*)val, val_len);
 		data.flags |= RQ_HAS_IF_MOD_SINCE;
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
 		data.flags |= RQ_HAS_IF_NONE_MATCH;
 		if (data.if_none_match == NULL) {
 			set_if_none_match(val, val_len);
@@ -200,71 +201,75 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_no_insert;
 	}
 	//	printf("attr=[%s],val=[%s]\n",attr,val);
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
 		data.content_length = string2int(val);
 		data.left_read = data.content_length;
 		data.flags |= RQ_HAS_CONTENT_LEN;
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
-		if (mem_case_same(val,val_len, kgl_expand_string("chunked"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
+		if (kgl_mem_case_same(val,val_len, kgl_expand_string("chunked"))) {
 			KBIT_SET(data.flags, RQ_INPUT_CHUNKED);
 			data.content_length = -1;
 		}
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Expect"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Expect"))) {
 		if (kgl_memstr(val, val_len, kgl_expand_string("100-continue")) != NULL) {
 			data.flags |= RQ_HAVE_EXPECT;
 		}
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
-		if (mem_case_same(val, val_len, kgl_expand_string("https"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
+		if (kgl_mem_case_same(val, val_len, kgl_expand_string("https"))) {
 			KBIT_SET(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		} else {
 			KBIT_CLR(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		}
 		return kgl_header_no_insert;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Pragma"))) {
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Pragma"))) {
 		if (kgl_memstr(val, val_len, kgl_expand_string("no-cache"))) {
 			data.flags |= RQ_HAS_NO_CACHE;
 		}
 		return kgl_header_success;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
-		KHttpFieldValue field(val);
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
+		KHttpFieldValue2 field(val,val+val_len);
 		do {
-			if (field.is("no-store") || field.is("no-cache")) {
+			if (field.is(_KS("no-store")) || field.is(_KS("no-cache"))) {
 				data.flags |= RQ_HAS_NO_CACHE;
-			} else if (field.is("only-if-cached")) {
+			} else if (field.is(_KS("only-if-cached"))) {
 				data.flags |= RQ_HAS_ONLY_IF_CACHED;
 			}
 		} while (field.next());
 		return kgl_header_success;
 	}
-	if (mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
-		if (!strncasecmp(val, "bytes=", 6)) {
-			val += 6;
+	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
+		data.flags |= RQ_HAVE_RANGE;
+		if (val_len>6 && !strncasecmp(val, kgl_expand_string("bytes="))) {
+			u_char* end = (u_char *)val + val_len;
+			u_char* hot = (u_char*)val + 6;
 			data.range_from = -1;
 			data.range_to = -1;
-			if (*val != '-') {
-				data.range_from = string2int(val);
+			if (*hot != '-') {
+				data.range_from = kgl_atol(hot, end - hot);
 			}
-			char* p = strchr(val, '-');
-			if (p && *(p + 1)) {
-				data.range_to = string2int(p + 1);
+			hot = (u_char *)memchr(hot, '-', end - hot);
+			if (hot && hot<end-1) {
+				hot++;
+				data.range_to = kgl_atol(hot, end - hot);
 			}
-			char* next_range = strchr(val, ',');
+			u_char* next_range = (u_char *)memchr(hot, ',', end - hot);
 			if (next_range) {
 				//we do not support multi range
 				klog(KLOG_INFO, "cut multi_range %s\n", val);
 				//KBIT_SET(filter_flags,RF_NO_CACHE);
-				*next_range = '\0';
+				end = next_range;
+				data.AddHeader(attr, attr_len, val, (int)(end - (u_char *)val), true);
+				return kgl_header_no_insert;
 			}
 		}
-		data.flags |= RQ_HAVE_RANGE;
 		return kgl_header_success;
 	}
 	return kgl_header_success;

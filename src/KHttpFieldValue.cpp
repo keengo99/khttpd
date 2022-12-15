@@ -14,8 +14,6 @@
 KHttpFieldValue::KHttpFieldValue(const char *val) {
 	this->val = val;
 }
-KHttpFieldValue::~KHttpFieldValue() {
-}
 bool KHttpFieldValue::next() {
 	val = strchr(val, ',');
 	if (val == NULL) {

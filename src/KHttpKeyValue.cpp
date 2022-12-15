@@ -56,7 +56,7 @@ kgl_str_t *KHttpKeyValue::getMethod(int meth) {
 int KHttpKeyValue::get_method(const char* src, int len)
 {
 	for (int i = 1; i < MAX_METHOD; i++) {
-		if (mem_case_same(src, len, http_methods[i].data, http_methods[i].len)) {
+		if (kgl_mem_case_same(src, len, http_methods[i].data, http_methods[i].len)) {
 			return i;
 		}
 	}

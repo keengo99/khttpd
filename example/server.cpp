@@ -58,7 +58,7 @@ int client_http_test(void *arg,int got)
 	us->gc(-1);
 	return 0;
 }
-static void* ssl_create_sni(SSL* ssl, KOPAQUE server_ctx, const char* hostname)
+static void* ssl_create_sni(KOPAQUE server_ctx, const char* hostname, SSL_CTX **ssl_ctx)
 {
 	return NULL;
 }

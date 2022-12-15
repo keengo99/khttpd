@@ -76,7 +76,7 @@ bool KRequestData::parse_connect_url(u_char *src, size_t len) {
 	
 	raw_url->host = kgl_strndup((char *)src, ss - src);
 	len -= (ss - src);
-	raw_url->port = kgl_atoi(ss + 1, len - 1);
+	raw_url->port = (uint16_t)kgl_atoi(ss + 1, len - 1);
 	return true;
 }
 kgl_header_result KRequestData::parse_host(char* val,size_t len)

@@ -49,17 +49,16 @@ static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
 
 static const char* days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-static int make_month(const char* s);
-static int make_num(const char* s);
+static uint32_t  mday[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 static int timz_minutes = 0;
-bool mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
+bool kgl_mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
 {
 	if (attr_len != val_len) {
 		return false;
 	}
 	return memcmp(attr, val, attr_len) == 0;
 }
-bool mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
+bool kgl_mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
 {
 	if (attr_len != val_len) {
 		return false;
@@ -122,145 +121,260 @@ void makeLastModifiedTime(time_t* a, char* b, size_t l) {
 		1900 + tm.tm_year, tm.tm_hour, tm.tm_min);
 
 }
-void do_exit(int code) {
-	//   flush_log();
-	assert(0);
-	//  exit(code);
-}
+time_t kgl_parse_http_time(u_char* value, size_t len)
+{
 
-static int make_num(const char* s) {
-	if (*s >= '0' && *s <= '9')
-		return 10 * (*s - '0') + *(s + 1) - '0';
-	else
-		return *(s + 1) - '0';
-}
+	u_char* p, * end;
+	int    month;
+	uint32_t   day, year, hour, min, sec;
+	uint64_t     time;
+	enum
+	{
+		nofmt = 0,
+		rfc822,   /* Tue, 10 Nov 2002 23:50:13   */
+		rfc850,   /* Tuesday, 10-Dec-02 23:50:13 */
+		isoc      /* Tue Dec 10 23:50:13 2002    */
+	} fmt;
 
-static int make_month(const char* s) {
-	int i;
-	for (i = 0; i < 12; i++) {
-		if (!strncasecmp(months[i], s, 3))
-			return i;
-	}
-	return -1;
-}
+	fmt = nofmt;
+	end = value + len;
 
-static bool isRightTime(struct tm* tm) {
-	if (tm->tm_sec < 0 || tm->tm_sec > 59)
-		return false;
-	if (tm->tm_min < 0 || tm->tm_min > 59)
-		return false;
-	if (tm->tm_hour < 0 || tm->tm_hour > 23)
-		return false;
-	if (tm->tm_mday < 1 || tm->tm_mday > 31)
-		return false;
-	if (tm->tm_mon < 0 || tm->tm_mon > 11)
-		return false;
-	return true;
-}
+#if (NGX_SUPPRESS_WARN)
+	day = 32;
+	year = 2038;
+#endif
 
-bool parse_date_elements(const char* day, const char* month, const char* year,
-	const char* aTime, const char* zone, struct tm* tm) {
-	const char* t;
-	memset(tm, 0, sizeof(struct tm));
-
-	if (!day || !month || !year || !aTime)
-		return false;
-	tm->tm_mday = atoi(day);
-	tm->tm_mon = make_month(month);
-	if (tm->tm_mon < 0)
-		return false;
-	tm->tm_year = atoi(year);
-	if (strlen(year) == 4)
-		tm->tm_year -= 1900;
-	else if (tm->tm_year < 70)
-		tm->tm_year += 100;
-	else if (tm->tm_year > 19000)
-		tm->tm_year -= 19000;
-	tm->tm_hour = make_num(aTime);
-	t = strchr(aTime, ':');
-	if (!t)
-		return false;
-	t++;
-	tm->tm_min = atoi(t);
-	t = strchr(t, ':');
-	if (t)
-		tm->tm_sec = atoi(t + 1);
-	return isRightTime(tm);
-}
-
-bool parse_date(const char* str, struct tm* tm) {
-	char* day = NULL;
-	char* month = NULL;
-	char* year = NULL;
-	char* aTime = NULL;
-	char* zone = NULL;
-	char* buf = xstrdup(str);
-	char* hot = buf;
-	for (;;) {
-		hot = strchr(hot, ' ');
-		if (hot == NULL) {
+	for (p = value; p < end; p++) {
+		if (*p == ',') {
 			break;
 		}
-		*hot = 0;
-		hot += 1;
-		if (!day) {
-			day = hot;
-		} else if (!month) {
-			month = hot;
-		} else if (!year) {
-			year = hot;
-		} else if (!aTime) {
-			aTime = hot;
+
+		if (*p == ' ') {
+			fmt = isoc;
+			break;
+		}
+	}
+
+	for (p++; p < end; p++) {
+		if (*p != ' ') {
+			break;
+		}
+	}
+
+	if (end - p < 18) {
+		return -1;
+	}
+
+	if (fmt != isoc) {
+		if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9') {
+			return -1;
+		}
+
+		day = (*p - '0') * 10 + (*(p + 1) - '0');
+		p += 2;
+
+		if (*p == ' ') {
+			if (end - p < 18) {
+				return -1;
+			}
+			fmt = rfc822;
+
+		} else if (*p == '-') {
+			fmt = rfc850;
+
 		} else {
-			zone = hot;
-			break;
+			return -1;
+		}
+
+		p++;
+	}
+
+	switch (*p) {
+
+	case 'J':
+		month = *(p + 1) == 'a' ? 0 : *(p + 2) == 'n' ? 5 : 6;
+		break;
+
+	case 'F':
+		month = 1;
+		break;
+
+	case 'M':
+		month = *(p + 2) == 'r' ? 2 : 4;
+		break;
+
+	case 'A':
+		month = *(p + 1) == 'p' ? 3 : 7;
+		break;
+
+	case 'S':
+		month = 8;
+		break;
+
+	case 'O':
+		month = 9;
+		break;
+
+	case 'N':
+		month = 10;
+		break;
+
+	case 'D':
+		month = 11;
+		break;
+
+	default:
+		return -1;
+	}
+
+	p += 3;
+
+	if ((fmt == rfc822 && *p != ' ') || (fmt == rfc850 && *p != '-')) {
+		return -1;
+	}
+
+	p++;
+
+	if (fmt == rfc822) {
+		if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9'
+			|| *(p + 2) < '0' || *(p + 2) > '9'
+			|| *(p + 3) < '0' || *(p + 3) > '9') {
+			return -1;
+		}
+
+		year = (*p - '0') * 1000 + (*(p + 1) - '0') * 100
+			+ (*(p + 2) - '0') * 10 + (*(p + 3) - '0');
+		p += 4;
+
+	} else if (fmt == rfc850) {
+		if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9') {
+			return -1;
+		}
+
+		year = (*p - '0') * 10 + (*(p + 1) - '0');
+		year += (year < 70) ? 2000 : 1900;
+		p += 2;
+	}
+
+	if (fmt == isoc) {
+		if (*p == ' ') {
+			p++;
+		}
+
+		if (*p < '0' || *p > '9') {
+			return -1;
+		}
+
+		day = *p++ - '0';
+
+		if (*p != ' ') {
+			if (*p < '0' || *p > '9') {
+				return -1;
+			}
+
+			day = day * 10 + (*p++ - '0');
+		}
+
+		if (end - p < 14) {
+			return -1;
 		}
 	}
-	bool result = parse_date_elements(day, month, year, aTime, zone, tm);
-	xfree(buf);
-	return result;
-}
 
-time_t parse1123time(const char* str) {
-	struct tm tm;
-	time_t t;
-	if (NULL == str)
-		return -1;
-	if (!parse_date(str, &tm)) {
+	if (*p++ != ' ') {
 		return -1;
 	}
-	tm.tm_isdst = -1;
-#ifdef HAVE_TIMEGM
-	t = timegm(&tm);
-#elif HAVE_GMTOFF
-	t = mktime(&tm);
-	if (t != -1) {
-		struct tm local;
-		localtime_r(&t, &local);
-		t += local.tm_gmtoff;
+
+	if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9') {
+		return -1;
 	}
-#else
-	t = mktime(&tm);
-	if (t != -1) {
-		time_t dst = 0;
-#if defined (_TIMEZONE)
-#elif defined (_timezone)
-#elif defined(FREEBSD)
-#elif defined(CYGWIN)
-#elif defined(MSWIN)
-#else
-		extern long timezone;
-#endif
-		if (tm.tm_isdst > 0)
-			dst = -3600;
-#if defined ( _timezone) || defined(_WIN32)
-		t -= (_timezone + dst);
-#else
-		t -= (timezone + dst);
-#endif
+
+	hour = (*p - '0') * 10 + (*(p + 1) - '0');
+	p += 2;
+
+	if (*p++ != ':') {
+		return -1;
 	}
-#endif
-	return t;
+
+	if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9') {
+		return -1;
+	}
+
+	min = (*p - '0') * 10 + (*(p + 1) - '0');
+	p += 2;
+
+	if (*p++ != ':') {
+		return -1;
+	}
+
+	if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9') {
+		return -1;
+	}
+
+	sec = (*p - '0') * 10 + (*(p + 1) - '0');
+
+	if (fmt == isoc) {
+		p += 2;
+
+		if (*p++ != ' ') {
+			return -1;
+		}
+
+		if (*p < '0' || *p > '9' || *(p + 1) < '0' || *(p + 1) > '9'
+			|| *(p + 2) < '0' || *(p + 2) > '9'
+			|| *(p + 3) < '0' || *(p + 3) > '9') {
+			return -1;
+		}
+
+		year = (*p - '0') * 1000 + (*(p + 1) - '0') * 100
+			+ (*(p + 2) - '0') * 10 + (*(p + 3) - '0');
+	}
+
+	if (hour > 23 || min > 59 || sec > 59) {
+		return -1;
+	}
+
+	if (day == 29 && month == 1) {
+		if ((year & 3) || ((year % 100 == 0) && (year % 400) != 0)) {
+			return -1;
+		}
+
+	} else if (day > mday[month]) {
+		return -1;
+	}
+
+	/*
+	 * shift new year to March 1 and start months from 1 (not 0),
+	 * it is needed for Gauss' formula
+	 */
+
+	if (--month <= 0) {
+		month += 12;
+		year -= 1;
+	}
+
+	/* Gauss' formula for Gregorian days since March 1, 1 BC */
+
+	time = (uint64_t)(
+		/* days in years including leap years since March 1, 1 BC */
+
+		365 * year + year / 4 - year / 100 + year / 400
+
+		/* days before the month */
+
+		+367 * month / 12 - 30
+
+		/* days before the day */
+
+		+day - 1
+
+		/*
+		 * 719527 days were between March 1, 1 BC and March 1, 1970,
+		 * 31 and 28 days were in January and February 1970
+		 */
+
+		-719527 + 31 + 28) * 86400 + hour * 3600 + min * 60 + sec;
+
+	return (time_t)time;
 }
 int make_http_time(time_t time, char* buf, int size)
 {
@@ -279,16 +393,8 @@ void my_msleep(int msec) {
 #if defined(_WIN32)
 	Sleep(msec);
 #else
-	/* DU don't want to sleep in poll when number of descriptors is 0 */
 	usleep(msec * 1000);
-
 #endif
-	/*
-	struct timeval tv;
-	tv.tv_sec = msec / 1000;
-	tv.tv_usec = (msec % 1000) * 1000;
-	select(1, NULL, NULL, NULL, &tv);
-	*/
 }
 #define	BU_FREE	1
 #define	BU_BUSY	2
@@ -338,6 +444,20 @@ char* url_value_encode(const char* s, size_t len, size_t* new_length) {
 	}
 	return (char*)start;
 }
+int64_t kgl_atol(const u_char* line, size_t n)
+{
+	int64_t  value;
+	if (n == 0) {
+		return 0;
+	}
+	for (value = 0; n--; line++) {
+		if (*line < '0' || *line > '9') {
+			return value;
+		}
+		value = value * 10 + (*line - '0');
+	}
+	return value;
+}
 int kgl_atoi(const u_char* line, size_t n)
 {
 	int  value;
@@ -347,7 +467,7 @@ int kgl_atoi(const u_char* line, size_t n)
 	for (value = 0; n--; line++) {
 		if (*line < '0' || *line > '9') {
 			return value;
-		}	
+		}
 		value = value * 10 + (*line - '0');
 	}
 	return value;
@@ -366,7 +486,7 @@ void kgl_strlow(u_char* dst, u_char* src, size_t n)
 const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen)
 {
 	const char* p;
-	for (p = (char *)haystack; p <= (haystack - needlen + haystacklen); p++) {
+	for (p = (char*)haystack; p <= (haystack - needlen + haystacklen); p++) {
 		if (memcmp(p, needle, needlen) == 0)
 			return p; /* found */
 	}
@@ -426,12 +546,12 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 	if (len == 0) {
 		return false;
 	}
-	size_t p_len,host_len;
+	size_t p_len, host_len;
 	if (*src == '/') {
 		path = src;
 		goto only_path;
 	}
-	host = kgl_memstr(src, len, kgl_expand_string("://"));	
+	host = kgl_memstr(src, len, kgl_expand_string("://"));
 	if (!host) {
 		return false;
 	}
@@ -443,7 +563,7 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 		KBIT_SET(url->flags, KGL_URL_ORIG_SSL);
 		//url->port = 443;
 	}
-	
+
 	//host start
 	host += 3;
 	len -= (p_len + 3);
@@ -456,13 +576,13 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 	if (!url->parse_host(host, host_len)) {
 		return false;
 	}
-only_path: const char* sp = (char *)memchr(path, '?', len);	
+only_path: const char* sp = (char*)memchr(path, '?', len);
 	size_t path_len;
 	if (sp) {
 		path_len = sp - path;
 		sp++;
 		len--;
-		char* param = kgl_strndup(sp,len);
+		char* param = kgl_strndup(sp, len);
 		assert(url->param == NULL);
 		if (*param) {
 			url->param = param;
@@ -482,17 +602,16 @@ bool parse_url(const char* src, KUrl* url) {
 
 
 static int my_htoi(char* s) {
-	int value;
-	int c;
-
-	c = ((unsigned char*)s)[0];
-	if (isupper(c))
+	int c = ((unsigned char*)s)[0];
+	if (isupper(c)) {
 		c = tolower(c);
-	value = (c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10) * 16;
+	}
+	int value = (c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10) * 16;
 
 	c = ((unsigned char*)s)[1];
-	if (isupper(c))
+	if (isupper(c)) {
 		c = tolower(c);
+	}
 	value += c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10;
 
 	return (value);
