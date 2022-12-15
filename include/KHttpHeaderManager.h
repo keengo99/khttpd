@@ -2,13 +2,9 @@
 #define KHTTPHEADERMANAGER_H_99
 #include <ctype.h>
 #include "KHttpHeader.h"
+#include "KHttpLib.h"
 
-inline int attr_tolower(const char p) {
-	if (p == '-') {
-		return '_';
-	}
-	return tolower(p);
-}
+
 inline int attr_casecmp(const char* s1, const char* s2)
 {
 	const unsigned char* p1 = (const unsigned char*)s1;
@@ -17,7 +13,7 @@ inline int attr_casecmp(const char* s1, const char* s2)
 	if (p1 == p2)
 		return 0;
 
-	while ((result = attr_tolower(*p1) - attr_tolower(*p2++)) == 0)
+	while ((result = kgl_attr_tolower(*p1) - kgl_attr_tolower(*p2++)) == 0)
 		if (*p1++ == '\0')
 			break;
 	return result;

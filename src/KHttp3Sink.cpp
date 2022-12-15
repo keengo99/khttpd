@@ -34,12 +34,13 @@ void KHttp3Sink::on_write(lsquic_stream_t* st)
         headers.headers = response_headers.begin();;
         headers.count = response_headers.get_size();
         ev[OP_WRITE].result = lsquic_stream_send_headers(st, &headers, 0);
+        printf("stream write result=[%d]\n", ev[OP_WRITE].result);
         ev[OP_WRITE].cd->f->notice(ev[OP_WRITE].cd, 0);
         return;
     }
     assert(KBIT_TEST(st_flags, STF_WRITE));
     ev[OP_WRITE].result = (int)lsquic_stream_writev(st, ev[OP_WRITE].buf, ev[OP_WRITE].bc);
-    //printf("stream write result=[%d]\n", ev[OP_WRITE].result);
+    printf("stream write result=[%d]\n", ev[OP_WRITE].result);
     KBIT_CLR(st_flags, STF_WRITE);
     ev[OP_WRITE].cd->f->notice(ev[OP_WRITE].cd, 0);
 }

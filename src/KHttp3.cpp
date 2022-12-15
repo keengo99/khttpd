@@ -452,8 +452,7 @@ SSL_CTX* ea_get_ssl_ctx(void* peer_ctx, const struct sockaddr* local)
 	return kgl_get_ssl_ctx(h3_engine->server->ssl_ctx);
 }
 static void*
-interop_server_hset_create(void* hsi_ctx, lsquic_stream_t* stream,
-    int is_push_promise)
+interop_server_hset_create(void* hsi_ctx, lsquic_stream_t* stream, int is_push_promise)
 {
     struct header_decoder* req = (struct header_decoder*)malloc(sizeof(struct header_decoder));
     if (req == NULL) {

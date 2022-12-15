@@ -51,34 +51,6 @@ static const char* days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 static uint32_t  mday[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 static int timz_minutes = 0;
-bool kgl_mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
-{
-	if (attr_len != val_len) {
-		return false;
-	}
-	return memcmp(attr, val, attr_len) == 0;
-}
-bool kgl_mem_case_same(const char* s1, size_t attr_len, const char* s2, size_t val_len)
-{
-	if (attr_len != val_len) {
-		return false;
-	}
-	u_char  c1, c2;
-	while (attr_len > 0) {
-		c1 = (u_char)*s1++;
-		c2 = (u_char)*s2++;
-
-		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-
-		if (c1 == c2) {
-			attr_len--;
-			continue;
-		}
-		return false;
-	}
-	return true;
-}
 void init_time_zone()
 {
 	time_t tt = time(NULL);
@@ -472,6 +444,40 @@ int kgl_atoi(const u_char* line, size_t n)
 	}
 	return value;
 }
+int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2)
+{
+	size_t     n;
+	int  m, z;
+	if (n1 <= n2) {
+		n = n1;
+		z = -1;
+	} else {
+		n = n2;
+		z = 1;
+	}
+	m = memcmp(s1, s2, n);
+	if (m || n1 >= n2) {
+		return m;
+	}
+	return z;
+}
+int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2)
+{
+	size_t     n;
+	int  m, z;
+	if (n1 <= n2) {
+		n = n1;
+		z = -1;
+	} else {
+		n = n2;
+		z = 1;
+	}
+	m = kgl_casecmp(s1, s2, n);
+	if (m || n1 >= n2) {
+		return m;
+	}
+	return z;
+}
 void kgl_strlow(u_char* dst, u_char* src, size_t n)
 {
 	while (n) {
@@ -481,7 +487,24 @@ void kgl_strlow(u_char* dst, u_char* src, size_t n)
 		n--;
 	}
 }
+int kgl_casecmp(const char* s1, const char* s2, size_t attr_len)
+{
+	u_char  c1, c2;
+	while (attr_len > 0) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
 
+		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+
+		int result = c1 - c2;
+		if (result != 0) {
+			return result;
+		}
+		attr_len--;
+	}
+	return 0;
+}
 
 const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen)
 {
@@ -779,4 +802,26 @@ std::string b64encode(const unsigned char* in, int len)
 			s << b64alpha[c & 63];
 	}
 	return s.str();
+}
+#define MEMPBRK_CACHE_SIZE  256
+const char* kgl_mempbrk(const char* str, size_t n, const char* control, int control_len)
+{
+	const char* p, * min = NULL, * control_ptr = control, * control_end = control + control_len;
+	while (n > 0) {
+		while (control_ptr < control_end) {
+			if ((p = (const char*)memchr(str, *control_ptr,
+				(n > MEMPBRK_CACHE_SIZE) ? MEMPBRK_CACHE_SIZE : n)) != NULL) {
+				n = p - str;
+				min = p;
+			}
+			++control_ptr;
+		}
+		if (min != NULL) {
+			return min;
+		}
+		str += MEMPBRK_CACHE_SIZE;
+		n -= MEMPBRK_CACHE_SIZE;
+		control_ptr = control;
+	}
+	return NULL;
 }
