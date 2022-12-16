@@ -19,11 +19,11 @@ enum class KDechunkResult
 #define dechunk_failed   KDechunkResult::Failed
 #define dechunk_status   KDechunkResult
 
-#define KHTTPD_MAX_CHUNK_SIZE      0x1FFFFFFF /* 000111----1 */
-#define KHTTPD_CHUNK_STATUS_PREFIX (7<<29)    /* 1110------0 */
-#define KHTTPD_CHUNK_PART_SIZE_END (5<<29)    /* 1010------0 */
-#define KHTTPD_CHUNK_STATUS        (3<<30)    /* 1100------0 */
-#define KHTTPD_CHUNK_PART_SIZE     (1<<31)    /* 1000------0 */
+#define KHTTPD_MAX_CHUNK_SIZE      0x1FFFFFFF    /* 000111----1 */
+#define KHTTPD_CHUNK_STATUS_PREFIX 0xE0000000    /* 1110------0 */
+#define KHTTPD_CHUNK_PART_SIZE_END 0xA0000000    /* 1010------0 */
+#define KHTTPD_CHUNK_STATUS        0xC0000000    /* 1100------0 */
+#define KHTTPD_CHUNK_PART_SIZE     0x80000000    /* 1000------0 */
 
 
 #define KHTTPD_CHUNK_STATUS_READ_SIZE  0
