@@ -59,12 +59,5 @@ inline void free_header_list(KHttpHeader *av) {
 	}
 }
 bool is_attr(KHttpHeader *av, const char *attr,int attr_len);
-inline char *strlendup(const char *str, int len)
-{
-	char *buf = (char *)malloc(len + 1);
-	memcpy(buf, str, len);
-	buf[len] = '\0';
-	return buf;
-}
 KEND_DECLS
 #endif /*KHTTPHEADER_H_*/

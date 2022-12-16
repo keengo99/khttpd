@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kmalloc.h"
-#include "kbuf.h"
-#define KHTTPD_MAX_CHUNK_SIZE 0x10000000
+
+
 enum class KDechunkResult
 {
 	Success,//解码成功，有数据返回，但要继续解码
@@ -13,61 +13,39 @@ enum class KDechunkResult
 	End,//解码成功，无数据返回，解码结束
 	Failed//解码错误
 };
-enum dechunk_status
-{
-	dechunk_success, //解码成功，有数据返回，但要继续解码
-	dechunk_continue,//解码成功，有数据返回，要继续喂数据
-	dechunk_end,     //解码成功，无数据返回，解码结束
-	dechunk_failed   //解码错误
-};
+#define dechunk_success  KDechunkResult::Success
+#define dechunk_continue KDechunkResult::Continue
+#define dechunk_end      KDechunkResult::End
+#define dechunk_failed   KDechunkResult::Failed
+#define dechunk_status   KDechunkResult
 
-class KDechunkEngine2
+#define KHTTPD_MAX_CHUNK_SIZE      0x1FFFFFFF /* 000111----1 */
+#define KHTTPD_CHUNK_STATUS_PREFIX (7<<29)    /* 1110------0 */
+#define KHTTPD_CHUNK_PART_SIZE_END (5<<29)    /* 1010------0 */
+#define KHTTPD_CHUNK_STATUS        (3<<30)    /* 1100------0 */
+#define KHTTPD_CHUNK_PART_SIZE     (1<<31)    /* 1000------0 */
+
+
+#define KHTTPD_CHUNK_STATUS_READ_SIZE  0
+#define KHTTPD_CHUNK_STATUS_READ_END   (KHTTPD_CHUNK_STATUS|1)
+#define KHTTPD_CHUNK_STATUS_READ_LAST  (KHTTPD_CHUNK_STATUS|2)
+#define KHTTPD_CHUNK_STATUS_IS_END     (KHTTPD_CHUNK_STATUS|4)
+#define KHTTPD_CHUNK_STATUS_IS_FAILED  (KHTTPD_CHUNK_STATUS|8)
+class KDechunkEngine
 {
 public:
-	KDechunkEngine2()
+	KDechunkEngine()
 	{
-		chunk_size = status_read_chunk_size;
+		chunk_size = KHTTPD_CHUNK_STATUS_READ_SIZE;
 	}
 	//piece_length是in,out参数，in时指示最大块长度
-	KDechunkResult dechunk(char ** buf, int& buf_len, char** piece, int& piece_length);
-	uint32_t chunk_size;
-private:
-	static constexpr uint32_t status_read_chunk_size{ static_cast<uint32_t>(0) };
-	static constexpr uint32_t status_read_end{ static_cast<uint32_t>(-1) };
-	static constexpr uint32_t status_read_last{ static_cast<uint32_t>(-2) };
-	static constexpr uint32_t status_is_ended{ static_cast<uint32_t>(-3) };
-	static constexpr uint32_t status_is_failed{ static_cast<uint32_t>(-4) };
-};
-
-class KDechunkEngine {
-public:
-	KDechunkEngine() {
-		chunk_size = 0;
-		work_len = 0;
-		work = NULL;
-	}
-	~KDechunkEngine() {
-		if (work) {
-			free(work);
-		}
-	}
+	KDechunkResult dechunk(const char ** buf, int& buf_len, const char** piece, int& piece_length);
 	bool is_success() {
-		return work_len == -4;
+		return chunk_size == KHTTPD_CHUNK_STATUS_IS_END;
 	}
-	//返回dechunk_continue表示还需要读数据，
-	dechunk_status dechunk(const char **buf, int&buf_len, const char **piece, int &piece_length,int max_piece_length=0);
 private:
-	bool is_failed() {
-		return work_len < -4;
-	}
-	bool is_end() {
-		return work_len <= -4;
-	}
-	int chunk_size ;
-	int work_len ;
-	char *work;
+	uint32_t chunk_size;
 };
-
 template<typename T>
 class KDechunkReader
 {
@@ -84,7 +62,7 @@ public:
 	}
 	int read(char* buf, int len)
 	{
-		char* piece;
+		const char* piece;
 		for (;;) {
 			switch (engine.dechunk(&hot, hot_len, &piece, len)) {
 			case KDechunkResult::Success:
@@ -93,6 +71,7 @@ public:
 				return len;
 			case KDechunkResult::Continue:
 			{
+				assert(hot_len == 0);
 				kgl_memcpy(buffer, hot, hot_len);
 				hot = buffer;
 				int got = us->read(buffer + hot_len, sizeof(buffer) - hot_len);
@@ -114,9 +93,9 @@ public:
 	}
 private:
 	T* us;
-	KDechunkEngine2 engine;
+	KDechunkEngine engine;
 	char buffer[8192];
 	int hot_len;
-	char* hot;
+	const char* hot;
 };
 #endif

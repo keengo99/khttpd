@@ -116,10 +116,10 @@ public:
 		memset(new_t, 0, sizeof(KHttpHeader));
 		new_t->type = type;
 		if (attr) {
-			new_t->attr = strlendup(attr, attr_len);
+			new_t->attr = kgl_strndup(attr, attr_len);
 		}
 		new_t->attr_len = attr_len;
-		new_t->val = strlendup(val, val_len);
+		new_t->val = kgl_strndup(val, val_len);
 		new_t->val_len = val_len;
 		new_t->next = NULL;
 		if (tail) {

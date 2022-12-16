@@ -278,7 +278,7 @@ int KHttpSink::internal_read(char *buf, int len)
 	}
 	return kfiber_net_read(cn, buf, len);
 }
-int KHttpSink::internal_write(LPWSABUF buf, int bc)
+int KHttpSink::internal_write(WSABUF *buf, int bc)
 {
 	assert(!kfiber_is_main());
 	return kfiber_net_writev(cn, buf, bc);

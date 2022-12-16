@@ -10,27 +10,6 @@
 #define DAV_AUTH_PASSWD "test"
 #define test_assert(x) test_assert2(x,__FILE__,__LINE__)
 static int total_passed = 0;
-static void test_dechunk()
-{
-	//printf("sizeof(KDechunkEngine2)=[%d],sizeof(KDechunkEngine)=[%d]\n", sizeof(KDechunkEngine2), sizeof(KDechunkEngine));
-	KDechunkEngine2 engine;
-	ks_buffer* buffer = ks_buffer_new(512);
-	ks_write_str(buffer, kgl_expand_string("9\n123456789\n0\n\n"));
-	char* hot = buffer->buf;
-	int len = buffer->used;
-	for (;;) {
-		char* piece = NULL;
-		int piece_len = 5;
-		if (engine.dechunk(&hot, len, &piece, piece_len) == KDechunkResult::End) {
-			assert(len==0);
-			break;
-		}
-		printf("piece_len=[%d]\n", piece_len);
-		fwrite(piece, 1, piece_len, stdout);
-		printf("\n");
-	}
-
-}
 static void test_assert2(bool condition, const char* file, int line)
 {
 	if (condition) {
