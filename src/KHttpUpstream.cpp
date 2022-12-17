@@ -114,7 +114,7 @@ KGL_RESULT KHttpUpstream::read_header()
 					result = KGL_EDATA_FORMAT;
 					goto out;
 				}
-				ks_save_point(ctx.read_buffer, hot, len);
+				ks_save_point(ctx.read_buffer, hot);
 				goto continue_read;
 			}
 			case kgl_parse_success:
@@ -142,7 +142,7 @@ KGL_RESULT KHttpUpstream::read_header()
 				break;
 			}
 			case kgl_parse_finished:
-				ks_save_point(ctx.read_buffer, hot, len);
+				ks_save_point(ctx.read_buffer, hot);
 				//printf("us=[%p] read_buffer=[%p] used=[%d]\n", static_cast<KUpstream *>(this),ctx.read_buffer, ctx.read_buffer->used);
 				//if (ctx.dechunk_ctx) {
 				//	ctx.dechunk_ctx->start_read(ctx.read_buffer);
@@ -164,7 +164,7 @@ int KHttpUpstream::read(char* buf, int len)
 		if (ctx.read_buffer->used > 0) {
 			len = MIN((int)len, (int)ctx.read_buffer->used);
 			kgl_memcpy(buf, ctx.read_buffer->buf, len);
-			ks_save_point(ctx.read_buffer, ctx.read_buffer->buf + len, ctx.read_buffer->used - len);
+			ks_save_point(ctx.read_buffer, ctx.read_buffer->buf + len);
 			//assert(len <= ctx.left);
 			//ctx.left -= len;
 			return len;

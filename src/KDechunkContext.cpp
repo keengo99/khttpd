@@ -26,11 +26,11 @@ int KDechunkContext::Read(KHttpSink* sink, char* buf, int length)
 			}
 			continue;
 		}		
-		KDechunkResult status = dechunk(&hot, hot_len, &piece, length);
+		KDechunkResult status = dechunk(&hot, hot_len, &piece, &length);
 		switch (status) {
 		case KDechunkResult::End:
 		{
-			ks_save_point(&sink->buffer, hot, hot_len);
+			ks_save_point(&sink->buffer, hot);
 			return 0;
 		}
 		case KDechunkResult::Success:
@@ -39,13 +39,13 @@ int KDechunkContext::Read(KHttpSink* sink, char* buf, int length)
 			if (buf) {
 				memcpy(buf, piece, length);
 			}
-			ks_save_point(&sink->buffer, hot, hot_len);
+			ks_save_point(&sink->buffer, hot);
 			return length;
 		}
 		case KDechunkResult::Continue:
 		{
 			assert(hot_len == 0);
-			ks_save_point(&sink->buffer, hot, hot_len);
+			ks_save_point(&sink->buffer, hot);
 			break;
 		}
 		default:

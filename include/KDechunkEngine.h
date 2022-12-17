@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kmalloc.h"
-
+#include "kbuf.h"
 
 enum class KDechunkResult
 {
@@ -39,7 +39,8 @@ public:
 		chunk_size = KHTTPD_CHUNK_STATUS_READ_SIZE;
 	}
 	//piece_length是in,out参数，in时指示最大块长度
-	KDechunkResult dechunk(const char ** buf, int& buf_len, const char** piece, int& piece_length);
+	KDechunkResult dechunk(const char** buf, const char* end, const char** piece, int* piece_length);
+	KDechunkResult dechunk(const char** buf, int buf_len, const char** piece, int* piece_length);
 	bool is_success() {
 		return chunk_size == KHTTPD_CHUNK_STATUS_IS_END;
 	}
@@ -53,39 +54,33 @@ public:
 	KDechunkReader(T* us)
 	{
 		this->us = us;
-		hot = buffer;
-		hot_len = 0;
-	}
-	~KDechunkReader()
-	{
-
 	}
 	int read(char* buf, int len)
 	{
+		char* dst = buf;
+	retry:
+		char* src = dst;
+		len -= (int)(dst - buf);
+		if (engine.is_success()) {
+			return (int)(dst - buf);
+		}
+		int got = us->read(src, len);
+		if (got <= 0) {
+			return -1;
+		}
 		const char* piece;
+		const char* end = src + got;
 		for (;;) {
-			switch (engine.dechunk(&hot, hot_len, &piece, len)) {
+			int piece_length = KHTTPD_MAX_CHUNK_SIZE;
+			switch (engine.dechunk((const char**)&src, end, &piece, &piece_length)) {
 			case KDechunkResult::Success:
-				assert(piece && len > 0);
-				kgl_memcpy(buf, piece, len);
-				return len;
+				kgl_memcpy(dst, piece, piece_length);
+				dst += piece_length;
+				break;
 			case KDechunkResult::Continue:
-			{
-				assert(hot_len == 0);
-				kgl_memcpy(buffer, hot, hot_len);
-				hot = buffer;
-				int got = us->read(buffer + hot_len, sizeof(buffer) - hot_len);
-				if (got <= 0) {
-					return -1;
-				}
-				hot_len += got;
-				//fwrite(buffer, 1, hot_len, stdout);
-				continue;
-			}
+				goto retry;
 			case KDechunkResult::End:
-			{
-				return 0;
-			}
+				return (int)(dst - buf);
 			default:
 				return -1;
 			}
@@ -94,8 +89,5 @@ public:
 private:
 	T* us;
 	KDechunkEngine engine;
-	char buffer[8192];
-	int hot_len;
-	const char* hot;
 };
 #endif
