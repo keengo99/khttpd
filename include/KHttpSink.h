@@ -6,24 +6,23 @@
 #include "KResponseContext.h"
 #include "KHttpHeader.h"
 #include "KDechunkContext.h"
-//处理http1协议的
-int buffer_read_http_sink(KOPAQUE data, void *arg, LPWSABUF buf, int bufCount);
 
+//handle http/1.x protocol
 class KHttpSink : public KTcpServerSink
 {
 public:
-	KHttpSink(kconnection *c,kgl_pool_t *pool);
+	KHttpSink(kconnection* c, kgl_pool_t* pool);
 	~KHttpSink();
 	bool is_locked() override
 	{
 		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
 	}
-	bool response_header(const char *name, int name_len, const char *val, int val_len) override;
-	bool response_connection(const char *val, int val_len) override {
+	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
+	bool response_connection(const char* val, int val_len) override {
 		return response_header(kgl_expand_string("Connection"), val, val_len);
 	}
 
-	bool read_hup(void *arg, result_callback result) override
+	bool read_hup(void* arg, result_callback result) override
 	{
 		return selectable_readhup(&cn->st, result, arg);
 	}
@@ -37,7 +36,7 @@ public:
 	}
 	void set_no_delay(bool forever) override
 	{
-		ksocket_no_delay(cn->st.fd,forever);
+		ksocket_no_delay(cn->st.fd, forever);
 	}
 	void shutdown() override
 	{
@@ -56,14 +55,13 @@ public:
 	ks_buffer buffer;
 	kev_result ReadHeader();
 	kev_result Parse();
-	KResponseContext *rc;
-	kconnection *cn;
-	kev_result ResultResponseContext(int got);
-	kconnection *get_connection() override
+	KResponseContext* rc;
+	kconnection* cn;
+	kconnection* get_connection() override
 	{
 		return cn;
 	}
-	KDechunkContext *GetDechunkContext()
+	KDechunkContext* GetDechunkContext()
 	{
 		return dechunk;
 	}
@@ -81,7 +79,7 @@ protected:
 protected:
 	void start_header() override;
 	bool internal_response_status(uint16_t status_code) override;
-	KDechunkContext *dechunk;
+	KDechunkContext* dechunk;
 	khttp_parser parser;
 };
 #endif

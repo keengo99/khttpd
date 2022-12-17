@@ -1116,7 +1116,7 @@ bool KHttp2::add_method(KHttp2Context* ctx, u_char meth)
 	if (ctx->send_header == NULL) {
 		ctx->send_header = new KHttp2HeaderFrame;
 	}
-	auto method = KHttpKeyValue::getMethod(meth);
+	auto method = KHttpKeyValue::get_method(meth);
 	add_header(ctx, kgl_expand_string(":method"), method->data, (hlen_t)method->len);
 	return true;
 }

@@ -12,7 +12,7 @@ bool KHttpUpstream::send_method_path(uint16_t meth, const char* path, hlen_t pat
 	if (this->ctx.send_header_buffer == NULL) {
 		ctx.send_header_buffer = krw_buffer_new(4096);
 	}
-	kgl_str_t *meth_str = KHttpKeyValue::getMethod(meth);
+	kgl_str_t *meth_str = KHttpKeyValue::get_method(meth);
 	krw_write_str(ctx.send_header_buffer, meth_str->data, (int)meth_str->len);
 	krw_write_str(ctx.send_header_buffer, kgl_expand_string(" "));
 	krw_write_str(ctx.send_header_buffer, path, path_len);

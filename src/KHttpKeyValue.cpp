@@ -11,7 +11,6 @@
 #include "kstring.h"
 #include "kmalloc.h"
 #include "KHttpLib.h"
-
 static kgl_str_t http_methods[MAX_METHOD] = {
 	kgl_string("UNSET"),
 		kgl_string("GET"),
@@ -47,7 +46,7 @@ static kgl_str_t http_methods[MAX_METHOD] = {
 		kgl_string("SUBSCRIBE"),
 		kgl_string("UNSUBSCRIBE")
 };
-kgl_str_t *KHttpKeyValue::getMethod(int meth) {
+kgl_str_t *KHttpKeyValue::get_method(int meth) {
 	if (meth < 0 || meth >= MAX_METHOD) {
 		meth = 0;
 	}

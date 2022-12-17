@@ -15,22 +15,6 @@ class KResponseContext
 public:
 	KResponseContext(kgl_pool_t *pool) : ab(pool)
 	{
-		buffer = NULL;
-		result = NULL;
-	}
-	bool ReadSuccess(int *got)
-	{
-		return ab.readSuccess(got);
-	}
-	int GetReadBuffer(KOPAQUE data, LPWSABUF buffer,int bc)
-	{
-		int ret = ab.getReadBuffer(buffer, bc);
-		if (this->buffer && ret<bc) {
-			//have body
-			int body_ret = this->buffer(data, this->arg, buffer + ret, bc - ret);
-			ret += body_ret;
-		}
-		return ret;
 	}
 	void head_insert_const(const char *str,uint16_t len)
 	{
@@ -54,16 +38,6 @@ public:
 		t->used = len;
 		ab.Append(t);
 	}
-	void SwitchRead() {
-		ab.SwitchRead();
-	}
-	int GetLen()
-	{
-		return ab.getLen();
-	}
-	void *arg;
-	buffer_callback buffer;
-	result_callback result;
 	friend class KHttpSink;
 private:
 	KAutoBuffer ab;

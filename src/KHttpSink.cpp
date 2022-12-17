@@ -20,35 +20,6 @@ kev_result end_http_sink_fiber(KOPAQUE data, void* arg, int got)
 	sink->EndFiber();
 	return kev_ok;
 }
-static int buffer_write_http_sink(KOPAQUE data, void* arg, LPWSABUF buf, int bc)
-{
-	KHttpSink* sink = (KHttpSink*)arg;
-	kassert(sink->rc);
-	return sink->rc->GetReadBuffer(data, buf, bc);
-}
-static void result_write_http_header(KOPAQUE data, void* arg, int got)
-{
-	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
-	kassert(sink->rc == NULL);
-	if (got < 0) {
-		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
-	}
-	sink->end_request();
-}
-static kev_result result_write_http_sink(KOPAQUE data, void* arg, int got)
-{
-	KHttpSink* sink = (KHttpSink*)arg;
-	KResponseContext* rc = sink->rc;
-	kassert(rc && rc->result);
-	if (got <= 0) {
-		return sink->ResultResponseContext(got);
-	}
-	if (rc->ReadSuccess(&got)) {
-		kassert(got == 0);
-		return selectable_write(&sink->cn->st, result_write_http_sink, buffer_write_http_sink, arg);
-	}
-	return sink->ResultResponseContext(got);
-}
 kev_result result_skip_chunk_request(KOPAQUE data, void* arg, int got)
 {
 	KSink* s = (KSink*)arg;
@@ -87,7 +58,7 @@ kev_result result_read_http_sink(KOPAQUE data, void* arg, int got)
 	return sink->Parse();
 }
 
-int buffer_read_http_sink(KOPAQUE data, void* arg, LPWSABUF buf, int bufCount)
+int buffer_read_http_sink(KOPAQUE data, void* arg, WSABUF *buf, int bufCount)
 {
 	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
 	int bc = ks_get_write_buffers(&sink->buffer, buf, bufCount);
@@ -114,19 +85,6 @@ static int handle_http2https_error(void* arg, int got)
 	return 0;
 }
 #endif
-kev_result KHttpSink::ResultResponseContext(int got)
-{
-	buffer_callback buffer = rc->buffer;
-	result_callback result = rc->result;
-	void* arg = rc->arg;
-	kassert(got < 0 || rc->GetLen() == 0);
-	delete rc;
-	rc = NULL;
-	if (got == 0 && buffer) {
-		return selectable_write(&cn->st, result, buffer, arg);
-	}
-	return result(cn->st.data, arg, got);
-}
 KHttpSink::KHttpSink(kconnection* c, kgl_pool_t* pool) : KTcpServerSink(pool)
 {
 	this->cn = c;
@@ -155,7 +113,7 @@ bool KHttpSink::internal_response_status(uint16_t status_code)
 {
 	kassert(rc);
 	kgl_str_t request_line;
-	getRequestLine(pool, status_code, &request_line);
+	KHttpKeyValue::get_request_line(pool, status_code, &request_line);
 	rc->head_insert_const(request_line.data, (uint16_t)request_line.len);
 	return true;
 }
@@ -236,26 +194,26 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 	}
 	send_alt_svc_header();
 	rc->head_append_const("\r\n", 2);
-	rc->SwitchRead();
-	int header_len = rc->GetLen();
-	if (!kfiber_is_main()) {
-		WSABUF buf[64];
-		for (;;) {
-			int bc = rc->GetReadBuffer(cn->st.data, buf, 64);
-			kassert(bc > 0);
-			int got = kfiber_net_writev(cn, buf, bc);
-			if (got <= 0) {
-				header_len = -1;
-				break;
-			}
-			if (!rc->ReadSuccess(&got)) {
-				kassert(got == 0);
-				break;
-			}
+	rc->ab.SwitchRead();
+	int header_len = rc->ab.getLen();
+	assert(!kfiber_is_main());
+
+	WSABUF buf[64];
+	for (;;) {
+		int bc = rc->ab.getReadBuffer(buf, 64);
+		kassert(bc > 0);
+		int got = kfiber_net_writev(cn, buf, bc);
+		if (got <= 0) {
+			header_len = -1;
+			break;
 		}
-		delete rc;
-		rc = NULL;
+		if (!rc->ab.readSuccess(&got)) {
+			kassert(got == 0);
+			break;
+		}
 	}
+	delete rc;
+	rc = NULL;
 	return header_len;
 }
 int KHttpSink::internal_read(char* buf, int len)
