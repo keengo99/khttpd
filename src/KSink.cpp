@@ -454,10 +454,3 @@ bool KSink::write_all(const char* buf, int len)
 	}
 	return true;
 }
-int kgl_get_alt_svc_value(kserver* server, char* buf, int buf_size)
-{
-	if (!KBIT_TEST(server->flags, WORK_MODEL_ALT_H3)) {
-		return 0;
-	}
-	return snprintf(buf, buf_size, "h3=\":%d\"", ksocket_addr_port(&server->addr));
-}

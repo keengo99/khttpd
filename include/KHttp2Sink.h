@@ -6,7 +6,7 @@
 class KHttp2Sink : public KTcpServerSink
 {
 public:
-	KHttp2Sink(KHttp2 *http2,KHttp2Context *ctx,kgl_pool_t *pool): KTcpServerSink(pool)
+	KHttp2Sink(KHttp2* http2, KHttp2Context* ctx, kgl_pool_t* pool) : KTcpServerSink(pool)
 	{
 		this->http2 = http2;
 		this->ctx = ctx;
@@ -24,17 +24,18 @@ public:
 	{
 		return http2->add_status(ctx, status_code);
 	}
-	bool response_header(const char *name, int name_len, const char *val, int val_len) override
+	bool response_header(const char* name, int name_len, const char* val, int val_len) override
 	{
-		return http2->add_header(ctx, name, name_len,val, val_len);
+		return http2->add_header(ctx, name, name_len, val, val_len);
 	}
-	bool response_connection(const char *val, int val_len) override
+	bool response_connection(const char* val, int val_len) override
 	{
 		return false;
 	}
 	//返回头长度,-1表示出错
 	int internal_start_response_body(int64_t body_size) override
 	{
+		send_alt_svc_header();
 		ctx->SetContentLength(body_size);
 		return http2->send_header(ctx);
 	}
@@ -48,7 +49,7 @@ public:
 		}
 		return false;
 	}
-	bool read_hup(void *arg, result_callback result) override
+	bool read_hup(void* arg, result_callback result) override
 	{
 		http2->read_hup(ctx, result, arg);
 		return true;
@@ -57,18 +58,17 @@ public:
 	{
 		http2->remove_read_hup(ctx);
 	}
-	int internal_read(char *buf, int len) override
+	int internal_read(char* buf, int len) override
 	{
 		WSABUF bufs;
 		bufs.iov_base = buf;
 		bufs.iov_len = len;
 		return http2->read(ctx, &bufs, 1);
 	}
-	int internal_write(WSABUF *buf, int bc) override
+	int internal_write(WSABUF* buf, int bc) override
 	{
 		return http2->write(ctx, buf, bc);
 	}
-
 	int end_request() override
 	{
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
@@ -88,7 +88,7 @@ public:
 	{
 		return http2->shutdown(ctx);
 	}
-	kconnection *get_connection() override
+	kconnection* get_connection() override
 	{
 		return http2->c;
 	}
@@ -104,17 +104,15 @@ public:
 	void flush() override
 	{
 	}
-#ifdef ENABLE_PROXY_PROTOCOL
-	const char *GetProxyIp()
-	{
-		return NULL;
-	};
-#endif
 protected:
 	friend class KHttp2;
+	bool response_altsvc_header(const char* val, int val_len) override
+	{
+		return http2->send_altsvc(ctx, val, val_len);
+	}
 private:
-	KHttp2Context *ctx;
-	KHttp2 *http2;
+	KHttp2Context* ctx;
+	KHttp2* http2;
 };
 #endif
 #endif

@@ -71,6 +71,10 @@ public:
 	int StartPipeLine();
 	void EndFiber();
 protected:
+	bool response_altsvc_header(const char* val, int val_len) override
+	{
+		return response_header(_KS("Alt-Svc"), val, val_len);
+	}
 	int internal_start_response_body(int64_t body_size) override;
 	int internal_read(char* buf, int len) override;
 	int internal_write(WSABUF* buf, int bc) override;

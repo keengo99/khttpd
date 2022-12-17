@@ -156,11 +156,9 @@ public:
 		set_no_delay(false);
 		set_delay();
 	}
-#ifdef KSOCKET_SSL
 	virtual kssl_session* get_ssl() {
 		return nullptr;
 	}
-#endif
 	const char* get_client_ip()
 	{
 		if (data.client_ip) {
@@ -228,5 +226,4 @@ protected:
 	virtual bool response_connection(const char* val, int val_len) = 0;
 	virtual int internal_start_response_body(int64_t body_size) = 0;
 };
-int kgl_get_alt_svc_value(kserver* server, char* buf, int buf_size);
 #endif

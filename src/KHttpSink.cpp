@@ -234,13 +234,7 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 	if (rc == NULL) {
 		return 0;
 	}
-	if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
-		char buf[32];
-		int len = kgl_get_alt_svc_value(cn->server, buf, sizeof(buf));
-		if (len > 0) {
-			response_header(kgl_expand_string("Alt-Svc"), buf, len);
-		}
-	}
+	send_alt_svc_header();
 	rc->head_append_const("\r\n", 2);
 	rc->SwitchRead();
 	int header_len = rc->GetLen();
