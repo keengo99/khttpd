@@ -44,7 +44,7 @@ int KDechunkContext::Read(KHttpSink* sink, char* buf, int length)
 		}
 		case KDechunkResult::Continue:
 		{
-			assert(hot_len == 0);
+			assert(hot == sink->buffer.buf + hot_len);
 			ks_save_point(&sink->buffer, hot);
 			break;
 		}
