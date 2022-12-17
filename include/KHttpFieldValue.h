@@ -9,24 +9,10 @@
 #define KHTTPFIELDVALUE_H_
 #include "KHttpLib.h"
 
- //@deprecated use KHttpFieldValue2
 class KHttpFieldValue
 {
 public:
-	KHttpFieldValue(const char* val);
-	bool have(const char* field);
-	bool is2(const char* field, int n);
-	bool is(const char* field, int* n);
-	bool is(const char* field);
-	bool next();
-private:
-	const char* val;
-	int val_len;
-};
-class KHttpFieldValue2
-{
-public:
-	KHttpFieldValue2(const char* val, const char* end)
+	KHttpFieldValue(const char* val, const char* end)
 	{
 		this->val = val;
 		this->end = end;

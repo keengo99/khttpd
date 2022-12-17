@@ -143,7 +143,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		|| mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
 #endif//}}
 		) {
-		KHttpFieldValue2 field(val, val+val_len);
+		KHttpFieldValue field(val, val+val_len);
 		do {
 			if (field.is(_KS("keep-alive"))) {
 				data.flags |= RQ_HAS_KEEP_CONNECTION;
@@ -159,7 +159,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		if (!*val) {
 			return kgl_header_no_insert;
 		}
-		KHttpFieldValue2 field(val, val+val_len);
+		KHttpFieldValue field(val, val+val_len);
 		do {
 			if (field.is(kgl_expand_string("gzip"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
@@ -235,7 +235,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_success;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
-		KHttpFieldValue2 field(val,val+val_len);
+		KHttpFieldValue field(val,val+val_len);
 		do {
 			if (field.is(_KS("no-store")) || field.is(_KS("no-cache"))) {
 				data.flags |= RQ_HAS_NO_CACHE;
