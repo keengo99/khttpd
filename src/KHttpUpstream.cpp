@@ -99,10 +99,10 @@ KGL_RESULT KHttpUpstream::read_header()
 		ks_write_success(ctx.read_buffer, got);
 		khttp_parse_result rs;
 		char* hot = ctx.read_buffer->buf;
-		int len = ctx.read_buffer->used;
+		char* end = ctx.read_buffer->buf + ctx.read_buffer->used;
 		for (;;) {
 			memset(&rs, 0, sizeof(rs));
-			kgl_parse_result parse_result = khttp_parse(&parser, &hot, &len, &rs);
+			kgl_parse_result parse_result = khttp_parse(&parser, &hot, end, &rs);
 			switch (parse_result) {
 			case kgl_parse_continue:
 			{
@@ -119,22 +119,6 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_success:
 			{
-#if 0
-				if (ctx.dechunk_ctx == NULL && strcasecmp(rs.attr, "Transfer-Encoding") == 0 && strcasecmp(rs.val, "chunked") == 0) {
-					ctx.dechunk_ctx = new KDechunkContext2;
-					ctx.dechunk_ctx->hot = nullptr;
-					ctx.left = -1;
-					break;
-				}
-				if (strcasecmp(rs.attr, "Content-Length") == 0) {
-					ctx.left = string2int(rs.val);
-					if (ctx.dechunk_ctx) {
-						delete ctx.dechunk_ctx;
-						ctx.dechunk_ctx = nullptr;
-					}
-					break;
-				}
-#endif
 				if (!stack.header(this, stack.arg, rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
 					result = KGL_EDATA_FORMAT;
 					goto out;
@@ -143,17 +127,12 @@ KGL_RESULT KHttpUpstream::read_header()
 			}
 			case kgl_parse_finished:
 				ks_save_point(ctx.read_buffer, hot);
-				//printf("us=[%p] read_buffer=[%p] used=[%d]\n", static_cast<KUpstream *>(this),ctx.read_buffer, ctx.read_buffer->used);
-				//if (ctx.dechunk_ctx) {
-				//	ctx.dechunk_ctx->start_read(ctx.read_buffer);
-				//}
 				goto out;
 			default:
 				result = KGL_EDATA_FORMAT;
 				goto out;
 			}
 		}
-
 	}
 out:
 	return result;

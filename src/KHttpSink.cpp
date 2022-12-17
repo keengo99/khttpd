@@ -163,11 +163,10 @@ kev_result KHttpSink::Parse()
 {
 	khttp_parse_result rs;
 	char* hot = buffer.buf;
-	int len = buffer.used;
-	//fwrite(hot, 1, len, stdout);
+	char* end = buffer.buf + buffer.used;
 	for (;;) {
 		memset(&rs, 0, sizeof(rs));
-		kgl_parse_result result = khttp_parse(&parser, &hot, &len, &rs);
+		kgl_parse_result result = khttp_parse(&parser, &hot, end, &rs);
 		//printf("len=[%d],result=[%d]\n", len,result);
 
 		switch (result) {

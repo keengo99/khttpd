@@ -31,19 +31,13 @@ typedef struct {
 } khttp_parse_result;
 
 typedef struct {
-	char *data;
-	int len;
-	int checked;
-} khttp_parse_body_result;
-
-typedef struct {
 	int header_len;
 	uint8_t started : 1;
 	uint8_t finished : 1;
 	uint8_t first_same : 1;
 } khttp_parser;
 
-kgl_parse_result khttp_parse(khttp_parser *parser, char **buf, int *len, khttp_parse_result *rs);
+kgl_parse_result khttp_parse(khttp_parser *parser, char **buf, char *end, khttp_parse_result *rs);
 
 #endif
 
