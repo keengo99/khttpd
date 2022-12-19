@@ -32,7 +32,7 @@ class KWebDavClient
 {
 public:
 	KWebDavClient();
-	bool set_url(const char* url);
+	bool set_url(const char* url, const char* host=nullptr);
 	void set_auth(const char* user, const char* passwd);
 	~KWebDavClient();
 	KGL_RESULT new_request(const char* method, const char* path, int64_t content_length, KWebDavRequest **rq);

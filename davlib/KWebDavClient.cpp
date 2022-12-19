@@ -20,7 +20,7 @@ void KWebDavClient::set_auth(const char* user, const char* passwd) {
 	auth->user = user;
 	auth->passwd = passwd;
 }
-bool KWebDavClient::set_url(const char* url)
+bool KWebDavClient::set_url(const char* url, const char *host)
 {
 	if (this->url) {
 		this->url->relase();
@@ -42,7 +42,10 @@ bool KWebDavClient::set_url(const char* url)
 	if (KBIT_TEST(this->url->flags, KGL_URL_ORIG_SSL)) {
 		ports << "sp";
 	}
-	sock_pool->setHostPort(this->url->host, ports.str().c_str());
+	if (host == nullptr) {
+		host = this->url->host;
+	}
+	sock_pool->setHostPort(host, ports.str().c_str());
 	return true;
 }
 KWebDavClient::~KWebDavClient()

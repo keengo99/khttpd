@@ -147,10 +147,14 @@ static int webdav_main(void* arg, int argc)
 		printf("Usage: %s test_webdav_url\n", argv[0]);
 		return 1;
 	}
+	const char* host = nullptr;
+	if (argc > 2) {
+		host = argv[2];
+	}
 	selector_manager_set_timeout(5, 5);
 	KWebDavClient provider, provider2;
-	test_assert(provider.set_url(argv[1]));
-	test_assert(provider2.set_url(argv[1]));
+	test_assert(provider.set_url(argv[1],host));
+	test_assert(provider2.set_url(argv[1],host));
 	provider.set_auth("test", "test");
 	provider2.set_auth("test", "test");
 	
