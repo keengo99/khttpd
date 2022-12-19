@@ -108,7 +108,8 @@ protected:
 	friend class KHttp2;
 	bool response_altsvc_header(const char* val, int val_len) override
 	{
-		return http2->send_altsvc(ctx, val, val_len);
+		return response_header(_KS("Alt-Svc"), val, val_len);
+		//return http2->send_altsvc(ctx, val, val_len);
 	}
 private:
 	KHttp2Context* ctx;

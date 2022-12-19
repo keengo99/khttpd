@@ -3,6 +3,8 @@
 #include "kforwin32.h"
 #include <string>
 #include <cstring>
+#include "khttp.h"
+
 #define kgl_tolower(c)      (u_char) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
 #define kgl_toupper(c)      (u_char) ((c >= 'a' && c <= 'z') ? (c & ~0x20) : c)
 std::string b64encode(const unsigned char* in, int len = 0);
@@ -75,6 +77,10 @@ inline bool kgl_is_attr(const char* s1, size_t s1_len, const char* s2, size_t s2
 		s1_len--;
 	}
 	return true;
+}
+inline bool kgl_is_attr(KHttpHeader* header, const char* s2, size_t s2_len)
+{
+	return kgl_is_attr(header->attr, header->attr_len, s2, s2_len);
 }
 /*
 skip space or not space

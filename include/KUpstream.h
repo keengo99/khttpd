@@ -14,13 +14,11 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "KHttpHeader.h"
-enum BadStage
+enum class HealthStatus
 {
-	/* BadStage_Connect BadStage_TrySend  */
-	BadStage_Connect,
-	BadStage_TrySend,
-	/* BadStage_SendSuccess  */
-	BadStage_SendSuccess,
+	//this only detect socket on tcp level(write success)
+	Err,
+	Success
 };
 
 
@@ -114,8 +112,7 @@ public:
 		return expire_time == 0;
 	}
 	virtual int GetLifeTime();
-	virtual void IsGood();	
-	virtual void IsBad(BadStage stage);
+	virtual void health(HealthStatus stage);
 	virtual sockaddr_i *GetAddr() = 0;
 	bool GetSelfAddr(sockaddr_i *addr)
 	{

@@ -25,7 +25,7 @@ struct kgl_fiber_event
 class KHttp3Sink : public KSink
 {
 public:
-	KHttp3Sink(KHttp3Connection *cn) : KSink(NULL), response_headers(8)
+	KHttp3Sink(KHttp3Connection* cn) : KSink(NULL), response_headers(8)
 	{
 		cn->addRef();
 		this->cn = cn;
@@ -65,7 +65,7 @@ public:
 		char buf[4];
 		snprintf(buf, sizeof(buf), "%03d", status_code);
 		auto header = response_headers[0];
-		build_header(header,kgl_expand_string(":status"), buf, 3);
+		build_header(header, kgl_expand_string(":status"), buf, 3);
 		return true;
 	}
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override
@@ -73,8 +73,8 @@ public:
 		auto header = response_headers.get_new();
 		if (header == NULL) {
 			return false;
-		}		
-		build_header(header,name,name_len,val,val_len);
+		}
+		build_header(header, name, name_len, val, val_len);
 		return true;
 	}
 	bool response_connection(const char* val, int val_len) override
@@ -87,6 +87,7 @@ public:
 		if (st == NULL) {
 			return -1;
 		}
+		this->content_left = body_size;
 		assert(!KBIT_TEST(st_flags, STF_WRITE));
 		lsquic_stream_wantwrite(st, 1);
 		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd);
@@ -94,7 +95,7 @@ public:
 	}
 	bool is_locked() override
 	{
-		return KBIT_TEST(st_flags,STF_READ|STF_WRITE)>0;
+		return KBIT_TEST(st_flags, STF_READ | STF_WRITE) > 0;
 	}
 	bool read_hup(void* arg, result_callback result) override
 	{
@@ -142,16 +143,19 @@ public:
 		KBIT_SET(st_flags, STF_WRITE);
 		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd);
 		assert(!KBIT_TEST(st_flags, STF_WRITE));
+		if (content_left > 0) {
+			content_left -= ev[OP_WRITE].result;
+		}
 		return ev[OP_WRITE].result;
 	}
-	void on_read(lsquic_stream_t *st);
+	void on_read(lsquic_stream_t* st);
 	void on_write(lsquic_stream_t* st);
 	int end_request() override
 	{
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE)) && st) {
+		if (st && (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE)) || content_left > 0)) {
 			lsquic_stream_maybe_reset(st, 0, 0);
-		}		
+		}
 		assert(is_processing());
 		KBIT_CLR(st_flags, H3_IS_PROCESSING);
 		if (st) {
@@ -163,7 +167,7 @@ public:
 		delete this;
 		return 0;
 	}
-	kgl_pool_t* get_connection_pool() override 
+	kgl_pool_t* get_connection_pool() override
 	{
 		return cn->get_pool();
 	}
@@ -186,7 +190,7 @@ public:
 	sockaddr_i* get_peer_addr() override
 	{
 		if (cn->c) {
-			return (sockaddr_i *)cn->peer_addr;
+			return (sockaddr_i*)cn->peer_addr;
 		}
 		return nullptr;
 	}
@@ -196,7 +200,7 @@ public:
 	}
 	void set_time_out(int tmo_count) override
 	{
-	
+
 	}
 	int get_time_out() override
 	{
@@ -217,7 +221,7 @@ public:
 		return cn->engine->server->get_data();
 	}
 private:
-	void build_header(lsxpack_header* header,const char* name, int name_len, const char* val, int val_len)
+	void build_header(lsxpack_header* header, const char* name, int name_len, const char* val, int val_len)
 	{
 		memset(header, 0, sizeof(lsxpack_header));
 		size_t buf_len = name_len + val_len + 2;
@@ -226,13 +230,14 @@ private:
 		kgl_strlow((u_char*)header->buf, (u_char*)name, name_len);
 		header->name_len = name_len;
 		header->val_len = val_len;
-		header->val_offset = name_len+1;
+		header->val_offset = name_len + 1;
 		kgl_memcpy(header->buf + header->val_offset, val, val_len);
 	}
 	KObjArray<lsxpack_header> response_headers;
 	uint32_t st_flags;
 	lsquic_stream_t* st;
 	KHttp3Connection* cn;
+	int64_t content_left;
 	kgl_fiber_event ev[2];
 };
 struct header_decoder

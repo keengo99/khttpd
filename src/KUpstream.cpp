@@ -16,16 +16,10 @@ KUpstream::~KUpstream()
 		container->unbind(this);
 	}
 }
-void KUpstream::IsBad(BadStage stage)
+void KUpstream::health(HealthStatus stage)
 {
 	if (container) {
-		container->isBad(this, stage);
-	}
-}
-void KUpstream::IsGood()
-{
-	if (container) {
-		container->isGood(this);
+		container->health(this, stage);
 	}
 }
 int KUpstream::GetLifeTime()

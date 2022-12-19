@@ -16,16 +16,18 @@ class KSockPoolHelper : public KPoolableSocketContainer {
 public:
 	KSockPoolHelper();
 	virtual ~KSockPoolHelper();
-	void isBad(KUpstream *st,BadStage stage)
+	void health(KUpstream *st,HealthStatus stage) override
 	{
 		katom_inc64((void *)&this->total_error);
 		switch(stage){
-		case BadStage_Connect:
-		case BadStage_TrySend:
+		case HealthStatus::Err:
 			error_count++;
 			if (error_count>=max_error_count) {
 				disable();
 			}
+			break;
+		case HealthStatus::Success:
+			enable();
 			break;
 		default:
 			break;
@@ -63,10 +65,6 @@ public:
 			return true;
 		}
 		return false;
-	}
-	void isGood(KUpstream *st)
-	{
-		enable();
 	}
 	void start_monitor_call_back();
 	//void syncCheckConnect();

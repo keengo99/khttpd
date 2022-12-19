@@ -604,7 +604,7 @@ only_path: const char* sp = (char*)memchr(path, '?', len);
 	if (sp) {
 		path_len = sp - path;
 		sp++;
-		len--;
+		len -= (path_len + 1);
 		char* param = kgl_strndup(sp, len);
 		assert(url->param == NULL);
 		if (*param) {

@@ -70,11 +70,7 @@ public:
 		lock.Unlock();
 		return size;
 	}
-	//isBad,isGood用于监控连接情况
-	virtual void isBad(KUpstream *st,BadStage stage)
-	{
-	}
-	virtual void isGood(KUpstream *st)
+	virtual void health(KUpstream *st,HealthStatus stage)
 	{
 	}
 	kgl_refs_string* GetParam();

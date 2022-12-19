@@ -82,13 +82,9 @@ public:
 	{
 		return us->GetLifeTime();
 	}
-	void IsGood() override
+	void health(HealthStatus stage) override
 	{
-		return us->IsGood();
-	}
-	void IsBad(BadStage stage) override
-	{
-		return us->IsBad(stage);
+		return us->health(stage);
 	}
 	void write_end() override;
 	void shutdown() override;

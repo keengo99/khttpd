@@ -61,10 +61,14 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 		if (bc == 0) {
 			break;
 		}
-		//fwrite(buf[0].iov_base, 1, buf[0].iov_len, stdout);
+		/*
+		for (int i = 0; i < bc; i++) {
+			fwrite(buf[i].iov_base, 1, buf[i].iov_len, stdout);
+		}
+		//*/
 		int got = kfiber_net_writev(cn, buf, bc);
 		if (got <= 0) {
-			result = KGL_ESOCKET_BROKEN;
+			result = KGL_ECAN_RETRY_SOCKET_BROKEN;
 			break;
 		}
 		if (!krw_read_success(ctx.send_header_buffer, got)) {

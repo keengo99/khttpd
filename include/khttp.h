@@ -147,6 +147,7 @@ typedef enum _kgl_header_type
 
 #define MAX_HEADER_ATTR_VAL_SIZE 65500
 typedef struct _KHttpHeader KHttpHeader;
+typedef struct _KHttpHeader2 KHttpHeader2;
 
 struct	_KHttpHeader {
 	char* attr;
@@ -156,15 +157,21 @@ struct	_KHttpHeader {
 	kgl_header_type type;
 	KHttpHeader* next;
 };
-
+struct _KHttpHeader2
+{
+	char* buf;
+	hlen_t name_offset;
+	hlen_t name_len;
+	hlen_t val_offset;
+	hlen_t val_len;
+};
 typedef enum _KGL_RESULT
 {
 	KGL_OK = 0,
 	KGL_END = 1,
 	KGL_NO_BODY = 2,
-	KGL_RETRY = 3,
-	KGL_DOUBLICATE = 4,
-	KGL_NEXT = 5,
+	KGL_DOUBLICATE = 3,
+	KGL_NEXT = 4,
 	KGL_EINSUFFICIENT_BUFFER = -1,
 	KGL_ENO_DATA = -2,
 	KGL_EINVALID_PARAMETER = -3,
@@ -173,11 +180,13 @@ typedef enum _KGL_RESULT
 	KGL_EDATA_FORMAT = -6,
 	KGL_ENO_MEMORY = -7,
 	KGL_EDENIED = -8,
+	KGL_EABORT = -9,
 	KGL_EHAS_SEND_HEADER = -11,
 	KGL_ESOCKET_BROKEN = -20,
-	KGL_EIO = -21,
-	KGL_ENOT_PREPARE = -22,
-	KGL_EEXSIT = -23,
+	KGL_ECAN_RETRY_SOCKET_BROKEN = -21, // this error should retry with new connection
+	KGL_EIO = -22,
+	KGL_ENOT_PREPARE = -23,
+	KGL_EEXSIT = -24,
 	KGL_ESYSCALL = -98,
 	KGL_EUNKNOW = -99,
 	KGL_ENOT_SUPPORT = -100

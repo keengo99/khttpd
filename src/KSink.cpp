@@ -13,13 +13,6 @@ bool KSink::start_response_body(INT64 body_len)
 	if (data.meth == METH_HEAD) {
 		body_len = 0;
 	}
-#if 0
-	if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && KBIT_TEST(get_bind_server()->flags,WORK_MODEL_ALT_H3)) {
-		char alt_port[16];
-		int alt_len = snprintf(alt_port, sizeof(alt_port), ":%d", get_self_port());
-		response_header(kgl_expand_string("Alt-Svc"), alt_port, alt_len);
-	}
-#endif
 	int header_len = internal_start_response_body(body_len);
 	add_down_flow(header_len, true);
 	return header_len > 0;
@@ -29,7 +22,7 @@ bool KSink::begin_request()
 	katom_inc64((void*)&kgl_total_requests);
 	set_state(STATE_RECV);
 	assert(data.url == NULL);
-	if (data.raw_url==nullptr) {
+	if (data.raw_url == nullptr) {
 		return false;
 	}
 	data.url = new KUrl;
@@ -73,21 +66,21 @@ bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len,
 
 kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
 {
-#ifdef ENABLE_HTTP2
+#if defined(ENABLE_HTTP2) || defined(ENABLE_HTTP3)
 	if (data.http_major > 1 && *attr == ':') {
-		if (kgl_mem_same(attr,attr_len,kgl_expand_string(":method"))){
+		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":method"))) {
 			if (!data.parse_method(val, val_len)) {
-				klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
+				//klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 				return kgl_header_failed;
 			}
 			return kgl_header_no_insert;
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":version"))) {
-			data.parse_http_version((u_char *)val, val_len);
+			data.parse_http_version((u_char*)val, val_len);
 			return kgl_header_no_insert;
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":path"))) {
-			parse_url(val,val_len, data.raw_url);
+			parse_url(val, val_len, data.raw_url);
 			return kgl_header_no_insert;
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
@@ -102,14 +95,14 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 #endif
 	if (is_first && data.http_major <= 1) {
 		if (!data.parse_method(attr, attr_len)) {
-			klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
+			//klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 			return kgl_header_failed;
 		}
-		u_char* space = (u_char *)memchr(val, ' ', val_len);
+		u_char* space = (u_char*)memchr(val, ' ', val_len);
 		if (space == NULL) {
-			klog(KLOG_DEBUG, "httpparse:cann't get space seperator to parse HTTP/1.1 [%s]\n", val);
+			//klog(KLOG_DEBUG, "httpparse:cann't get space seperator to parse HTTP/1.1 [%s]\n", val);
 			return kgl_header_failed;
-		}		
+		}
 		*space = 0;
 		size_t url_len = space - (u_char*)val;
 		while (*space && IS_SPACE(*space)) {
@@ -117,16 +110,16 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		bool result;
 		if (data.meth == METH_CONNECT) {
-			result = data.parse_connect_url((u_char *)val, url_len);
+			result = data.parse_connect_url((u_char*)val, url_len);
 		} else {
 			result = parse_url(val, url_len, data.raw_url);
 		}
 		if (!result) {
-			klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
+			//klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
 			return kgl_header_failed;
 		}
 		if (!data.parse_http_version(space, val_len - url_len)) {
-			klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
+			//klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
 			return kgl_header_failed;
 		}
 		if (data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
@@ -135,15 +128,14 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_no_insert;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Host"))) {
-		return data.parse_host(val,val_len);
+		return data.parse_host(val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Connection"))
-		//{{ent
 #ifdef HTTP_PROXY
 		|| mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
-#endif//}}
+#endif
 		) {
-		KHttpFieldValue field(val, val+val_len);
+		KHttpFieldValue field(val, val + val_len);
 		do {
 			if (field.is(_KS("keep-alive"))) {
 				data.flags |= RQ_HAS_KEEP_CONNECTION;
@@ -156,10 +148,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_success;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
-		if (!*val) {
-			return kgl_header_no_insert;
-		}
-		KHttpFieldValue field(val, val+val_len);
+		KHttpFieldValue field(val, val + val_len);
 		do {
 			if (field.is(kgl_expand_string("gzip"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
@@ -176,7 +165,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_success;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
-		time_t try_time = kgl_parse_http_time((u_char *)val, val_len);
+		time_t try_time = kgl_parse_http_time((u_char*)val, val_len);
 		if (try_time == -1) {
 			data.flags |= RQ_IF_RANGE_ETAG;
 			if (data.if_none_match == NULL) {
@@ -208,7 +197,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_no_insert;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
-		if (kgl_mem_case_same(val,val_len, kgl_expand_string("chunked"))) {
+		if (kgl_mem_case_same(val, val_len, kgl_expand_string("chunked"))) {
 			KBIT_SET(data.flags, RQ_INPUT_CHUNKED);
 			data.content_length = -1;
 		}
@@ -235,7 +224,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		return kgl_header_success;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
-		KHttpFieldValue field(val,val+val_len);
+		KHttpFieldValue field(val, val + val_len);
 		do {
 			if (field.is(_KS("no-store")) || field.is(_KS("no-cache"))) {
 				data.flags |= RQ_HAS_NO_CACHE;
@@ -247,26 +236,24 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
 		data.flags |= RQ_HAVE_RANGE;
-		if (val_len>6 && !strncasecmp(val, kgl_expand_string("bytes="))) {
-			u_char* end = (u_char *)val + val_len;
+		if (val_len > 6 && !strncasecmp(val, kgl_expand_string("bytes="))) {
+			u_char* end = (u_char*)val + val_len;
 			u_char* hot = (u_char*)val + 6;
 			data.range_from = -1;
 			data.range_to = -1;
 			if (*hot != '-') {
 				data.range_from = kgl_atol(hot, end - hot);
 			}
-			hot = (u_char *)memchr(hot, '-', end - hot);
-			if (hot && hot<end-1) {
+			hot = (u_char*)memchr(hot, '-', end - hot);
+			if (hot && hot < end - 1) {
 				hot++;
 				data.range_to = kgl_atol(hot, end - hot);
 			}
-			u_char* next_range = (u_char *)memchr(hot, ',', end - hot);
+			u_char* next_range = (u_char*)memchr(hot, ',', end - hot);
 			if (next_range) {
 				//we do not support multi range
-				klog(KLOG_INFO, "cut multi_range %s\n", val);
-				//KBIT_SET(filter_flags,RF_NO_CACHE);
 				end = next_range;
-				data.AddHeader(attr, attr_len, val, (int)(end - (u_char *)val), true);
+				data.AddHeader(attr, attr_len, val, (int)(end - (u_char*)val), true);
 				return kgl_header_no_insert;
 			}
 		}
@@ -307,36 +294,36 @@ const char* KSink::get_state()
 void KSink::set_state(uint8_t state)
 {
 #ifdef ENABLE_STAT_STUB
-		if (data.state == state) {
-			return;
-		}
-		switch (data.state) {
-		case STATE_IDLE:
-		case STATE_QUEUE:
-			katom_dec((void*)&kgl_waiting);
-			break;
-		case STATE_RECV:
-			katom_dec((void*)&kgl_reading);
-			break;
-		case STATE_SEND:
-			katom_dec((void*)&kgl_writing);
-			break;
-		}
+	if (data.state == state) {
+		return;
+	}
+	switch (data.state) {
+	case STATE_IDLE:
+	case STATE_QUEUE:
+		katom_dec((void*)&kgl_waiting);
+		break;
+	case STATE_RECV:
+		katom_dec((void*)&kgl_reading);
+		break;
+	case STATE_SEND:
+		katom_dec((void*)&kgl_writing);
+		break;
+	}
 #endif
-		data.state = state;
+	data.state = state;
 #ifdef ENABLE_STAT_STUB
-		switch (state) {
-		case STATE_IDLE:
-		case STATE_QUEUE:
-			katom_inc((void*)&kgl_waiting);
-			break;
-		case STATE_RECV:
-			katom_inc((void*)&kgl_reading);
-			break;
-		case STATE_SEND:
-			katom_inc((void*)&kgl_writing);
-			break;
-		}
+	switch (state) {
+	case STATE_IDLE:
+	case STATE_QUEUE:
+		katom_inc((void*)&kgl_waiting);
+		break;
+	case STATE_RECV:
+		katom_inc((void*)&kgl_reading);
+		break;
+	case STATE_SEND:
+		katom_inc((void*)&kgl_writing);
+		break;
+	}
 #endif
 }
 bool KSink::adjust_range(int64_t* len)
@@ -389,7 +376,6 @@ bool KSink::response_content_length(int64_t content_len)
 	}
 	return true;
 }
-
 int KSink::write(WSABUF* buf, int bc)
 {
 	int got = internal_write(buf, bc);
