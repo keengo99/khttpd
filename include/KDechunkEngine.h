@@ -60,11 +60,15 @@ public:
 		char* dst = buf;
 	retry:
 		char* src = dst;
-		len -= (int)(dst - buf);
+		int left_buffer = len - (int)(dst - buf);
+		if (left_buffer == 0) {
+			return (int)(dst - buf);
+		}
+		assert(left_buffer > 0);
 		if (engine.is_success()) {
 			return (int)(dst - buf);
 		}
-		int got = us->read(src, len);
+		int got = us->read(src, left_buffer);
 		if (got <= 0) {
 			return -1;
 		}
@@ -74,12 +78,17 @@ public:
 			int piece_length = KHTTPD_MAX_CHUNK_SIZE;
 			switch (engine.dechunk((const char**)&src, end, &piece, &piece_length)) {
 			case KDechunkResult::Success:
-				kgl_memcpy(dst, piece, piece_length);
+				if (piece != dst) {
+					kgl_memcpy(dst, piece, piece_length);
+				}
 				dst += piece_length;
+				assert((int)(dst - buf) >= 0);
+				//printf("piece_length=[%d]\n", piece_length);
 				break;
 			case KDechunkResult::Continue:
 				goto retry;
 			case KDechunkResult::End:
+				//assert((int)(dst - buf) >= 0);
 				return (int)(dst - buf);
 			default:
 				return -1;

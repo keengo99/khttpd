@@ -45,7 +45,6 @@ KGL_RESULT KWebDavRequest::read_body(KXmlDocument& body)
 	if (buffer == nullptr) {
 		return result;
 	}
-	//printf("%s\n", buffer->buf);
 	body.parse(buffer->buf);
 	ks_buffer_destroy(buffer);
 	return KGL_OK;

@@ -15,9 +15,11 @@ static void test_assert2(bool condition, const char* file, int line)
 	if (condition) {
 		total_passed++;
 		printf("%s:%d test passed.\n", file, line);
+		fflush(stdout);
 		return;
 	}
 	printf("%s:%d test failed.\n", file, line);
+	fflush(stdout);
 	if (!condition) {
 		abort();
 	}

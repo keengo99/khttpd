@@ -403,7 +403,10 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 		return result;
 	}
 	KXmlDocument body;
-	rq->read_body(body);
+	result = rq->read_body(body);
+	if (result != KGL_OK) {
+		return result;
+	}
 	//printf("status_code=[%d]\n", rq->resp.status_code);	
 	if (rq->resp.status_code == STATUS_MULTI_STATUS) {
 		if (!file_list.parse(body, (int)strlen(path))) {
@@ -411,5 +414,5 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 		}
 		return KGL_OK;
 	}
-	return KGL_EIO;	
+	return KGL_EIO;
 }
