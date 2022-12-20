@@ -40,7 +40,7 @@ public:
 		if (strcasecmp(attr, "Transfer-Encoding") == 0) {
 			if (strcasecmp(val, "chunked") == 0 && dechunk == nullptr) {
 				left = -1;
-				dechunk = new KDechunkReader<KUpstream>(us);
+				dechunk = new KDechunkReader();
 			}
 			return true;
 		}
@@ -70,7 +70,7 @@ public:
 			return got;
 		}
 		if (dechunk) {
-			int got = dechunk->read(buf, len);
+			int got = dechunk->read<KUpstream>(us,buf, len);
 			if (got == 0) {
 				left = 0;
 			}
@@ -142,7 +142,7 @@ public:
 	uint16_t status_code;
 	int64_t left;
 	KUpstream* us;
-	KDechunkReader<KUpstream>* dechunk;
+	KDechunkReader* dechunk;
 };
 class KWebDavRequest
 {

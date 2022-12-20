@@ -47,15 +47,16 @@ public:
 private:
 	uint32_t chunk_size;
 };
-template<typename T>
+
 class KDechunkReader
 {
 public:
-	KDechunkReader(T* us)
+	KDechunkReader()
 	{
-		this->us = us;
+
 	}
-	int read(char* buf, int len)
+	template<typename T>
+	int read(T* us, char* buf, int len)
 	{
 		char* dst = buf;
 	retry:
@@ -96,7 +97,6 @@ public:
 		}
 	}
 private:
-	T* us;
 	KDechunkEngine engine;
 };
 #endif
