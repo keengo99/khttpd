@@ -25,34 +25,21 @@ static bool ssl_is_quic(SSL* ssl) {
 void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen)
 {
 	u_char* alpn = (u_char*)ssl_ctx_data;
+#ifdef ENABLE_HTTP3
 	if (ssl && ssl_is_quic(ssl)) {
 		*out = (unsigned char*)KGL_HTTP_V3_NPN_ADVERTISE;
 		*outlen = sizeof(KGL_HTTP_V3_NPN_ADVERTISE) - 1;
 		return;
 	}
-	if (alpn) {
-		switch (*alpn) {
+#endif
 #ifdef ENABLE_HTTP2
-		case KGL_ALPN_HTTP2:
-			*out = (unsigned char*)KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE;
-			*outlen = sizeof(KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE) - 1;
-			return;
-#endif
-#ifdef ENABLE_HTTP3
-		case KGL_ALPN_HTTP3:
-			*out = (unsigned char*)KGL_HTTP_V3_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE;
-			*outlen = sizeof(KGL_HTTP_V3_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE) - 1;
-			return;
-		case KGL_ALPN_HTTP2|KGL_ALPN_HTTP3:
-			*out = (unsigned char*)KGL_HTTP_V3_NPN_ADVERTISE KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE;
-			*outlen = sizeof(KGL_HTTP_V3_NPN_ADVERTISE KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE) - 1;
-			return;
-#endif
-		default:
-			break;
-		}
+	if (alpn && KBIT_TEST(*alpn, KGL_ALPN_HTTP2)) {
+		*out = (unsigned char*)KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE;
+		*outlen = sizeof(KGL_HTTP_V2_NPN_ADVERTISE KGL_HTTP_NPN_ADVERTISE) - 1;
+		return;
 	}
-	*out = (unsigned char*)KGL_HTTP_NPN_ADVERTISE;
+#endif
+	* out = (unsigned char*)KGL_HTTP_NPN_ADVERTISE;
 	*outlen = sizeof(KGL_HTTP_NPN_ADVERTISE) - 1;
 }
 #endif
@@ -83,7 +70,7 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 }
 bool start_http_server(kserver* server, int flags, SOCKET sockfd)
 {
-	if (ksocket_opened(sockfd)){
+	if (ksocket_opened(sockfd)) {
 		return kserver_open_exsit(server, sockfd, handle_connection);
 	}
 	return kserver_open(server, 0, handle_connection);
