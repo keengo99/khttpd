@@ -67,10 +67,17 @@ public:
 		}
 		lsquic_engine_process_conns(engine);
 	}
-	bool has_active_connection()
+	int next_event_time()
 	{
 		int diff;
-		return lsquic_engine_earliest_adv_tick(engine, &diff) > 0;
+		if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
+			if (diff >= 1000) {
+				return (diff + 500) / 1000;
+			} else if (diff >= 0) {
+				return diff > 0;
+			}
+		}
+		return -1;
 	}
 	bool is_multi();
 	char* realloc_buffer()

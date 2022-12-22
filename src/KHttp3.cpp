@@ -360,6 +360,7 @@ int send_packets_out(
 static int parse_local_addr(kgl_quic_package* package, kconnection* uc)
 {
 	package->local_addr.v4.sin_family = package->peer_addr->v4.sin_family;
+	package->local_addr.v4.sin_port = uc->addr.v4.sin_port;
 	return kudp_get_recvaddr(uc, (struct sockaddr*)&package->local_addr);
 }
 inline int  kgl_quic_package_in(KHttp3ServerEngine* h3_engine, kgl_quic_package* package, int got)
@@ -537,11 +538,12 @@ bool init_khttp3()
 	http_server_if.on_write = http_server_on_write;
 	http_server_if.on_close = http_server_on_close;
 	http_server_if.on_goaway_received = http_server_on_goaway;
-	lsquic_engine_init_settings(&engine_settings, LSENG_SERVER | LSENG_HTTP);
+	lsquic_engine_init_settings(&engine_settings, LSENG_SERVER);
 	engine_settings.es_rw_once = 1;
-	engine_settings.es_proc_time_thresh = LSQUIC_DF_PROC_TIME_THRESH;
-	engine_settings.es_cc_rtt_thresh = 0;
-	engine_settings.es_cc_algo = LSQUIC_DF_CC_ALGO;
+	engine_settings.es_send_prst = 1;
+	//engine_settings.es_proc_time_thresh = LSQUIC_DF_PROC_TIME_THRESH;
+	//engine_settings.es_cc_rtt_thresh = 0;
+	//engine_settings.es_cc_algo = 2; //BBRv1
 
 	memset(&header_bypass_api, 0, sizeof(header_bypass_api));
 	header_bypass_api.hsi_create_header_set = interop_server_hset_create;
@@ -576,17 +578,20 @@ int h3_shutdown_engine(void* arg, int got)
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)arg;
 	return h3_engine->shutdown();
 }
-void kgl_h3_engine_tick(void* arg, int event_count)
+int kgl_h3_engine_tick(void* arg, int event_count)
 {
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)arg;
 	assert(h3_engine->selector_tick);
-	if (h3_engine->server->is_shutdown() && !h3_engine->has_active_connection()) {
+	h3_engine->ticked();
+	int next_time = h3_engine->next_event_time();
+
+	if (h3_engine->server->is_shutdown() && next_time<0) {
 		kselector_close_tick(h3_engine->selector_tick);
 		h3_engine->selector_tick = NULL;
 		h3_engine->release();
-		return;
+		return 0;
 	}
-	h3_engine->ticked();
+	return next_time;
 }
 KHttp3Server* kgl_h3_new_server(const char* ip, uint16_t port, int sock_flags, kgl_ssl_ctx* ssl_ctx, uint32_t model)
 {
