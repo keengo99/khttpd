@@ -50,11 +50,9 @@ private:
     int set_capacity(int num_obj)
     {
         if (cap < num_obj) {
-            void* new_array = realloc(obj, num_obj * sizeof(T));
-            if (!new_array) {
+            if (!kgl_realloc(&(void *)obj, num_obj * sizeof(T))) {
                 return -1;
             }
-            obj = (T *)new_array;
             cap = num_obj;
         }
         return 0;
