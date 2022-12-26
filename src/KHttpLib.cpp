@@ -30,7 +30,8 @@
 #include 	<ctype.h>
 #include <string>
 #include <sstream>
-#include	"kforwin32.h"
+#include <stdarg.h>
+#include "kforwin32.h"
 #include "kmalloc.h"
 #include "KHttpLib.h"
 #include "KUrl.h"
