@@ -78,6 +78,13 @@ public:
 		data.status_code = status_code;
 		return internal_response_status(status_code);
 	}
+	virtual bool response_header(KHttpHeader* header)
+	{
+		if (header->name_is_know) {
+			return response_header(kgl_header_type_string[header->know_header].value.data, (int)kgl_header_type_string[header->know_header].value.len, header->buf+header->val_offset, header->val_len);
+		}
+		return response_header(header->buf, header->name_len, header->buf+header->val_offset, header->val_len);
+	}
 	virtual bool read_hup(void* arg, result_callback result) = 0;
 	virtual void remove_read_hup() = 0;
 	virtual bool set_transfer_chunked() {
@@ -218,7 +225,6 @@ protected:
 	}
 	void start_parse();
 	void reset_pipeline();
-	kgl_header_result internal_parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
 	void init_pool(kgl_pool_t* pool);
 	virtual int internal_write(WSABUF* buf, int bc) = 0;
 	virtual int internal_read(char* buf, int len) = 0;

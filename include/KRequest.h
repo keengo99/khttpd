@@ -78,7 +78,7 @@ private:
 	bool parse_method(const char* src,int len);
 	bool parse_connect_url(u_char* src, size_t len);
 	bool parse_http_version(u_char* ver, size_t len);
-	kgl_header_result parse_host(char* val,size_t len);
+	bool parse_host(char* val,size_t len);
 	void init();
 	void clean();
 	KFlowInfoHelper* fh;

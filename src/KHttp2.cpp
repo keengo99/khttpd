@@ -1166,13 +1166,13 @@ bool KHttp2::add_status(KHttp2Context* ctx, uint16_t status_code)
 }
 bool KHttp2::add_header(KHttp2Context* ctx, kgl_header_type name, const char* val, hlen_t val_len)
 {
-	return add_header(ctx, kgl_header_type_string[name].data, (hlen_t)kgl_header_type_string[name].len, val, val_len);
+	return add_header(ctx, kgl_header_type_string[name].low_case.data, (hlen_t)kgl_header_type_string[name].low_case.len, val, val_len);
 }
 bool KHttp2::add_header_cookie(KHttp2Context* ctx, const char* val, hlen_t val_len)
 {
 	ctx->send_header->write(0);
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), sizeof("cookie") - 1);
-	ctx->send_header->write_lower_string("cookie", sizeof("cookie") - 1);
+	ctx->send_header->write_lower_string(_KS("cookie"));
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
 	ctx->send_header->write(val, val_len);
 	return true;

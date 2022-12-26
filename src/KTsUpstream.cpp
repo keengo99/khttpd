@@ -102,7 +102,7 @@ KGL_RESULT KTsUpstream::read_header()
 	kfiber_join(fiber, &ret);
 	bool is_first = true;
 	while (header) {
-		stack.header(us, stack.arg, header->attr, header->attr_len, header->val, header->val_len,is_first);
+		stack.header(us, stack.arg, header->buf, header->name_len, header->buf + header->val_offset, header->val_len, is_first);
 		is_first = false;
 		header = header->next;
 	}

@@ -36,13 +36,57 @@
 #include "KUrl.h"
 #include "KHttpHeader.h"
 
-kgl_str_t kgl_header_type_string[] = {
-	{ kgl_expand_string("Unknow") },
-	{ kgl_expand_string("Internal") },
-	{ kgl_expand_string("Server") },
-	{ kgl_expand_string("Date") },
-	{ kgl_expand_string("Content-Length")},
-	{ kgl_expand_string("Last-Modified")},
+ /*
+	 kgl_header_unknow = 0,
+		kgl_header_host,
+	kgl_header_accept_encoding,
+	kgl_header_range,
+	 kgl_header_server,
+	 kgl_header_date,
+	 kgl_header_content_length,
+	 kgl_header_last_modified,
+	 kgl_header_etag,
+	 kgl_header_content_range,
+	 kgl_header_content_type,
+	 kgl_header_set_cookie,
+	 kgl_header_set_cookie2,
+	 kgl_header_pragma,
+	 kgl_header_cache_control,
+	 kgl_header_vary,
+	 kgl_header_age,
+	 kgl_header_transfer_encoding,
+	 kgl_header_content_encoding,
+	 kgl_header_expires,
+	 kgl_header_location,
+	kgl_header_keep_alive,
+	kgl_header_alt_svc,
+	kgl_header_connection
+ */
+kgl_header_string kgl_header_type_string[] = {
+	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
+	{ _KS("Host"),_KS("host"),_KS("\r\nHost: ")},
+	{ _KS("Accept-Encoding"),_KS("accept-encoding"),_KS("\r\nAccept-Encoding: ")},
+	{ _KS("Range"),_KS("range"),_KS("\r\nRange: ")},
+	{ _KS("Server"),_KS("server"),_KS("\r\nServer: ")},
+	{ _KS("Date"),_KS("date"),_KS("\r\nDate: ")},
+	{ _KS("Content-Length"),_KS("content-length"),_KS("\r\nContent-Length: ")},
+	{ _KS("Last-Modified"),_KS("last-modified"),_KS("\r\nLast-Modified: ")},
+	{ _KS("Etag"),_KS("etag"),_KS("\r\nEtag: ")},
+	{ _KS("Content-Range"),_KS("content-range"),_KS("\r\nContent-Range: ")},
+	{ _KS("Content-Type"),_KS("content-type"),_KS("\r\nContent-Type: ")},
+	{ _KS("Set-Cookie"),_KS("set-cookie"),_KS("\r\nSet-Cookie: ")},
+	{ _KS("Set-Cookie2"),_KS("set-cookie2"),_KS("\r\nSet-Cookie2: ")},
+	{ _KS("Pragma"),_KS("pragma"),_KS("\r\nPragma: ")},
+	{ _KS("Cache-Control"),_KS("cache-control"),_KS("\r\nCache-Control: ")},
+	{ _KS("Vary"),_KS("vary"),_KS("\r\nVary: ")},
+	{ _KS("Age"),_KS("age"),_KS("\r\nAge: ")},
+	{ _KS("Transfer-Encoding"),_KS("transfer-encoding"),_KS("\r\nTransfer-Encoding: ")},
+	{ _KS("Content-Encoding"),_KS("content-encoding"),_KS("\r\nContent-Encoding: ")},
+	{ _KS("Expires"),_KS("expires"),_KS("\r\nExpires: ")},
+	{ _KS("Location"),_KS("location"),_KS("\r\nLocation: ")},
+	{_KS("Keep-Alive"),_KS("keep-alive"),_KS("\r\nKeep-Alive: ")},
+	{_KS("Alt-Svc"),_KS("alt-svc"),_KS("\r\nAlt-Svc: ")},
+	{_KS("Connection"),_KS("connection"),_KS("\r\nConnection: ")},
 };
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #define B64PAD '='
@@ -82,10 +126,10 @@ void CTIME_R(time_t* a, char* b, size_t l)
 	localtime_r(a, &tm);
 	snprintf(b, l - 1, "%s %02d %s %02d:%02d:%02d\n", days[tm.tm_wday],
 		tm.tm_mday, months[tm.tm_mon], tm.tm_hour, tm.tm_min, tm.tm_sec);
-#endif /* HAVE_CTIME_R */
+#endif
 }
 
-void makeLastModifiedTime(time_t* a, char* b, size_t l) {
+void make_last_modified_time(time_t* a, char* b, size_t l) {
 	struct tm tm;
 	memset(b, 0, l);
 	localtime_r(a, &tm);
@@ -348,14 +392,20 @@ time_t kgl_parse_http_time(u_char* value, size_t len)
 
 	return (time_t)time;
 }
-int make_http_time(time_t time, char* buf, int size)
+char* make_http_time(time_t time, char* buf, int size)
 {
 	struct tm tm;
 	time_t holder = time;
 	gmtime_r(&holder, &tm);
-	return snprintf(buf, size, "%s, %02d %s %d %02d:%02d:%02d GMT", days[tm.tm_wday],
-		tm.tm_mday, months[tm.tm_mon], tm.tm_year + 1900, tm.tm_hour,
-		tm.tm_min, tm.tm_sec);
+	return (char*)kgl_snprintf((u_char*)buf, size,
+		"%s, %02d %s %d %02d:%02d:%02d GMT",
+		days[tm.tm_wday],
+		tm.tm_mday,
+		months[tm.tm_mon],
+		tm.tm_year + 1900,
+		tm.tm_hour,
+		tm.tm_min,
+		tm.tm_sec);
 }
 const char* mk1123time(time_t time, char* buf, int size) {
 	make_http_time(time, buf, size);
@@ -825,3 +875,479 @@ const char* kgl_mempbrk(const char* str, size_t n, const char* control, int cont
 	}
 	return NULL;
 }
+
+static u_char* kgl_sprintf_num(u_char* buf, u_char* last, uint64_t ui64, u_char zero,
+	unsigned hexadecimal, unsigned width)
+{
+	u_char* p, temp[KGL_INT64_LEN + 1];
+	/*
+	 * we need temp[KGL_INT64_LEN] only,
+	 * but icc issues the warning
+	 */
+	size_t          len;
+	uint32_t        ui32;
+	static u_char   hex[] = "0123456789abcdef";
+	static u_char   HEX[] = "0123456789ABCDEF";
+
+	p = temp + KGL_INT64_LEN;
+
+	if (hexadecimal == 0) {
+
+		if (ui64 <= (uint64_t)KGL_MAX_UINT32_VALUE) {
+
+			/*
+			 * To divide 64-bit numbers and to find remainders
+			 * on the x86 platform gcc and icc call the libc functions
+			 * [u]divdi3() and [u]moddi3(), they call another function
+			 * in its turn.  On FreeBSD it is the qdivrem() function,
+			 * its source code is about 170 lines of the code.
+			 * The glibc counterpart is about 150 lines of the code.
+			 *
+			 * For 32-bit numbers and some divisors gcc and icc use
+			 * a inlined multiplication and shifts.  For example,
+			 * unsigned "i32 / 10" is compiled to
+			 *
+			 *     (i32 * 0xCCCCCCCD) >> 35
+			 */
+
+			ui32 = (uint32_t)ui64;
+
+			do {
+				*--p = (u_char)(ui32 % 10 + '0');
+			} while (ui32 /= 10);
+
+		} else {
+			do {
+				*--p = (u_char)(ui64 % 10 + '0');
+			} while (ui64 /= 10);
+		}
+
+	} else if (hexadecimal == 1) {
+
+		do {
+
+			/* the "(uint32_t)" cast disables the BCC's warning */
+			*--p = hex[(uint32_t)(ui64 & 0xf)];
+
+		} while (ui64 >>= 4);
+
+	} else { /* hexadecimal == 2 */
+
+		do {
+
+			/* the "(uint32_t)" cast disables the BCC's warning */
+			*--p = HEX[(uint32_t)(ui64 & 0xf)];
+
+		} while (ui64 >>= 4);
+	}
+
+	/* zero or space padding */
+
+	len = (temp + KGL_INT64_LEN) - p;
+
+	while (len++ < width && buf < last) {
+		*buf++ = zero;
+	}
+
+	/* number safe copy */
+
+	len = (temp + KGL_INT64_LEN) - p;
+
+	if (buf + len > last) {
+		len = last - buf;
+	}
+
+	return kgl_cpymem(buf, p, len);
+}
+
+
+static u_char* kgl_sprintf_str(u_char* buf, u_char* last, u_char* src, size_t len, unsigned hexadecimal)
+{
+	static u_char   hex[] = "0123456789abcdef";
+	static u_char   HEX[] = "0123456789ABCDEF";
+
+	if (hexadecimal == 0) {
+
+		if (len == (size_t)-1) {
+			while (*src && buf < last) {
+				*buf++ = *src++;
+			}
+
+		} else {
+			len = MIN((size_t)(last - buf), len);
+			buf = kgl_cpymem(buf, src, len);
+		}
+
+	} else if (hexadecimal == 1) {
+
+		if (len == (size_t)-1) {
+
+			while (*src && buf < last - 1) {
+				*buf++ = hex[*src >> 4];
+				*buf++ = hex[*src++ & 0xf];
+			}
+
+		} else {
+
+			while (len-- && buf < last - 1) {
+				*buf++ = hex[*src >> 4];
+				*buf++ = hex[*src++ & 0xf];
+			}
+		}
+
+	} else { /* hexadecimal == 2 */
+
+		if (len == (size_t)-1) {
+
+			while (*src && buf < last - 1) {
+				*buf++ = HEX[*src >> 4];
+				*buf++ = HEX[*src++ & 0xf];
+			}
+
+		} else {
+
+			while (len-- && buf < last - 1) {
+				*buf++ = HEX[*src >> 4];
+				*buf++ = HEX[*src++ & 0xf];
+			}
+		}
+	}
+
+	return buf;
+}
+
+
+u_char* kgl_vslprintf(u_char* buf, u_char* last, const char* fmt, va_list args)
+{
+	u_char* p, zero;
+	int                    d;
+	double                 f;
+	size_t                 slen;
+	int64_t                i64;
+	uint64_t               ui64, frac;
+	unsigned             width, sign, hex, max_width, frac_width, scale, n;
+	kgl_str_t* v;
+
+	while (*fmt && buf < last) {
+
+		/*
+		 * "buf < last" means that we could copy at least one character:
+		 * the plain character, "%%", "%c", and minus without the checking
+		 */
+
+		if (*fmt == '%') {
+
+			i64 = 0;
+			ui64 = 0;
+
+			zero = (u_char)((*++fmt == '0') ? '0' : ' ');
+			width = 0;
+			sign = 1;
+			hex = 0;
+			max_width = 0;
+			frac_width = 0;
+			slen = (size_t)-1;
+
+			while (*fmt >= '0' && *fmt <= '9') {
+				width = width * 10 + (*fmt++ - '0');
+			}
+
+
+			for (;; ) {
+				switch (*fmt) {
+
+				case 'u':
+					sign = 0;
+					fmt++;
+					continue;
+
+				case 'm':
+					max_width = 1;
+					fmt++;
+					continue;
+
+				case 'X':
+					hex = 2;
+					sign = 0;
+					fmt++;
+					continue;
+
+				case 'x':
+					hex = 1;
+					sign = 0;
+					fmt++;
+					continue;
+
+				case '.':
+					fmt++;
+
+					while (*fmt >= '0' && *fmt <= '9') {
+						frac_width = frac_width * 10 + (*fmt++ - '0');
+					}
+
+					break;
+
+				case '*':
+					slen = va_arg(args, size_t);
+					fmt++;
+					continue;
+
+				default:
+					break;
+				}
+
+				break;
+			}
+
+
+			switch (*fmt) {
+
+			case 'V':
+				v = va_arg(args, kgl_str_t*);
+
+				buf = kgl_sprintf_str(buf, last, (u_char*)v->data, v->len, hex);
+				fmt++;
+
+				continue;
+
+			case 's':
+				p = va_arg(args, u_char*);
+
+				buf = kgl_sprintf_str(buf, last, p, slen, hex);
+				fmt++;
+
+				continue;
+
+			case 'O':
+				i64 = (int64_t)va_arg(args, off_t);
+				sign = 1;
+				break;
+			case 'T':
+				i64 = (int64_t)va_arg(args, time_t);
+				sign = 1;
+				break;
+			case 'z':
+				if (sign) {
+					i64 = (int64_t)va_arg(args, ssize_t);
+				} else {
+					ui64 = (uint64_t)va_arg(args, size_t);
+				}
+				break;
+
+			case 'i':
+				if (sign) {
+					i64 = (int64_t)va_arg(args, int);
+				} else {
+					ui64 = (uint64_t)va_arg(args, unsigned);
+				}
+
+				if (max_width) {
+					width = KGL_INT32_LEN;
+				}
+				break;
+
+			case 'd':
+				if (sign) {
+					i64 = (int64_t)va_arg(args, int);
+				} else {
+					ui64 = (uint64_t)va_arg(args, u_int);
+				}
+				break;
+
+			case 'l':
+				if (sign) {
+					i64 = (int64_t)va_arg(args, long);
+				} else {
+					ui64 = (uint64_t)va_arg(args, u_long);
+				}
+				break;
+
+			case 'D':
+				if (sign) {
+					i64 = (int64_t)va_arg(args, int32_t);
+				} else {
+					ui64 = (uint64_t)va_arg(args, uint32_t);
+				}
+				break;
+
+			case 'L':
+				if (sign) {
+					i64 = va_arg(args, int64_t);
+				} else {
+					ui64 = va_arg(args, uint64_t);
+				}
+				break;
+
+			case 'f':
+				f = va_arg(args, double);
+
+				if (f < 0) {
+					*buf++ = '-';
+					f = -f;
+				}
+
+				ui64 = (int64_t)f;
+				frac = 0;
+
+				if (frac_width) {
+
+					scale = 1;
+					for (n = frac_width; n; n--) {
+						scale *= 10;
+					}
+
+					frac = (uint64_t)((f - (double)ui64) * scale + 0.5);
+
+					if (frac == scale) {
+						ui64++;
+						frac = 0;
+					}
+				}
+
+				buf = kgl_sprintf_num(buf, last, ui64, zero, 0, width);
+
+				if (frac_width) {
+					if (buf < last) {
+						*buf++ = '.';
+					}
+
+					buf = kgl_sprintf_num(buf, last, frac, '0', 0, frac_width);
+				}
+
+				fmt++;
+
+				continue;
+
+			case 'p':
+				ui64 = (uintptr_t)va_arg(args, void*);
+				hex = 2;
+				sign = 0;
+				zero = '0';
+				width = 2 * sizeof(void*);
+				break;
+
+			case 'c':
+				d = va_arg(args, int);
+				*buf++ = (u_char)(d & 0xff);
+				fmt++;
+
+				continue;
+
+			case 'Z':
+				*buf++ = '\0';
+				fmt++;
+
+				continue;
+			case '%':
+				*buf++ = '%';
+				fmt++;
+
+				continue;
+
+			default:
+				*buf++ = *fmt++;
+
+				continue;
+			}
+
+			if (sign) {
+				if (i64 < 0) {
+					*buf++ = '-';
+					ui64 = (uint64_t)-i64;
+
+				} else {
+					ui64 = (uint64_t)i64;
+				}
+			}
+
+			buf = kgl_sprintf_num(buf, last, ui64, zero, hex, width);
+
+			fmt++;
+
+		} else {
+			*buf++ = *fmt++;
+		}
+	}
+
+	return buf;
+}
+
+u_char* kgl_sprintf(u_char* buf, const char* fmt, ...)
+{
+	u_char* p;
+	va_list   args;
+
+	va_start(args, fmt);
+	p = kgl_vslprintf(buf, (u_char*)((void*)-1), fmt, args);
+	va_end(args);
+
+	return p;
+}
+
+
+u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...)
+{
+	u_char* p;
+	va_list   args;
+
+	va_start(args, fmt);
+	p = kgl_vslprintf(buf, buf + max, fmt, args);
+	va_end(args);
+
+	return p;
+}
+
+
+u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...)
+{
+	u_char* p;
+	va_list   args;
+
+	va_start(args, fmt);
+	p = kgl_vslprintf(buf, last, fmt, args);
+	va_end(args);
+
+	return p;
+}
+#if 0
+int kgl_strcasecmp_size(const char* s1, const char* s2, size_t n)
+{
+	u_char  c1, c2;
+
+	while (n) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
+
+		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+		if (c1 == c2) {
+			if (c1) {
+				n--;
+				continue;
+			}
+			return 0;
+		}
+		return c1 - c2;
+	}
+	return (int)*s1;
+}
+int kgl_strcmp_size(const char* s1, const char* s2, size_t n)
+{
+	u_char  c1, c2;
+
+	while (n) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
+
+		if (c1 == c2) {
+			if (c1) {
+				n--;
+				continue;
+			}
+			return 0;
+		}
+		return c1 - c2;
+	}
+	return (int)*s1;
+}
+#endif

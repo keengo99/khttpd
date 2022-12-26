@@ -9,13 +9,6 @@ typedef enum {
 	kgl_parse_continue //no data parsed, need more data
 } kgl_parse_result;
 
-typedef enum {
-	kgl_header_failed,
-	kgl_header_success,
-	kgl_header_no_insert,
-	kgl_header_insert_begin
-} kgl_header_result;
-
 typedef struct {
 	char *val;
 	int val_len;

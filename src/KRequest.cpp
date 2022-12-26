@@ -39,7 +39,7 @@ void KRequestData::free_lazy_memory()
 		raw_url->relase();
 		raw_url = NULL;
 	}
-	free_header_list(header);
+	free_header_list2(header);
 	header = last = NULL;
 	mark = 0;
 }
@@ -79,14 +79,12 @@ bool KRequestData::parse_connect_url(u_char *src, size_t len) {
 	raw_url->port = (uint16_t)kgl_atoi(ss + 1, len - 1);
 	return true;
 }
-kgl_header_result KRequestData::parse_host(char* val,size_t len)
+bool KRequestData::parse_host(char* val,size_t len)
 {
 	if (raw_url->host == NULL) {
-		if (!raw_url->parse_host(val, len)) {
-			return kgl_header_failed;
-		}
+		return raw_url->parse_host(val, len);
 	}
-	return kgl_header_no_insert;
+	return true;
 }
 bool KRequestData::parse_http_version(u_char* ver, size_t len) {
 	u_char* dot = (u_char*)memchr(ver, '.', len);

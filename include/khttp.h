@@ -12,7 +12,14 @@
 #define MAX_HTTP_HEAD_SIZE	4194304
 #define IF_FREE(p) {if ( p ) xfree(p);p=NULL;}
 
+#define KGL_MAX_UINT32_VALUE  (uint32_t) 0xffffffff
+#define KGL_MAX_INT32_VALUE   (uint32_t) 0x7fffffff
 
+#define KGL_INT32_LEN      (sizeof("-2147483648") - 1)
+#define KGL_INT64_LEN      (sizeof("-9223372036854775808") - 1)
+#define KGL_1123_TIME_LEN  (sizeof("Sun, 21 Oct 2018 12:16:24 GMT")-1)
+#define kgl_tolower(c)      (u_char) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
+#define kgl_toupper(c)      (u_char) ((c >= 'a' && c <= 'z') ? (c & ~0x20) : c)
 #define STATUS_OK               200
 #define STATUS_CREATED          201
 #define STATUS_NO_CONTENT       204
@@ -138,32 +145,72 @@ typedef unsigned short hlen_t;
 typedef enum _kgl_header_type
 {
 	kgl_header_unknow = 0,
-	kgl_header_internal,
+
+	kgl_header_host,
+	kgl_header_accept_encoding,
+	kgl_header_range,
+
 	kgl_header_server,
 	kgl_header_date,
 	kgl_header_content_length,
 	kgl_header_last_modified,
+	kgl_header_etag,
+	kgl_header_content_range,
+	kgl_header_content_type,
+	kgl_header_set_cookie,
+	kgl_header_set_cookie2,
+	kgl_header_pragma,
+	kgl_header_cache_control,
+	kgl_header_vary,
+	kgl_header_age,
+	kgl_header_transfer_encoding,
+	kgl_header_content_encoding,
+	kgl_header_expires,
+	kgl_header_location,
+	kgl_header_keep_alive,
+	kgl_header_alt_svc,
+	kgl_header_connection
 } kgl_header_type;
 
 #define MAX_HEADER_ATTR_VAL_SIZE 65500
 typedef struct _KHttpHeader KHttpHeader;
-typedef struct _KHttpHeader2 KHttpHeader2;
 
-struct	_KHttpHeader {
-	char* attr;
-	char* val;
-	hlen_t attr_len;
-	hlen_t val_len;
-	kgl_header_type type;
-	KHttpHeader* next;
-};
-struct _KHttpHeader2
+struct _KHttpHeader
 {
+	KHttpHeader* next;
 	char* buf;
-	hlen_t name_offset;
-	hlen_t name_len;
-	hlen_t val_offset;
-	hlen_t val_len;
+	union
+	{
+		struct
+		{
+			union
+			{
+				struct
+				{
+					uint8_t name_hash;
+					uint8_t name_is_know : 1;
+					uint8_t name_is_internal : 1;
+				};
+				uint16_t name_flags;
+			};
+			union
+			{
+				uint16_t name_len;
+				kgl_header_type know_header : 16;
+			};
+		};
+		uint32_t name_attribute;
+	};
+	union
+	{
+		struct
+		{
+			uint16_t val_offset;
+			uint16_t val_len;
+		};
+		uint32_t val_attribute;
+	};
+
 };
 typedef enum _KGL_RESULT
 {

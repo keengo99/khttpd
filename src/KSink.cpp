@@ -47,61 +47,36 @@ bool KSink::begin_request()
 }
 bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
 {
+	//printf("attr=[%s],val=[%s]\n",attr,val);
 	if (is_first) {
 		start_parse();
 	}
-	//printf("%s%s%s\n", attr, is_first ? " " : ": ", val);
-	kgl_header_result ret = internal_parse_header(attr, attr_len, val, val_len, is_first);
-	switch (ret) {
-	case kgl_header_failed:
-		return false;
-	case kgl_header_insert_begin:
-		return data.AddHeader(attr, attr_len, val, val_len, false);
-	case kgl_header_success:
-		return data.AddHeader(attr, attr_len, val, val_len, true);
-	default:
-		return true;
-	}
-}
-
-kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
-{
 #if defined(ENABLE_HTTP2) || defined(ENABLE_HTTP3)
 	if (data.http_major > 1 && *attr == ':') {
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":method"))) {
-			if (!data.parse_method(val, val_len)) {
-				//klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
-				return kgl_header_failed;
-			}
-			return kgl_header_no_insert;
+			return data.parse_method(val, val_len);
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":version"))) {
-			data.parse_http_version((u_char*)val, val_len);
-			return kgl_header_no_insert;
+			return data.parse_http_version((u_char*)val, val_len);
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":path"))) {
-			parse_url(val, val_len, data.raw_url);
-			return kgl_header_no_insert;
+			return parse_url(val, val_len, data.raw_url);
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
-			if (kgl_header_success == data.parse_host(val, val_len)) {
-				//转换成HTTP/1的http头
-				data.AddHeader(kgl_expand_string("Host"), val, val_len, true);
-			}
-			return kgl_header_no_insert;
+			return data.parse_host(val, val_len);
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 #endif
 	if (is_first && data.http_major <= 1) {
 		if (!data.parse_method(attr, attr_len)) {
 			//klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
-			return kgl_header_failed;
+			return false;
 		}
 		u_char* space = (u_char*)memchr(val, ' ', val_len);
 		if (space == NULL) {
 			//klog(KLOG_DEBUG, "httpparse:cann't get space seperator to parse HTTP/1.1 [%s]\n", val);
-			return kgl_header_failed;
+			return false;
 		}
 		*space = 0;
 		size_t url_len = space - (u_char*)val;
@@ -116,16 +91,16 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		}
 		if (!result) {
 			//klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
-			return kgl_header_failed;
+			return false;
 		}
 		if (!data.parse_http_version(space, val_len - url_len)) {
 			//klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
-			return kgl_header_failed;
+			return false;
 		}
 		if (data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
 			KBIT_SET(data.flags, RQ_HAS_KEEP_CONNECTION);
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Host"))) {
 		return data.parse_host(val, val_len);
@@ -145,7 +120,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 				KBIT_CLR(data.flags, RQ_HAS_KEEP_CONNECTION);
 			}
 		} while (field.next());
-		return kgl_header_success;
+		return data.add_header(kgl_header_connection, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
 		KHttpFieldValue field(val, val + val_len);
@@ -162,7 +137,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
 			}
 		} while (field.next());
-		return kgl_header_success;
+		return data.add_header(kgl_header_accept_encoding, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
 		time_t try_time = kgl_parse_http_time((u_char*)val, val_len);
@@ -175,39 +150,39 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 			data.if_modified_since = try_time;
 			data.flags |= RQ_IF_RANGE_DATE;
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
 		data.if_modified_since = kgl_parse_http_time((u_char*)val, val_len);
 		data.flags |= RQ_HAS_IF_MOD_SINCE;
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
 		data.flags |= RQ_HAS_IF_NONE_MATCH;
 		if (data.if_none_match == NULL) {
 			set_if_none_match(val, val_len);
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
-	//	printf("attr=[%s],val=[%s]\n",attr,val);
+	
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
 		data.content_length = string2int(val);
 		data.left_read = data.content_length;
 		data.flags |= RQ_HAS_CONTENT_LEN;
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
 		if (kgl_mem_case_same(val, val_len, kgl_expand_string("chunked"))) {
 			KBIT_SET(data.flags, RQ_INPUT_CHUNKED);
 			data.content_length = -1;
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Expect"))) {
 		if (kgl_memstr(val, val_len, kgl_expand_string("100-continue")) != NULL) {
 			data.flags |= RQ_HAVE_EXPECT;
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
 		if (kgl_mem_case_same(val, val_len, kgl_expand_string("https"))) {
@@ -215,13 +190,13 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 		} else {
 			KBIT_CLR(data.raw_url->flags, KGL_URL_ORIG_SSL);
 		}
-		return kgl_header_no_insert;
+		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Pragma"))) {
 		if (kgl_memstr(val, val_len, kgl_expand_string("no-cache"))) {
 			data.flags |= RQ_HAS_NO_CACHE;
 		}
-		return kgl_header_success;
+		return data.add_header(kgl_header_pragma, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
 		KHttpFieldValue field(val, val + val_len);
@@ -232,7 +207,7 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 				data.flags |= RQ_HAS_ONLY_IF_CACHED;
 			}
 		} while (field.next());
-		return kgl_header_success;
+		return data.add_header(kgl_header_cache_control, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
 		data.flags |= RQ_HAVE_RANGE;
@@ -253,13 +228,12 @@ kgl_header_result KSink::internal_parse_header(const char* attr, int attr_len, c
 			if (next_range) {
 				//we do not support multi range
 				end = next_range;
-				data.AddHeader(attr, attr_len, val, (int)(end - (u_char*)val), true);
-				return kgl_header_no_insert;
+				return data.add_header(kgl_header_range, val, (int)(end - (u_char*)val), true);
 			}
 		}
-		return kgl_header_success;
+		return data.add_header(kgl_header_range, val, val_len);
 	}
-	return kgl_header_success;
+	return data.add_header(attr, attr_len, val, val_len);
 }
 void KSink::init_pool(kgl_pool_t* pool) {
 	this->pool = pool;

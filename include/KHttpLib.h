@@ -4,9 +4,9 @@
 #include <string>
 #include <cstring>
 #include "khttp.h"
+#include "KHttpHeader.h"
 
-#define kgl_tolower(c)      (u_char) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
-#define kgl_toupper(c)      (u_char) ((c >= 'a' && c <= 'z') ? (c & ~0x20) : c)
+
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);
 char *url_encode(const char *s, size_t len, size_t *new_length);
@@ -14,9 +14,12 @@ char *url_value_encode(const char *s, size_t len, size_t *new_length);
 std::string url_encode(const char *str, size_t len_string);
 
 void my_msleep(int msec);
+u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...);
+u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...);
+u_char* kgl_sprintf(u_char* buf, const char* fmt, ...);
 time_t kgl_parse_http_time(u_char *str,size_t len);
 const char *mk1123time(time_t time, char *buf, int size);
-void makeLastModifiedTime(time_t *a, char *b, size_t l);
+void make_last_modified_time(time_t *a, char *b, size_t l);
 void init_time_zone();
 class KUrl;
 bool parse_url(const char* src, KUrl* url);
@@ -30,6 +33,7 @@ INLINE int64_t string2int(const char* buf) {
 int kgl_casecmp(const char* s1, const char* s2, size_t attr_len);
 const char* kgl_memstr(const char* haystack, size_t haystacklen,const char* needle, size_t needlen);
 void kgl_strlow(u_char* dst, u_char* src, size_t n);
+
 inline bool kgl_mem_same(const char* attr, size_t attr_len, const char* val, size_t val_len)
 {
 	if (attr_len != val_len) {
@@ -80,7 +84,10 @@ inline bool kgl_is_attr(const char* s1, size_t s1_len, const char* s2, size_t s2
 }
 inline bool kgl_is_attr(KHttpHeader* header, const char* s2, size_t s2_len)
 {
-	return kgl_is_attr(header->attr, header->attr_len, s2, s2_len);
+	if (header->name_is_know) {
+		return kgl_is_attr(kgl_header_type_string[header->know_header].value.data, kgl_header_type_string[header->know_header].value.len, s2, s2_len);
+	}
+	return kgl_is_attr(header->buf, header->name_len, s2, s2_len);
 }
 /*
 skip space or not space

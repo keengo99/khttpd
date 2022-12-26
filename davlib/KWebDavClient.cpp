@@ -174,11 +174,11 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 	if (rq->resp.status_code != STATUS_OK && rq->resp.status_code != STATUS_CREATED) {
 		return KGL_EDATA_FORMAT;
 	}
-	KHttpHeader* header = rq->resp.FindHeader(kgl_expand_string("Lock-Token"));
+	KHttpHeader* header = rq->resp.find(kgl_expand_string("Lock-Token"));
 	if (header == NULL) {
 		return KGL_EDATA_FORMAT;
 	}
-	u_char* pos = (u_char*)strchr(header->val, '<');
+	u_char* pos = (u_char*)strchr(header->buf + header->val_offset, '<');
 	if (pos == NULL) {
 		return KGL_EDATA_FORMAT;
 	}

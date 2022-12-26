@@ -51,6 +51,24 @@ inline const char * int2string(int64_t value, char *buf,bool hex=false) {
 	return buf;
 }
 
+inline char* kgl_upstrndup(const char* val,size_t val_len)
+{
+	size_t len;
+	char* copy;
+	len = strnlen(val, val_len);
+	copy = (char*)malloc(len + 1);
+	if (copy) {
+		char* end = copy + len;
+		char* dst = copy;
+		while (dst < end) {
+			*dst = kgl_toupper(*val);
+			val++;
+			dst++;
+		}
+		*dst = '\0';
+	}
+	return copy;
+}
 inline char *upstrdup(const char *val)
 {
 	char *buf = strdup(val);

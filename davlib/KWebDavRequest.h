@@ -20,7 +20,7 @@ public:
 	}
 	~KResponseData()
 	{
-		free_header_list(header);
+		free_header_list2(header);
 		if (dechunk) {
 			delete dechunk;
 		}
@@ -52,7 +52,7 @@ public:
 			}
 			return true;
 		}
-		return AddHeader(attr, attr_len, val, val_len);
+		return add_header(attr, attr_len, val, val_len);
 	}
 	int read(char* buf, int len)
 	{
