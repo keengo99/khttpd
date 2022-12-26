@@ -81,6 +81,7 @@ public:
 	virtual bool response_header(KHttpHeader* header)
 	{
 		if (header->name_is_know) {
+			assert(header->know_header<kgl_header_unknow);
 			return response_header(kgl_header_type_string[header->know_header].value.data, (int)kgl_header_type_string[header->know_header].value.len, header->buf+header->val_offset, header->val_len);
 		}
 		return response_header(header->buf, header->name_len, header->buf+header->val_offset, header->val_len);

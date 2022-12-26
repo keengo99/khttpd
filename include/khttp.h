@@ -143,8 +143,7 @@
 KBEGIN_DECLS
 typedef unsigned short hlen_t;
 typedef enum _kgl_header_type
-{
-	kgl_header_unknow = 0,
+{	
 
 	kgl_header_host,
 	kgl_header_accept_encoding,
@@ -169,7 +168,8 @@ typedef enum _kgl_header_type
 	kgl_header_location,
 	kgl_header_keep_alive,
 	kgl_header_alt_svc,
-	kgl_header_connection
+	kgl_header_connection,
+	kgl_header_unknow 
 } kgl_header_type;
 
 #define MAX_HEADER_ATTR_VAL_SIZE 65500
@@ -196,7 +196,7 @@ struct _KHttpHeader
 			union
 			{
 				uint16_t name_len;
-				kgl_header_type know_header : 16;
+				uint16_t know_header;
 			};
 		};
 		uint32_t name_attribute;

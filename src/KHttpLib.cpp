@@ -38,8 +38,7 @@
 #include "KHttpHeader.h"
 
  /*
-	 kgl_header_unknow = 0,
-		kgl_header_host,
+	kgl_header_host,
 	kgl_header_accept_encoding,
 	kgl_header_range,
 	 kgl_header_server,
@@ -61,10 +60,10 @@
 	 kgl_header_location,
 	kgl_header_keep_alive,
 	kgl_header_alt_svc,
-	kgl_header_connection
+	kgl_header_connection,
+	kgl_header_unknow,
  */
 kgl_header_string kgl_header_type_string[] = {
-	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 	{ _KS("Host"),_KS("host"),_KS("\r\nHost: ")},
 	{ _KS("Accept-Encoding"),_KS("accept-encoding"),_KS("\r\nAccept-Encoding: ")},
 	{ _KS("Range"),_KS("range"),_KS("\r\nRange: ")},
@@ -88,6 +87,7 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("Keep-Alive"),_KS("keep-alive"),_KS("\r\nKeep-Alive: ")},
 	{_KS("Alt-Svc"),_KS("alt-svc"),_KS("\r\nAlt-Svc: ")},
 	{_KS("Connection"),_KS("connection"),_KS("\r\nConnection: ")},
+	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #define B64PAD '='

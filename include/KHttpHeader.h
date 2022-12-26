@@ -48,6 +48,7 @@ inline KHttpHeader* new_pool_http_header(kgl_pool_t* pool, const char* attr, int
 	return header;
 }
 inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, int val_len) {
+	assert(type>=0 && type<kgl_header_unknow);
 	KHttpHeader* header = (KHttpHeader*)malloc(sizeof(KHttpHeader));
 	memset(header, 0, sizeof(KHttpHeader));
 	int val_type = (val_len >> 16);
@@ -70,7 +71,7 @@ inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, 
 		break;
 	}
 	header->buf[header->val_len] = '\0';
-	header->know_header = type;
+	header->know_header = (uint16_t)type;
 	header->name_is_know = 1;
 	return header;
 }
