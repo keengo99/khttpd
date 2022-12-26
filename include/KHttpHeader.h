@@ -1,5 +1,6 @@
 #ifndef KHTTPHEADER_H_
 #define KHTTPHEADER_H_
+#include <stdio.h>
 #include "kmalloc.h"
 #include "kstring.h"
 #include "khttp.h"
