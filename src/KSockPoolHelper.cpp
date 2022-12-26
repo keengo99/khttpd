@@ -390,7 +390,7 @@ bool KSockPoolHelper::isEnable() {
 		return true;
 	}
 	if (tryTime < kgl_current_sec) {
-		tryTime += MAX(error_try_time,10);
+		tryTime += KGL_MAX(error_try_time,10);
 		checkActive();
 		return false;
 	}

@@ -341,7 +341,7 @@ KGL_RESULT KWebDavClient::put(const char* path, KRStream* in)
 	rq->send_header_complete();
 	char buf[1024];
 	while (content_length > 0) {
-		int len = in->read(buf, (int)(MIN(sizeof(buf), content_length)));
+		int len = in->read(buf, (int)(KGL_MIN(sizeof(buf), content_length)));
 		if (len <= 0) {
 			return KGL_EIO;
 		}

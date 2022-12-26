@@ -330,7 +330,7 @@ u_char* KHttp2::handle_continuation(u_char* pos, u_char* end, kgl_http_v2_handle
 
 	len = state.length;
 	if (state.padding && (size_t)(end - pos) > len) {
-		skip = MIN(state.padding, (end - pos) - len);
+		skip = KGL_MIN(state.padding, (end - pos) - len);
 
 		state.padding -= (uint8_t)skip;
 
@@ -921,7 +921,7 @@ int KHttp2::copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc)
 		while (buf[i].iov_len > 0) {
 			int this_len;
 			char* data = ctx->read_buffer->getReadBuffer(this_len);
-			this_len = MIN(this_len, (int)buf[i].iov_len);
+			this_len = KGL_MIN(this_len, (int)buf[i].iov_len);
 			kgl_memcpy(buf[i].iov_base, data, this_len);
 			total_send += this_len;
 			buf[i].iov_len -= this_len;
@@ -1351,8 +1351,8 @@ int KHttp2::WriteWindowReady(KHttp2Context* http2_ctx)
 {
 	assert(http2_ctx->write_wait && IS_WRITE_WAIT_FOR_WINDOW(http2_ctx->write_wait));
 	assert(!IsWriteClosed(http2_ctx));
-	int len = MIN((int)frame_size, http2_ctx->send_window);
-	len = MIN(len, (int)send_window);
+	int len = KGL_MIN((int)frame_size, http2_ctx->send_window);
+	len = KGL_MIN(len, (int)send_window);
 	if (len <= 0) {
 		AddQueue(http2_ctx);
 		return len;

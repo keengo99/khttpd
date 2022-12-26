@@ -76,11 +76,11 @@ restart:
 		assert(KBIT_TEST(chunk_size, KHTTPD_CHUNK_STATUS_PREFIX) == 0);
 		assert(chunk_size > 0);
 		length = (int)(end - *buf);
-		length = MIN((int)chunk_size, length);
+		length = KGL_MIN((int)chunk_size, length);
 		if (length <= 0) {
 			return KDechunkResult::Continue;
 		}
-		length = MIN(*piece_length, length);
+		length = KGL_MIN(*piece_length, length);
 		*piece = *buf;
 		*piece_length = length;
 		(*buf) += length;

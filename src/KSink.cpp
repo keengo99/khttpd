@@ -309,7 +309,7 @@ bool KSink::adjust_range(int64_t* len)
 		}
 		(*len) -= data.range_from;
 		if (data.range_to >= 0) {
-			(*len) = MIN(data.range_to - data.range_from + 1, (*len));
+			(*len) = KGL_MIN(data.range_to - data.range_from + 1, (*len));
 			if ((*len) <= 0) {
 				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
 				return false;
@@ -377,7 +377,7 @@ int KSink::read(char* buf, int len)
 	}
 	int length;
 	if (data.left_read >= 0 && !KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
-		len = (int)MIN((int64_t)len, data.left_read);
+		len = (int)KGL_MIN((int64_t)len, data.left_read);
 	}
 	length = internal_read(buf, len);
 	if (length == 0 && data.left_read == -1 && !KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {

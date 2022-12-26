@@ -17,6 +17,7 @@ public:
 	{
 		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
 	}
+	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
 	bool response_connection(const char* val, int val_len) override {
 		return response_header(kgl_expand_string("Connection"), val, val_len);

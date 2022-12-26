@@ -4,7 +4,7 @@ int KAutoBuffer::write(const char *buf, int len)
 	int wlen;
 	char *t = getWriteBuffer(wlen);
 	assert(t);
-	wlen = MIN(len, wlen);
+	wlen = KGL_MIN(len, wlen);
 	kgl_memcpy(t, buf, wlen);		
 	writeSuccess(wlen);
 	return wlen;
@@ -75,7 +75,7 @@ bool KAutoBuffer::readSuccess(int *got)
 	kassert(hot && head);
 	while (*got > 0) {
 		int hot_left = head->used - (int)(hot - head->data);
-		int this_len = MIN(*got, hot_left);
+		int this_len = KGL_MIN(*got, hot_left);
 		hot += this_len;
 		*got -= this_len;
 		total_len -= this_len;

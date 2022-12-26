@@ -61,7 +61,7 @@ public:
 		}
 		if (left > 0) {
 			assert(dechunk == nullptr);
-			len = (int)(MIN(left, len));
+			len = (int)(KGL_MIN(left, len));
 			int got = us->read(buf, len);
 			if (got <= 0) {
 				return -1;

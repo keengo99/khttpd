@@ -975,7 +975,7 @@ static u_char* kgl_sprintf_str(u_char* buf, u_char* last, u_char* src, size_t le
 			}
 
 		} else {
-			len = MIN((size_t)(last - buf), len);
+			len = KGL_MIN((size_t)(last - buf), len);
 			buf = kgl_cpymem(buf, src, len);
 		}
 

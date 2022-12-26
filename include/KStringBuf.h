@@ -84,7 +84,7 @@ public:
 	}
 	int read(char* buf, int len) override
 	{
-		int send_len = MIN(len, left);
+		int send_len = KGL_MIN(len, left);
 		if (send_len <= 0) {
 			return 0;
 		}

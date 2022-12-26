@@ -8,6 +8,7 @@
 #define KGL_HEADER_VALUE_INT64 1
 #define KGL_HEADER_VALUE_INT   2
 #define KGL_HEADER_VALUE_TIME  3
+
 char *make_http_time(time_t time, char* buf, int size);
 KBEGIN_DECLS
 typedef struct _kgl_header_string

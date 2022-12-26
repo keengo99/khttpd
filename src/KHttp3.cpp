@@ -262,7 +262,7 @@ int send_packets_out(
 #	define SIZE1 sizeof(struct in_addr)
 #endif
 		unsigned char buf[
-			CMSG_SPACE(MAX(SIZE1, sizeof(struct in6_pktinfo)))
+			CMSG_SPACE(KGL_MAX(SIZE1, sizeof(struct in6_pktinfo)))
 #if ECN_SUPPORTED
 				+ CMSG_SPACE(sizeof(int))
 #endif

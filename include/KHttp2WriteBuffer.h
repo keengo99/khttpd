@@ -157,7 +157,7 @@ private:
 		}
 		assert(last->used < KGL_HEADER_FRAME_CHUNK_SIZE);
 		int left = KGL_HEADER_FRAME_CHUNK_SIZE - last->used;
-		len = MIN(len, left);
+		len = KGL_MIN(len, left);
 		last->used += len;
 		char *ret = hot;
 		hot += len;
@@ -199,7 +199,7 @@ public:
 		http2_buff *tmp = header;
 		buffer[0].iov_base = hot;
 		int hot_left = header->used - (int)(hot - header->data);
-		hot_left = MIN(hot_left,got);
+		hot_left = KGL_MIN(hot_left,got);
 		buffer[0].iov_len = hot_left;
 		got -= hot_left;
 		int i;
@@ -209,7 +209,7 @@ public:
 				break;
 			}
 			buffer[i].iov_base = tmp->data;
-			buffer[i].iov_len = MIN(got,tmp->used);
+			buffer[i].iov_len = KGL_MIN(got,tmp->used);
 			got -= buffer[i].iov_len;
 		}
 		return i;
@@ -220,7 +220,7 @@ public:
 		left -= got;
 		while (got>0) {
 			int hot_left = header->used - (int)(hot - header->data);
-			int this_len = MIN(got,hot_left);
+			int this_len = KGL_MIN(got,hot_left);
 			hot += this_len;
 			got -= this_len;
 			if (header->used == hot - header->data) {

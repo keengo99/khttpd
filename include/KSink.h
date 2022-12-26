@@ -78,13 +78,10 @@ public:
 		data.status_code = status_code;
 		return internal_response_status(status_code);
 	}
-	virtual bool response_header(KHttpHeader* header)
+	virtual bool response_header(kgl_header_type know_header,const char *val, int val_len, bool lock_value)
 	{
-		if (header->name_is_know) {
-			assert(header->know_header<kgl_header_unknow);
-			return response_header(kgl_header_type_string[header->know_header].value.data, (int)kgl_header_type_string[header->know_header].value.len, header->buf+header->val_offset, header->val_len);
-		}
-		return response_header(header->buf, header->name_len, header->buf+header->val_offset, header->val_len);
+		assert(know_header<kgl_header_unknow);
+		return response_header(kgl_header_type_string[know_header].value.data, (int)kgl_header_type_string[know_header].value.len, val, val_len);
 	}
 	virtual bool read_hup(void* arg, result_callback result) = 0;
 	virtual void remove_read_hup() = 0;

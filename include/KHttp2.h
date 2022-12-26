@@ -334,7 +334,7 @@ public:
 			http2_buff* new_buf = new http2_buff;
 			new_buf->skip_data_free = 1;
 			new_buf->data = (char*)e->buf[i].iov_base;
-			new_buf->used = (uint16_t)MIN(len, (int)e->buf[i].iov_len);
+			new_buf->used = (uint16_t)KGL_MIN(len, (int)e->buf[i].iov_len);
 #ifndef NDEBUG
 			//KMD5Update(&md5, (unsigned char *)new_buf->data, new_buf->used);
 #endif

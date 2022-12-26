@@ -57,7 +57,7 @@ public:
 		total_len -= got;
 		while (got>0) {
 			int hot_left = header->used - (int)(hot - header->data);
-			int this_len = MIN(got,hot_left);
+			int this_len = KGL_MIN(got,hot_left);
 			hot += this_len;
 			got -= this_len;
 			if (header->used == hot - header->data) {

@@ -145,7 +145,7 @@ int KHttpUpstream::read(char* buf, int len)
 {
 	if (ctx.read_buffer) {
 		if (ctx.read_buffer->used > 0) {
-			len = MIN((int)len, (int)ctx.read_buffer->used);
+			len = KGL_MIN((int)len, (int)ctx.read_buffer->used);
 			kgl_memcpy(buf, ctx.read_buffer->buf, len);
 			ks_save_point(ctx.read_buffer, ctx.read_buffer->buf + len);
 			//assert(len <= ctx.left);

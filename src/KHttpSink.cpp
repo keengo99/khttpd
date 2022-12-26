@@ -171,19 +171,33 @@ kev_result KHttpSink::Parse()
 		}
 	}
 }
+bool KHttpSink::response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value)
+{
+	assert(know_header < kgl_header_unknow);
+	rc->head_append_const(kgl_header_type_string[know_header].http11.data, (uint16_t)kgl_header_type_string[know_header].http11.len);
+	if (lock_value) {
+		rc->head_append_const(val, val_len);
+	} else {
+		char* buf = (char*)kgl_pnalloc(rc->ab.pool, val_len);
+		memcpy(buf, val, val_len);
+		rc->head_append(buf, (uint16_t)val_len);
+	}
+	return true;
+}
 bool KHttpSink::response_header(const char* name, int name_len, const char* val, int val_len)
 {
 	kassert(rc);
 	int len = name_len + val_len + 4;
 	char* buf = (char*)kgl_pnalloc(rc->ab.pool, len);
 	char* hot = buf;
+	kgl_memcpy(hot, "\r\n", 2);
+	hot += 2;
 	kgl_memcpy(hot, name, name_len);
 	hot += name_len;
 	kgl_memcpy(hot, ": ", 2);
 	hot += 2;
 	kgl_memcpy(hot, val, val_len);
 	hot += val_len;
-	kgl_memcpy(hot, "\r\n", 2);
 	rc->head_append(buf, len);
 	return true;
 }
@@ -193,7 +207,7 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 		return 0;
 	}
 	send_alt_svc_header();
-	rc->head_append_const("\r\n", 2);
+	rc->head_append_const(_KS("\r\n\r\n"));
 	rc->ab.SwitchRead();
 	int header_len = rc->ab.getLen();
 	assert(!kfiber_is_main());
@@ -222,7 +236,7 @@ int KHttpSink::internal_read(char* buf, int len)
 		return dechunk->Read(this, buf, len);
 	}
 	if (buffer.used > 0) {
-		len = MIN((int)len, buffer.used);
+		len = KGL_MIN((int)len, buffer.used);
 		kgl_memcpy(buf, buffer.buf, len);
 		ks_save_point(&buffer, buffer.buf + len);
 		return len;
@@ -280,7 +294,7 @@ void KHttpSink::SkipPost()
 	}
 	int buf_size;
 	char* buf = ks_get_write_buffer(&buffer, &buf_size);
-	int skip_len = (int)(MIN(data.left_read, (INT64)buffer.used));
+	int skip_len = (int)(KGL_MIN(data.left_read, (INT64)buffer.used));
 	ks_save_point(&buffer, buffer.buf + skip_len);
 	data.left_read -= skip_len;
 	add_up_flow((INT64)skip_len);
@@ -289,7 +303,7 @@ void KHttpSink::SkipPost()
 		return;
 	}
 	while (data.left_read > 0) {
-		int len = kfiber_net_read(cn, buf, (int)MIN((int64_t)buf_size, data.left_read));
+		int len = kfiber_net_read(cn, buf, (int)KGL_MIN((int64_t)buf_size, data.left_read));
 		if (len <= 0) {
 			kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
 			return;

@@ -247,7 +247,7 @@ struct header_decoder
 	struct lsxpack_header xhdr;
 	size_t       decode_off;
 	KHttp3Sink* sink;
-	char         decode_buf[MIN(LSXPACK_MAX_STRLEN + 1, 64 * 1024)];
+	char         decode_buf[KGL_MIN(LSXPACK_MAX_STRLEN + 1, 64 * 1024)];
 };
 
 inline void free_header_decoder(struct header_decoder* r) {
