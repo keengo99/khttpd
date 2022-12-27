@@ -15,7 +15,7 @@ public:
 	}
 	void BindOpaque(KOPAQUE data) override
 	{
-		selectable_bind_opaque(&cn->st, data, kgl_opaque_other);
+		selectable_bind_opaque(&cn->st, data);
 	}
 	sockaddr_i *GetAddr() override
 	{

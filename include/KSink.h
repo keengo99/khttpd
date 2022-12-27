@@ -11,17 +11,8 @@
 class KSink
 {
 public:
-	KSink(kgl_pool_t* pool)
-	{
-		init_pool(pool);
-	}
-	virtual ~KSink()
-	{
-		if (pool) {
-			kgl_destroy_pool(pool);
-		}
-		set_state(STATE_UNKNOW);
-	}
+	KSink(kgl_pool_t* pool);
+	virtual ~KSink();
 	void push_flow_info(KFlowInfo* fi)
 	{
 		KFlowInfoHelper* helper = new KFlowInfoHelper(fi);
@@ -213,6 +204,7 @@ public:
 		return nullptr;
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
+	kgl_list queue;
 	kgl_pool_t* pool;
 	KRequestData data;
 	friend class KHttp2;
@@ -230,4 +222,7 @@ protected:
 	virtual bool response_connection(const char* val, int val_len) = 0;
 	virtual int internal_start_response_body(int64_t body_size) = 0;
 };
+bool kgl_init_sink_queue();
+typedef bool (*kgl_sink_iterator)(void* ctx, KSink* sink);
+void kgl_iterator_sink(kgl_sink_iterator it, void* ctx);
 #endif

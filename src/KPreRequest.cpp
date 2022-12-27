@@ -15,12 +15,12 @@ static kev_result handle_http_request(kconnection *cn)
 #ifdef WORK_MODEL_TCP
 	if (KBIT_TEST(cn->server->flags, WORK_MODEL_TCP)) {
 		KTcpSink *sink = new KTcpSink(cn, NULL);
-		selectable_bind_opaque(&cn->st, (KSink *)sink, kgl_opaque_server);
+		selectable_bind_opaque(&cn->st, (KSink *)sink);
 		return sink->StartRequest();
 	}
 #endif
 	KHttpSink *sink = new KHttpSink(cn,NULL);
-	selectable_bind_opaque(&cn->st, (KSink*)sink, kgl_opaque_server);
+	selectable_bind_opaque(&cn->st, (KSink*)sink);
 	return sink->ReadHeader();
 }
 
@@ -90,7 +90,7 @@ kev_result handle_ssl_accept(KOPAQUE data, void *arg,int got)
 	if (len == sizeof(KGL_HTTP_V2_NPN_NEGOTIATED) - 1 &&
 		memcmp(protocol_data, KGL_HTTP_V2_NPN_NEGOTIATED, len) == 0) {
 		KHttp2 *http2 = new KHttp2();
-		selectable_bind_opaque(&cn->st, http2, kgl_opaque_server_http2);
+		selectable_bind_opaque(&cn->st, http2);
 		http2->server(cn);
 		return kev_ok;
 	}

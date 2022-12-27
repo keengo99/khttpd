@@ -3,6 +3,8 @@
 #include "KHttp2.h"
 #include "KSink.h"
 #include "KHttp3.h"
+#include "klog.h"
+
 
 KACCEPT_CALLBACK_DECLEAR(handle_connection);
 
@@ -56,6 +58,7 @@ int khttp_server_new_request(void* arg, int got)
 }
 void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request)
 {
+	kgl_init_sink_queue();
 	init_time_zone();
 	memset(&http_config, 0, sizeof(http_config));
 	http_config.time_out = 60;

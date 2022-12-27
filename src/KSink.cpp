@@ -2,7 +2,70 @@
 #include "klog.h"
 #include "KHttpFieldValue.h"
 #include "kfiber.h"
+#include "kselector_manager.h"
+#include "kfiber_sync.h"
 
+struct kgl_request_ts
+{
+	kgl_list sinks;
+};
+static pthread_key_t kgl_request_key;
+kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got)
+{
+	kgl_request_ts* rq = new kgl_request_ts;
+	klist_init(&rq->sinks);
+	pthread_setspecific(kgl_request_key, rq);
+	return kev_ok;
+}
+struct kgl_sink_iterator_param
+{
+	void* ctx;
+	kgl_sink_iterator it;
+	kfiber_cond* cond;
+};
+static kev_result ksink_iterator(KOPAQUE data, void* arg, int got)
+{
+	kgl_sink_iterator_param* param = (kgl_sink_iterator_param*)arg;
+	kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
+	kgl_list* pos;
+	klist_foreach(pos, &ts->sinks) {
+		KSink* sink = (KSink*)kgl_list_data(pos, KSink, queue);
+		if (!param->it(param->ctx, sink)) {
+			break;
+		}
+	}
+	param->cond->f->notice(param->cond, got);
+	return kev_ok;
+}
+void kgl_iterator_sink(kgl_sink_iterator it, void* ctx)
+{
+	kgl_sink_iterator_param param;
+	param.ctx = ctx;
+	param.it = it;
+	param.cond = kfiber_cond_init_ts(true);
+	auto selector_count = get_selector_count();
+	for (int i = 0; i < selector_count; i++) {
+		kselector* selector = get_selector_by_index(i);
+		kgl_selector_module.next(selector, NULL, ksink_iterator, &param, 0);
+		param.cond->f->wait(param.cond);
+	}
+	param.cond->f->release(param.cond);
+}
+KSink::KSink(kgl_pool_t* pool)
+{
+	init_pool(pool);
+	kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
+	assert(ts);
+	klist_append(&ts->sinks, &queue);
+}
+KSink::~KSink()
+{
+	if (pool) {
+		kgl_destroy_pool(pool);
+	}
+	set_state(STATE_UNKNOW);
+	klist_remove(&queue);
+}
 bool KSink::start_response_body(INT64 body_len)
 {
 	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
@@ -164,7 +227,7 @@ bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len,
 		}
 		return true;
 	}
-	
+
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
 		data.content_length = string2int(val);
 		data.left_read = data.content_length;
@@ -411,6 +474,15 @@ bool KSink::write_all(const char* buf, int len)
 		}
 		len -= this_len;
 		buf += this_len;
+	}
+	return true;
+}
+bool kgl_init_sink_queue()
+{
+	pthread_key_create(&kgl_request_key, NULL);
+	if (0 != selector_manager_thread_init(kgl_request_thread_init, NULL)) {
+		klog(KLOG_ERR, "init_http_server_callback must called early!!!\n");
+		return false;
 	}
 	return true;
 }
