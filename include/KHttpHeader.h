@@ -77,7 +77,7 @@ inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, 
 	header->name_is_know = 1;
 	return header;
 }
-inline KHttpHeader* new_http_header2(const char* attr, int attr_len, const char* val, int val_len) {
+inline KHttpHeader* new_http_header(const char* attr, int attr_len, const char* val, int val_len) {
 	if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
 		return NULL;
 	}
@@ -93,15 +93,15 @@ inline KHttpHeader* new_http_header2(const char* attr, int attr_len, const char*
 	header->name_len = attr_len;
 	return header;
 }
-inline void xfree_header2(KHttpHeader* av) {
+inline void xfree_header(KHttpHeader* av) {
 	free(av->buf);
 	free(av);
 }
-inline void free_header_list2(KHttpHeader* av) {
+inline void free_header_list(KHttpHeader* av) {
 	KHttpHeader* next;
 	while (av) {
 		next = av->next;
-		xfree_header2(av);
+		xfree_header(av);
 		av = next;
 	}
 }

@@ -20,7 +20,7 @@ public:
 	}
 	~KResponseData()
 	{
-		free_header_list2(header);
+		free_header_list(header);
 		if (dechunk) {
 			delete dechunk;
 		}

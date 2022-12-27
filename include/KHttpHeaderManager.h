@@ -74,7 +74,7 @@ public:
 				} else {
 					header = next;
 				}
-				xfree_header2(l);
+				xfree_header(l);
 				l = next;
 				goto next;
 			}
@@ -88,7 +88,7 @@ public:
 	}
 	KHttpHeader *add_header(const char* attr, int attr_len, const char* val, int val_len, bool tail = true)
 	{
-		KHttpHeader* new_t = new_http_header2(attr, attr_len, val, val_len);
+		KHttpHeader* new_t = new_http_header(attr, attr_len, val, val_len);
 		if (new_t == NULL) {
 			return nullptr;
 		}

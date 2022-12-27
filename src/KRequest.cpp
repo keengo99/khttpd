@@ -39,7 +39,7 @@ void KRequestData::free_lazy_memory()
 		raw_url->relase();
 		raw_url = NULL;
 	}
-	free_header_list2(header);
+	free_header_list(header);
 	header = last = NULL;
 	mark = 0;
 }
