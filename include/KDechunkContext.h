@@ -6,8 +6,8 @@ class KHttpSink;
 class KDechunkContext : public KDechunkEngine
 {
 public:
-	int Read(KHttpSink* sink, char* buf, int length);
+	int read(KHttpSink* sink, char* buf, int length);
 private:
-	bool ReadDataFromNet(KHttpSink* sink);
+	bool read_from_net(KHttpSink* sink);
 };
 #endif

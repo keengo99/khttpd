@@ -20,9 +20,8 @@ public:
 	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
 	bool response_connection(const char* val, int val_len) override {
-		return response_header(kgl_expand_string("Connection"), val, val_len);
+		return response_header(kgl_header_connection, val, val_len, true);
 	}
-
 	bool read_hup(void* arg, result_callback result) override
 	{
 		return selectable_readhup(&cn->st, result, arg);
@@ -72,7 +71,7 @@ public:
 protected:
 	bool response_altsvc_header(const char* val, int val_len) override
 	{
-		return response_header(_KS("Alt-Svc"), val, val_len);
+		return response_header(kgl_header_alt_svc, val, val_len, false);
 	}
 	int internal_start_response_body(int64_t body_size) override;
 	int internal_read(char* buf, int len) override;

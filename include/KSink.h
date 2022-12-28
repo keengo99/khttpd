@@ -77,7 +77,7 @@ public:
 	virtual bool read_hup(void* arg, result_callback result) = 0;
 	virtual void remove_read_hup() = 0;
 	virtual bool set_transfer_chunked() {
-		return response_header(kgl_expand_string("Transfer-Encoding"), kgl_expand_string("chunked"));
+		return response_header(kgl_header_transfer_encoding, _KS("chunked"), true);
 	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
 	virtual sockaddr_i* get_peer_addr() = 0;
@@ -180,7 +180,7 @@ public:
 	bool write(kbuf* buf);
 	int read(char* buf, int len);
 	bool write_all(const char* buf, int len);
-	bool parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first);
+	bool parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first);
 	bool begin_request();
 	virtual int end_request() = 0;
 	virtual bool is_locked() = 0;

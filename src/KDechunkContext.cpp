@@ -1,7 +1,7 @@
 #include "KDechunkContext.h"
 #include "KHttpSink.h"
 #include "kfiber.h"
-bool KDechunkContext::ReadDataFromNet(KHttpSink* sink)
+bool KDechunkContext::read_from_net(KHttpSink* sink)
 {
 	int len;
 	char* hot_buf = ks_get_read_buffer(&sink->buffer, &len);
@@ -12,7 +12,7 @@ bool KDechunkContext::ReadDataFromNet(KHttpSink* sink)
 	ks_write_success(&sink->buffer, got);
 	return true;
 }
-int KDechunkContext::Read(KHttpSink* sink, char* buf, int length)
+int KDechunkContext::read(KHttpSink* sink, char* buf, int length)
 {
 	const char* piece;
 	const char* hot;
@@ -21,7 +21,7 @@ int KDechunkContext::Read(KHttpSink* sink, char* buf, int length)
 		hot = sink->buffer.buf;
 		hot_len = sink->buffer.used;
 		if (hot_len == 0) {
-			if (!ReadDataFromNet(sink)) {
+			if (!read_from_net(sink)) {
 				return -1;
 			}
 			continue;

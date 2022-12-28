@@ -233,7 +233,7 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 int KHttpSink::internal_read(char* buf, int len)
 {
 	if (dechunk) {
-		return dechunk->Read(this, buf, len);
+		return dechunk->read(this, buf, len);
 	}
 	if (buffer.used > 0) {
 		len = KGL_MIN((int)len, buffer.used);
@@ -274,7 +274,7 @@ void KHttpSink::SkipPost()
 	kassert(data.left_read != 0);
 	if (dechunk) {
 		for (;;) {
-			int got = dechunk->Read(this, NULL, 8192);
+			int got = dechunk->read(this, NULL, 8192);
 			if (got < 0) {
 				kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
 				return;

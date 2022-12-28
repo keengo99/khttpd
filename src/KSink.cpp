@@ -108,7 +108,7 @@ bool KSink::begin_request()
 	}
 	return true;
 }
-bool KSink::parse_header(const char* attr, int attr_len, char* val, int val_len, bool is_first)
+bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first)
 {
 	//printf("attr=[%s],val=[%s]\n",attr,val);
 	if (is_first) {
@@ -401,7 +401,7 @@ bool KSink::response_content_length(int64_t content_len)
 		//有content-length时
 		char len_str[INT2STRING_LEN];
 		int len = int2string2(content_len, len_str, false);
-		return response_header(kgl_expand_string("Content-Length"), len_str, len);
+		return response_header(kgl_header_content_length, len_str, len, false);
 	}
 	//无content-length时
 	if (data.http_minor == 0) {
