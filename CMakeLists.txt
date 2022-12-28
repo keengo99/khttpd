@@ -14,8 +14,6 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
-else()
-	add_compile_options(-Wno-invalid-offsetof)
 endif()
 
 if (BORINGSSL_DIR) 
@@ -60,6 +58,7 @@ message(STATUS "KHTTP_LIBS ${KHTTPD_LIBS}")
 add_library(khttpd STATIC ${KHTTPD_SOURCE_FILES} ${KHTTPD_INCLUDE_FILES})
 target_include_directories(khttpd PUBLIC ${KHTTPD_INCLUDE_DIR})
 target_link_libraries(khttpd ${KHTTPD_LIBS})
+target_compile_options(khttpd PUBLIC -Wno-invalid-offsetof)
 
 
 
