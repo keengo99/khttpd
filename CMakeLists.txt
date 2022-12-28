@@ -14,6 +14,8 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
+else()
+	add_compile_options(-Wno-invalid-offsetof)
 endif()
 
 if (BORINGSSL_DIR) 
