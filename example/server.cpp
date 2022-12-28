@@ -58,6 +58,7 @@ int client_http_test(void *arg,int got)
 	us->gc(-1);
 	return 0;
 }
+#ifdef KSOCKET_SSL
 static void* ssl_create_sni(KOPAQUE server_ctx, const char* hostname, SSL_CTX **ssl_ctx)
 {
 	return NULL;
@@ -67,6 +68,7 @@ static void ssl_free_sni(void* sni)
 
 }
 static u_char h3_alpn = KGL_ALPN_HTTP3|KGL_ALPN_HTTP2;
+#endif
 kgl_ssl_ctx* ssl_ctx = NULL;
 #ifdef ENABLE_HTTP3
 int h3_server(void* arg, int got)
@@ -87,7 +89,9 @@ int h3_server(void* arg, int got)
 kev_result on_ready(KOPAQUE data, void* arg, int got)
 {	
 	http_config.time_out = 30;
+#ifdef KSOCKET_SSL
 	ssl_ctx = kgl_new_ssl_ctx(kgl_ssl_ctx_new_server("server.crt", "server.key", NULL, NULL, &h3_alpn));
+#endif
 	kserver* server = kserver_init();
 	kserver_bind(server, "0.0.0.0", 4433, ssl_ctx);
 	KBIT_SET(server->flags, WORK_MODEL_ALT_H3);
@@ -101,7 +105,9 @@ kev_result on_ready(KOPAQUE data, void* arg, int got)
 int main(int argc, char** argv)
 {
 	kasync_init();
+#ifdef KSOCKET_SSL
 	kssl_set_sni_callback(ssl_create_sni, ssl_free_sni);
+#endif
 	init_http_server_callback(NULL, on_new_http_request);
 	selector_manager_on_ready(on_ready, NULL);
 	selector_manager_init(1, true);

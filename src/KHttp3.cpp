@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <errno.h>
 #include "khttp.h"
 #ifdef ENABLE_HTTP3
