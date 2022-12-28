@@ -47,6 +47,7 @@ public:
 		return get_connection()->proxy;
 	}
 #endif
+#ifdef KSOCKET_SSL
 	void* get_sni() override
 	{
 		auto cn = get_connection();
@@ -54,6 +55,7 @@ public:
 		cn->sni = NULL;
 		return sni;
 	}
+#endif
 	bool send_alt_svc_header()
 	{
 #ifdef KSOCKET_SSL
