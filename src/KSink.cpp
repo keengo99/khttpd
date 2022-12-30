@@ -430,6 +430,7 @@ int KSink::write(const char* buf, int len)
 }
 int KSink::read(char* buf, int len)
 {
+	KBIT_SET(data.flags, RQ_HAS_READ_POST);
 	kassert(!kfiber_is_main());
 	if (KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
 		KBIT_CLR(data.flags, RQ_HAVE_EXPECT);

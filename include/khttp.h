@@ -57,7 +57,7 @@
 #define RQ_BODY_NOT_COMPLETE   (1<<4)
 #define RQ_CACHE_HIT           (1<<5)
 #define RQ_INPUT_CHUNKED       (1<<6)
-//#define RQ_SYNC                (1<<7)
+#define RQ_NEXT_CALLED         (1<<7)
 #define RQ_HAS_ONLY_IF_CACHED  (1<<8)
 #define RQ_HAS_AUTHORIZATION   (1<<9)
 #define RQ_HAS_PROXY_AUTHORIZATION (1<<10)
@@ -72,6 +72,7 @@
 #define RQ_TE_CHUNKED          (1<<19)
 #define RQ_TE_COMPRESS         (1<<20)
 #define RQ_HAS_SEND_HEADER     (1<<21)
+#define RQ_HAS_READ_POST       (1<<22)
 
 #define RQ_POST_UPLOAD         (1<<23)
 #define RQ_CONNECTION_CLOSE    (1<<24)
