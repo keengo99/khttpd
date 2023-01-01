@@ -13,6 +13,30 @@ krequest_start_func server_on_new_request = NULL;
 krequest_start_func http2https_error = NULL;
 khttp_server_config http_config;
 
+static kgl_refs_string* ca_path = nullptr;
+static kgl_refs_string* ssl_client_chiper = nullptr;
+static kgl_refs_string* ssl_client_protocols = nullptr;
+static kmutex ssl_config_lock;
+
+
+void khttp_server_set_ssl_config(const char* ca_path, const char* ssl_client_chiper, const char* ssl_client_protocols) {
+	kmutex_lock(&ssl_config_lock);
+	kstring_release(::ca_path);
+	::ca_path = kstring_from(ca_path);
+	kstring_release(::ssl_client_chiper);
+	::ssl_client_chiper = kstring_from(ssl_client_chiper);
+	kstring_release(::ssl_client_protocols);
+	::ssl_client_protocols = kstring_from(ssl_client_protocols);
+	kmutex_unlock(&ssl_config_lock);
+}
+void khttp_server_refs_ssl_config(kgl_refs_string** ca_path, kgl_refs_string** ssl_client_chiper, kgl_refs_string** ssl_client_protocols) {
+	kmutex_lock(&ssl_config_lock);
+	*ca_path = kstring_refs(::ca_path);
+	*ssl_client_chiper = kstring_refs(::ssl_client_chiper);
+	*ssl_client_protocols = kstring_refs(::ssl_client_protocols);
+	kmutex_unlock(&ssl_config_lock);
+}
+
 #ifdef KSOCKET_SSL
 static bool ssl_is_quic(SSL* ssl) {
 #ifdef ENABLE_HTTP3
@@ -24,8 +48,7 @@ static bool ssl_is_quic(SSL* ssl) {
 	return false;
 #endif
 }
-void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen)
-{
+void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen) {
 	u_char* alpn = (u_char*)ssl_ctx_data;
 #ifdef ENABLE_HTTP3
 	if (ssl && ssl_is_quic(ssl)) {
@@ -45,8 +68,7 @@ void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, 
 	*outlen = sizeof(KGL_HTTP_NPN_ADVERTISE) - 1;
 }
 #endif
-int khttp_server_new_request(void* arg, int got)
-{
+int khttp_server_new_request(void* arg, int got) {
 	KSink* sink = (KSink*)arg;
 	if (!sink->begin_request()) {
 		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
@@ -56,8 +78,8 @@ int khttp_server_new_request(void* arg, int got)
 	server_on_new_request(sink, got);
 	return 0;
 }
-void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request)
-{
+void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request) {
+	kmutex_init(&ssl_config_lock, NULL);
 	kgl_init_sink_queue();
 	init_time_zone();
 	memset(&http_config, 0, sizeof(http_config));
@@ -71,8 +93,7 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 #endif
 #endif
 }
-bool start_http_server(kserver* server, int flags, SOCKET sockfd)
-{
+bool start_http_server(kserver* server, int flags, SOCKET sockfd) {
 	if (ksocket_opened(sockfd)) {
 		return kserver_open_exsit(server, sockfd, handle_connection);
 	}

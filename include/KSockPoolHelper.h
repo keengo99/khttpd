@@ -83,7 +83,9 @@ public:
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
 	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);
-	void checkActive();
+	void checkActive() {
+		startMonitor();
+	}
 	bool setHostPort(std::string host,int port,const char *ssl);
 	bool setHostPort(std::string host, const char *port);
 	void disable();
@@ -112,6 +114,7 @@ public:
 			uint32_t monitor : 1;
 			uint32_t is_unix : 1;
 			uint32_t sign : 1;
+			uint32_t disable_flag : 1;
 #ifdef ENABLE_UPSTREAM_SSL
 			uint32_t no_sni : 1;
 #endif
@@ -122,7 +125,7 @@ public:
 #ifdef ENABLE_UPSTREAM_HTTP2
 	u_char alpn;
 #endif
-	bool IsSslVerify()
+	bool need_verify()
 	{
 		return ssl == "S";
 	}
@@ -135,23 +138,23 @@ public:
 	 */
 	uint16_t error_count;
 	uint16_t max_error_count;
-	/*
-	 * 下次试连接时间，如果是0表示活跃的。
-	 */
-	time_t tryTime;
-	void monitorNextTick();
 	void stopMonitor()
 	{
 		lock.Lock();
 		internalStopMonitor();
 		lock.Unlock();
 	}
+	int get_error_try_time() {
+		if (error_try_time <= 0) {
+			return ERROR_RECONNECT_TIME;
+		}
+		return error_try_time;
+	}
 	volatile uint64_t total_error;
 	volatile uint64_t total_connect;
-	INT64 monitor_start_time;
-	int avg_monitor_tick;
-	KSockPoolHelper *next;
-	KSockPoolHelper *prev;
+	int avg_monitor_tick = 0;
+	KSockPoolHelper* next = nullptr;
+	KSockPoolHelper *prev = nullptr;
 private:
 	void startMonitor();
 	void internalStopMonitor()

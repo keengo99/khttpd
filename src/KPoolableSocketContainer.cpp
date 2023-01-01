@@ -87,7 +87,7 @@ KPoolableSocketContainer::~KPoolableSocketContainer() {
 		delete imp;
 	}
 	if (param) {
-		release_string(param);
+		kstring_release(param);
 	}
 }
 
@@ -224,27 +224,14 @@ void KPoolableSocketContainer::clean()
 void KPoolableSocketContainer::SetParam(const char* param)
 {
 	lock.Lock();
-	if (this->param) {
-		release_string(this->param);
-		this->param = NULL;
-	}
-	if (param && *param) {
-		char* str = strdup(param);
-		int len = (int)strlen(str);
-		kgl_refs_string* ns = convert_refs_string(str, len);
-		this->param = ns;
-	}
+	kstring_release(this->param);
+	this->param = kstring_from(param);
 	lock.Unlock();
 }
 kgl_refs_string* KPoolableSocketContainer::GetParam()
 {
 	lock.Lock();
-	if (param == NULL) {
-		lock.Unlock();
-		return NULL;
-	}
-	kgl_refs_string* result = param;
-	refs_string(result);
+	kgl_refs_string* result = kstring_refs(param);
 	lock.Unlock();
 	return result;
 }

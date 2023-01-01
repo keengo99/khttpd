@@ -5,111 +5,116 @@
 #include "KHttp2Upstream.h"
 #include "KTsUpstream.h"
 #include "KHttpUpstream.h"
-
+#include "KHttpServer.h"
 #include "klog.h"
+#include <sstream>
 
 using namespace std;
-#if 0
-static kev_result monitor_connect_result(KOPAQUE data, void *arg, int got)
-{
-	KUpstream *us = (KUpstream *)arg;
-	kconnection *c = us->get_connection();
-	KSockPoolHelper *sph = static_cast<KSockPoolHelper *>(us->container);
-	if (got < 0) {
-		sph->disable();
-	} else {
-		if (send(c->st.fd,"H", 1,0) <= 0) {			
-			sph->disable();
-		} else {
-			sph->enable();
+
+static int kgl_ssl_verify_callback(int ok, X509_STORE_CTX* x509_store) {
+#ifndef NDEBUG
+	char* subject, * issuer;
+	int                err, depth;
+	X509* cert;
+	X509_NAME* sname, * iname;
+
+
+	cert = X509_STORE_CTX_get_current_cert(x509_store);
+	err = X509_STORE_CTX_get_error(x509_store);
+	depth = X509_STORE_CTX_get_error_depth(x509_store);
+
+	sname = X509_get_subject_name(cert);
+
+	if (sname) {
+		subject = X509_NAME_oneline(sname, NULL, 0);
+		if (subject == NULL) {
+			klog(KLOG_DEBUG, "X509_NAME_oneline() failed\n");
 		}
-	}
-	int monitor_tick = (int)(kgl_current_msec - sph->monitor_start_time);
-	if (monitor_tick <= 0) {
-		monitor_tick = 1;
-	}
-	if (monitor_tick > 30000) {
-		monitor_tick = 30000;
-	}	
-	if (sph->avg_monitor_tick == 0) {
-		sph->avg_monitor_tick = monitor_tick;
+
 	} else {
-		sph->avg_monitor_tick = (int)(0.9 * float(sph->avg_monitor_tick) + 0.1 * float(monitor_tick));
-	}	
-	sph->monitorNextTick();
-	us->Destroy();
-	return kev_destroy;
-}
-static kev_result start_monitor_call_back(KOPAQUE data, void *arg,int got)
-{
-	KSockPoolHelper *sph = (KSockPoolHelper *)arg;
-	if (!sph->monitor) {
-		sph->release();
-		return kev_ok;
+		subject = NULL;
 	}
-	sph->start_monitor_call_back();
-	return kev_ok;
-}
-kev_result next_monitor_call_back(KOPAQUE data, void *arg, int got)
-{
-	kselector_add_timer(kgl_get_tls_selector(),::start_monitor_call_back, arg, got,NULL);
-	return kev_ok;
-}
-static kev_result sockpool_name_resovled_monitor_call_back(void *arg, struct addrinfo  *addr)
-{
-	sockaddr_i a;
-	KSockPoolDns *spdns = (KSockPoolDns *)arg;
-	assert(spdns->socket);
-	if (addr==NULL ||
-		!kgl_addr_build(addr,(uint16_t)spdns->sh->port, &a) ||
-		!spdns->sh->connect_addr(NULL, static_cast<KTcpUpstream *>(spdns->socket), a)) {
-		spdns->socket->Destroy();
-		spdns->sh->disable();
-		spdns->sh->monitorNextTick();
-		delete spdns;
-		return kev_destroy;
+
+	iname = X509_get_issuer_name(cert);
+
+	if (iname) {
+		issuer = X509_NAME_oneline(iname, NULL, 0);
+		if (issuer == NULL) {
+			klog(KLOG_DEBUG, "X509_NAME_oneline() failed\n");
+		}
+
+	} else {
+		issuer = NULL;
 	}
-	kev_result ret = spdns->socket->Connect(spdns->socket, monitor_connect_result);
-	delete spdns;
-	return ret;
-}
+
+	klog(KLOG_DEBUG, "verify:%d, error:%d %s, depth:%d, "
+		"subject:\"%s\", issuer:\"%s\"\n",
+		ok, err, X509_verify_cert_error_string(err), depth,
+		subject ? subject : "(none)",
+		issuer ? issuer : "(none)");
+	if (subject) {
+		OPENSSL_free(subject);
+	}
+	if (issuer) {
+		OPENSSL_free(issuer);
+	}
 #endif
-void KSockPoolHelper::start_monitor_call_back()
-{
-#if 0
+	return 1;
+}
+static int monitor_fiber(void* arg, int got) {
+	KSockPoolHelper* sock_pool = (KSockPoolHelper*)arg;
+	sock_pool->start_monitor_call_back();	
+	sock_pool->release();
+	return 0;
+}
+void KSockPoolHelper::start_monitor_call_back() {
+	for (;;) {
 #ifdef MALLOCDEBUG
-	if (quit_program_flag > 0) {
-		return;
-	}
+		if (quit_program_flag > 0) {
+			break;
+		}
 #endif
-	bool need_name_resolved = false;
-	KUpstream *us = newConnection(NULL, need_name_resolved);
-	if (us == NULL) {
-		disable();		
-		monitorNextTick();
-		return;
+		if (!monitor) {
+			//monitor is stoped
+			break;
+		}
+		auto monitor_start_time = kgl_current_msec;
+		auto us = get_upstream(KSOCKET_FLAGS_SKIP_POOL, NULL);
+		if (!us) {
+			disable();
+			kfiber_msleep(get_error_try_time() * 1000);
+			continue;
+		}
+		//caculate monitor tick time
+		int monitor_tick = (int)(kgl_current_msec - monitor_start_time);
+		if (monitor_tick <= 0) {
+			monitor_tick = 1;
+		}
+		if (monitor_tick > 30000) {
+			monitor_tick = 30000;
+		}
+		if (avg_monitor_tick == 0) {
+			avg_monitor_tick = monitor_tick;
+		} else {
+			avg_monitor_tick = (int)(0.9 * float(avg_monitor_tick) + 0.1 * float(monitor_tick));
+		}
+		int life_time = this->lifeTime;
+		if (ssl_ctx) {
+			life_time = -1;
+		}
+		us->gc(life_time);
+		enable();
+		break;
 	}
-	us->BindSelector(kgl_get_tls_selector());
-	this->monitor_start_time = kgl_current_msec;
-	if (need_name_resolved) {
-		KSockPoolDns *spdns = new KSockPoolDns;
-		spdns->socket = us;
-		spdns->sh = this;
-		kgl_find_addr(this->host.c_str(), kgl_addr_ip, sockpool_name_resovled_monitor_call_back, spdns, kgl_get_tls_selector());
-		return;
-	}
-	us->Connect(us, monitor_connect_result);
-#endif
+	monitor = 0;
 }
 KSockPoolHelper::KSockPoolHelper() {
 	ip = NULL;
-	tryTime = 0;
 	error_count = 0;
 	flags = 0;
 	max_error_count = 5;
 	hit = 0;
 	weight = 1;
-	avg_monitor_tick = 0;
 #ifdef ENABLE_UPSTREAM_SSL
 #ifdef ENABLE_UPSTREAM_HTTP2
 	alpn = 0;
@@ -129,79 +134,18 @@ KSockPoolHelper::~KSockPoolHelper() {
 		free(ip);
 	}
 }
-void KSockPoolHelper::monitorNextTick()
-{
-#if 0
-	if (!monitor) {
+void KSockPoolHelper::startMonitor() {
+	if (monitor) {
+		return;
+	}
+	monitor = 1;
+	addRef();
+	if (kfiber_create(monitor_fiber, this, 0, 0, NULL) != 0) {
+		monitor = 0;
 		release();
-		return;
 	}
-	kselector_add_timer(kgl_get_tls_selector(),::start_monitor_call_back,this,error_try_time*1000,NULL);
-#endif
 }
-void KSockPoolHelper::startMonitor()
-{
-#if 0
-	if (monitor) {
-		return;
-	}
-	monitor = true;
-	addRef();
-	selector_manager_add_timer(::start_monitor_call_back, this, rand() % 10000,NULL);
-#endif
-}
-
-void KSockPoolHelper::checkActive()
-{
-	if (monitor) {
-		return;
-	}
-	addRef();
-	start_monitor_call_back();
-}
-#if 0
-KUpstream *KSockPoolHelper::get_connection(KHttpRequest *rq, bool &half, bool &need_name_resolved)
-{
-	KUpstream *socket = NULL;
-	if (!KBIT_TEST(rq->req.flags, RQ_UPSTREAM_ERROR|RQ_HAS_CONNECTION_UPGRADE)) {
-		//如果是发生错误重连或upgrade的连接，则排除连接池
-		socket = GetPoolSocket(rq);
-		if (socket) {
-			half = false;
-			return socket;
-		}
-	}
-	half = true;
-	return newConnection(rq, need_name_resolved);
-}
-KUpstream *KSockPoolHelper::newConnection(KHttpRequest *rq,bool &need_name_resolved)
-{
-	
-	KTcpUpstream *socket = new KTcpUpstream(NULL);
-	bind(socket);
-#ifdef KSOCKET_UNIX
-	if (is_unix) {
-		struct sockaddr_un addr;
-		ksocket_unix_addr(host.c_str(),&addr);
-		SOCKET fd = ksocket_half_connect((sockaddr_i *)&addr,NULL,0);
-		if (!ksocket_opened(fd)) {
-			socket->Destroy();
-			return NULL;
-		}
-		kconnection *cn = socket->get_connection();
-		cn->st.fd = fd;
-		return socket;
-	}
-#endif
-	if (!try_numerichost_connect(rq,socket, need_name_resolved) && !need_name_resolved) {
-		socket->Destroy();
-		return NULL;
-	}
-	return socket;
-}
-#endif
-KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
-{
+KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 	KUpstream* socket = NULL;
 	if (!KBIT_TEST(flags, KSOCKET_FLAGS_SKIP_POOL)) {
 		//如果是发生错误重连或upgrade的连接，则排除连接池
@@ -210,7 +154,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 			return socket;
 		}
 	}
-	sockaddr_i *bind_addr = NULL;
+	sockaddr_i* bind_addr = NULL;
 	sockaddr_i bind_tmp_addr;
 	const char* bind_ip = ip;
 	if (bind_ip) {
@@ -223,14 +167,16 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 	kgl_addr* addr = NULL;
 	if (kfiber_net_getaddr(host.c_str(), &addr) != 0) {
 		assert(addr == NULL);
+		health(NULL, HealthStatus::Err);
 		return NULL;
 	}
 	int tproxy_mask = 0;
 	katom_inc64((void*)&total_connect);
-	kconnection* cn = kfiber_net_open2(addr->addr,port);
+	kconnection* cn = kfiber_net_open2(addr->addr, port);
 	kgl_addr_release(addr);
 	if (kfiber_net_connect(cn, bind_addr, tproxy_mask) != 0) {
 		kfiber_net_close(cn);
+		health(NULL, HealthStatus::Err);
 		return NULL;
 	}
 #ifdef ENABLE_UPSTREAM_SSL
@@ -245,7 +191,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 		}
 #ifdef ENABLE_UPSTREAM_HTTP2
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
-		if (alpn>0 && cn->st.ssl && KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
+		if (alpn > 0 && cn->st.ssl && KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
 			//websocket will turn off http2
 			SSL_set_alpn_protos(cn->st.ssl->ssl, (unsigned char*)KGL_HTTP_NPN_ADVERTISE, sizeof(KGL_HTTP_NPN_ADVERTISE) - 1);
 		}
@@ -253,7 +199,16 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 #endif
 		if (kfiber_ssl_handshake(cn) != 0) {
 			kfiber_net_close(cn);
+			health(NULL, HealthStatus::Err);
 			return NULL;
+		}
+		if (need_verify()) {
+			if (X509_V_OK != SSL_get_verify_result(cn->st.ssl->ssl)) {
+				klog(KLOG_ERR, "cann't verify [%s:%d] ssl certificate.\n", host.c_str(), port);
+				kfiber_net_close(cn);
+				health(NULL, HealthStatus::Err);
+				return NULL;
+			}
 		}
 #ifdef ENABLE_UPSTREAM_HTTP2
 		const unsigned char* protocol_data = NULL;
@@ -274,19 +229,18 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host)
 	bind(socket);
 	return socket;
 }
-bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
-{
+bool KSockPoolHelper::setHostPort(std::string host, int port, const char* ssl) {
 	bool destChanged = false;
 	lock.Lock();
-	if(this->host != host || this->port!=port){
+	if (this->host != host || this->port != port) {
 		destChanged = true;
 	}
 	this->host = host;
 	this->port = port;
 #ifdef ENABLE_UPSTREAM_SSL
-	char *ssl_buf = NULL;
-	char *protocols = NULL;
-	char *chiper = NULL;
+	char* ssl_buf = NULL;
+	char* protocols = NULL;
+	char* chiper = NULL;
 	if (ssl) {
 		this->ssl = ssl;
 		ssl_buf = strdup(ssl);
@@ -317,46 +271,49 @@ bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
 		ssl_ctx = NULL;
 	}
 	if (ssl) {
-		void *ssl_ctx_data = NULL;
+		void* ssl_ctx_data = NULL;
 #ifdef ENABLE_UPSTREAM_HTTP2
 		ssl_ctx_data = &alpn;
 #endif
-		std::string ssl_client_chiper;
-		std::string ssl_client_protocols ;
-		std::string ca_path ;
-#if 0
-		conf.admin_lock.Lock();
-		std::string ssl_client_chiper = cconf ? cconf->ssl_client_chiper : conf.ssl_client_chiper;
-		std::string ssl_client_protocols = cconf ? cconf->ssl_client_protocols : conf.ssl_client_protocols;
-		std::string ca_path = cconf ? cconf->ca_path : conf.ca_path;
-		conf.admin_lock.Unlock();
-#endif
-		ssl_ctx = kgl_ssl_ctx_new_client(IsSslVerify()?ca_path.c_str():NULL, NULL, ssl_ctx_data);
+		kgl_refs_string* ssl_client_chiper;
+		kgl_refs_string* ssl_client_protocols;
+		kgl_refs_string* ca_path;
+		khttp_server_refs_ssl_config(&ca_path, &ssl_client_chiper, &ssl_client_protocols);
+		ssl_ctx = kgl_ssl_ctx_new_client(ca_path ? ca_path->data : NULL, NULL, ssl_ctx_data);
 		if (ssl_ctx) {
+			if (need_verify()) {
+				SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, kgl_ssl_verify_callback);
+				if (!ca_path) {
+					SSL_CTX_set_default_verify_paths(ssl_ctx);
+				}
+			}
 			kgl_ssl_ctx_set_protocols(ssl_ctx, protocols);
 			if (chiper) {
 				kgl_ssl_ctx_set_cipher_list(ssl_ctx, chiper);
 			}
 			if (chiper == NULL || protocols == NULL) {
-				if (chiper == NULL && !ssl_client_chiper.empty()) {
-					SSL_CTX_set_cipher_list(ssl_ctx, ssl_client_chiper.c_str());
+				if (chiper == NULL && ssl_client_chiper) {
+					SSL_CTX_set_cipher_list(ssl_ctx, ssl_client_chiper->data);
 				}
-				if (protocols == NULL && !ssl_client_protocols.empty()) {
-					kgl_ssl_ctx_set_protocols(ssl_ctx, ssl_client_protocols.c_str());
+				if (protocols == NULL && ssl_client_protocols) {
+					kgl_ssl_ctx_set_protocols(ssl_ctx, ssl_client_protocols->data);
 				}
 			}
 		}
+		kstring_release(ca_path);
+		kstring_release(ssl_client_chiper);
+		kstring_release(ssl_client_protocols);
 	}
 #endif
 	if (destChanged) {
 		//clean();
 	}
 #ifdef KSOCKET_UNIX
-	if(strncasecmp(this->host.c_str(),"unix:",5)==0){
+	if (strncasecmp(this->host.c_str(), "unix:", 5) == 0) {
 		is_unix = 1;
 		this->host = this->host.substr(5);
 	}
-	if (this->host[0]=='/') {
+	if (this->host[0] == '/') {
 		is_unix = 1;
 	}
 #endif
@@ -368,90 +325,71 @@ bool KSockPoolHelper::setHostPort(std::string host,int port,const char *ssl)
 #endif
 	return true;
 }
-bool KSockPoolHelper::setHostPort(std::string host, const char *port) {
-	const char *ssl = port;
+bool KSockPoolHelper::setHostPort(std::string host, const char* port) {
+	const char* ssl = port;
 	while (*ssl && IS_DIGIT(*ssl)) {
 		ssl++;
 	}
 	if (*ssl != 's' && *ssl != 'S') {
 		ssl = NULL;
 	}
-	return setHostPort(host,atoi(port),ssl);
+	return setHostPort(host, atoi(port), ssl);
 }
 void KSockPoolHelper::disable() {
-	if (error_try_time==0) {
-		tryTime = kgl_current_sec + ERROR_RECONNECT_TIME;
-	} else {
-		tryTime = kgl_current_sec + error_try_time;
-	}
+	disable_flag = 1;
+	
 }
 bool KSockPoolHelper::isEnable() {
-	if (tryTime == 0) {
+	if (disable_flag) {
 		return true;
-	}
-	if (tryTime < kgl_current_sec) {
-		tryTime += KGL_MAX(error_try_time,10);
-		checkActive();
-		return false;
 	}
 	return false;
 }
 void KSockPoolHelper::enable() {
-	tryTime = 0;
+	disable_flag = 0;
 	error_count = 0;
 }
 
-bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr)
-{
+bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
 	setHostPort(attr["host"], attr["port"].c_str());
 	setLifeTime(atoi(attr["life_time"].c_str()));
 	SetParam(attr["param"].c_str());
-	//{{ent
 #ifdef HTTP_PROXY
 	auth_user = attr["auth_user"];
 	auth_passwd = attr["auth_passwd"];
-#endif//}}
+#endif
 	setIp(attr["self_ip"].c_str());
 	sign = (attr["sign"] == "1");
 	return true;
 }
-void KSockPoolHelper::build(std::map<std::string, std::string>& attr)
-{
-
+void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
 	attr["host"] = host;
-	attr["port"] = to_string(port);
-#if 0
+	std::stringstream s;
+	s << (int)port;
 #ifdef ENABLE_UPSTREAM_SSL
-	if (ssl.size() > 0) {
+	if (!ssl.empty()) {
 		s << ssl;
 	}
 #endif
-
-	s << " host='";
-	s << host << "' port='" << port;
-
-	s << "' life_time='" << getLifeTime() << "' ";
+	attr["port"] = s.str();
+	attr["life_time"] = std::to_string(getLifeTime());
 	kgl_refs_string* str = GetParam();
 	if (str) {
-		s << "param='";
-		s.write(str->str.data, str->str.len);
-		s << "' ";
-		release_string(str);
+		attr["param"] = str->data;
 	}
-	//{{ent
+	kstring_release(str);
 #ifdef HTTP_PROXY
 	if (auth_user.size() > 0) {
-		s << "auth_user='" << auth_user << "' ";
+		attr["auth_user"] = auth_user;
 	}
 	if (auth_passwd.size() > 0) {
-		s << "auth_passwd='" << auth_passwd << "' ";
-	}
-#endif//}}
-	if (ip && *ip) {
-		s << "self_ip='" << ip << "' ";
-	}
-	if (sign) {
-		s << "sign='1' ";
+		attr["auth_passwd"] = auth_passwd;
 	}
 #endif
+	if (ip && *ip) {
+		attr["self_ip"] = ip;
+	}
+	if (sign) {
+		attr["sign"] = "1";
+	}
 }
