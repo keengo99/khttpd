@@ -110,7 +110,6 @@ KSockPoolHelper::KSockPoolHelper() {
 	error_count = 0;
 	flags = 0;
 	max_error_count = 5;
-	hit = 0;
 	weight = 1;
 #ifdef ENABLE_UPSTREAM_SSL
 #ifdef ENABLE_UPSTREAM_HTTP2
@@ -141,6 +140,7 @@ void KSockPoolHelper::startMonitor() {
 	}
 }
 KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
+	katom_inc64((void*)&total_hit);
 	KUpstream* socket = NULL;
 	if (!KBIT_TEST(flags, KSOCKET_FLAGS_SKIP_POOL)) {
 		//如果是发生错误重连或upgrade的连接，则排除连接池

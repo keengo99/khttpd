@@ -101,7 +101,7 @@ public:
 		return this->ip;
 	}
 	std::string host;
-	uint64_t hit;
+	volatile uint64_t total_hit = 0;
 	volatile uint64_t total_error = 0;
 	volatile uint64_t total_connect = 0;
 	int avg_monitor_tick = 0;
