@@ -855,7 +855,7 @@ std::string b64encode(const unsigned char* in, int len)
 	return s.str();
 }
 #define MEMPBRK_CACHE_SIZE  256
-const char* kgl_mempbrk(const char* str, size_t n, const char* control, int control_len)
+const char* kgl_mempbrk(const char* str, int n, const char* control, int control_len)
 {
 	const char* p, * min = NULL, * control_ptr = control, * control_end = control + control_len;
 	while (n > 0) {

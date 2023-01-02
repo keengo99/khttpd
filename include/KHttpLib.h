@@ -62,7 +62,7 @@ int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2);
  *   in the input buffer,
  *   else NULL if not found.
  */
-const char* kgl_mempbrk(const char* str, size_t n, const char* control, int control_len);
+const char* kgl_mempbrk(const char* str, int n, const char* control, int control_len);
 inline int kgl_attr_tolower(const u_char p) {
 	if (p == '-') {
 		return '_';

@@ -102,6 +102,7 @@ void KSockPoolHelper::start_monitor_call_back() {
 		}
 		us->Destroy();
 		enable();
+		kfiber_msleep(get_error_try_time() * 1000);
 	}
 	monitor = 0;
 }
@@ -134,7 +135,7 @@ void KSockPoolHelper::startMonitor() {
 	}
 	monitor = 1;
 	addRef();
-	if (kfiber_create(monitor_fiber, this, 0, 0, NULL) != 0) {
+	if (kfiber_create2(get_perfect_selector(), monitor_fiber, this, 0, 0, NULL) != 0) {
 		monitor = 0;
 		release();
 	}
