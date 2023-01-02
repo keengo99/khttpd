@@ -862,7 +862,7 @@ const char* kgl_mempbrk(const char* str, int n, const char* control, int control
 		while (control_ptr < control_end) {
 			if ((p = (const char*)memchr(str, *control_ptr,
 				(n > MEMPBRK_CACHE_SIZE) ? MEMPBRK_CACHE_SIZE : n)) != NULL) {
-				n = p - str;
+				n = (int)(p - str);
 				min = p;
 			}
 			++control_ptr;
