@@ -10,7 +10,7 @@
 #include <sstream>
 
 using namespace std;
-
+#ifdef ENABLE_UPSTREAM_SSL
 static int kgl_ssl_verify_callback(int ok, X509_STORE_CTX* x509_store) {
 #ifndef NDEBUG
 	char* subject, * issuer;
@@ -61,6 +61,7 @@ static int kgl_ssl_verify_callback(int ok, X509_STORE_CTX* x509_store) {
 #endif
 	return 1;
 }
+#endif
 static int monitor_fiber(void* arg, int got) {
 	KSockPoolHelper* sock_pool = (KSockPoolHelper*)arg;
 	sock_pool->start_monitor_call_back();	
