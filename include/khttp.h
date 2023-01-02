@@ -2,12 +2,12 @@
 #define KHTTP_H_SADFLKJASDLFKJA455ss
 #include "kfeature.h"
 #ifdef KSOCKET_SSL
-	#define ENABLE_UPSTREAM_SSL   1
-	#define ENABLE_HTTP2          1
-    //#define ENABLE_HTTP3          1
-	#ifdef ENABLE_HTTP2
-		#define ENABLE_UPSTREAM_HTTP2 1
-	#endif
+#define ENABLE_UPSTREAM_SSL   1
+#define ENABLE_HTTP2          1
+//#define ENABLE_HTTP3          1
+#ifdef ENABLE_HTTP2
+#define ENABLE_UPSTREAM_HTTP2 1
+#endif
 #endif
 #define MAX_HTTP_HEAD_SIZE	4194304
 #define IF_FREE(p) {if ( p ) xfree(p);p=NULL;}
@@ -144,7 +144,7 @@
 KBEGIN_DECLS
 typedef unsigned short hlen_t;
 typedef enum _kgl_header_type
-{	
+{
 
 	kgl_header_host,
 	kgl_header_accept_encoding,
@@ -170,7 +170,7 @@ typedef enum _kgl_header_type
 	kgl_header_keep_alive,
 	kgl_header_alt_svc,
 	kgl_header_connection,
-	kgl_header_unknow 
+	kgl_header_unknow
 } kgl_header_type;
 
 #define MAX_HEADER_ATTR_VAL_SIZE 65500

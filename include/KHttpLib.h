@@ -103,6 +103,20 @@ inline const char* kgl_skip_space(const char* start, const char* end, bool space
 	return NULL;
 }
 int url_decode(char* str, int len, KUrl* url, bool space2plus);
+inline bool is_absolute_path(const char* str) {
+	if (str[0] == '/') {
+		return true;
+	}
+#ifdef _WIN32
+	if (str[0] == '\\') {
+		return true;
+	}
+	if (strlen(str) > 1 && str[1] == ':') {
+		return true;
+	}
+#endif
+	return false;
+}
 void CTIME_R(time_t* a, char* b, size_t l);
 /*
  * 18446744073709551616

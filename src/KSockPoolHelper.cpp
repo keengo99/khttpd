@@ -68,6 +68,8 @@ static int monitor_fiber(void* arg, int got) {
 	return 0;
 }
 void KSockPoolHelper::start_monitor_call_back() {
+	//10 seconds rand sleep
+	kfiber_msleep(rand() % 10000);
 	for (;;) {
 #ifdef MALLOCDEBUG
 		if (quit_program_flag > 0) {
@@ -98,13 +100,8 @@ void KSockPoolHelper::start_monitor_call_back() {
 		} else {
 			avg_monitor_tick = (int)(0.9 * float(avg_monitor_tick) + 0.1 * float(monitor_tick));
 		}
-		int life_time = this->lifeTime;
-		if (ssl_ctx) {
-			life_time = -1;
-		}
-		us->gc(life_time);
+		us->Destroy();
 		enable();
-		break;
 	}
 	monitor = 0;
 }
@@ -121,8 +118,6 @@ KSockPoolHelper::KSockPoolHelper() {
 #endif
 	ssl_ctx = NULL;
 #endif
-	total_error = 0;
-	total_connect = 0;
 }
 KSockPoolHelper::~KSockPoolHelper() {
 #ifdef ENABLE_UPSTREAM_SSL
@@ -339,15 +334,15 @@ void KSockPoolHelper::disable() {
 	disable_flag = 1;
 	
 }
-bool KSockPoolHelper::isEnable() {
+bool KSockPoolHelper::is_enabled() {
 	if (disable_flag) {
-		return true;
+		return false;
 	}
-	return false;
+	return true;
 }
 void KSockPoolHelper::enable() {
 	disable_flag = 0;
-	error_count = 0;
+	katom_set16((void*)&error_count, 0);
 }
 
 bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {

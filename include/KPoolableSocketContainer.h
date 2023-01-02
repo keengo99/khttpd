@@ -84,6 +84,22 @@ public:
 	{
 	}
 #endif
+	union
+	{
+		struct
+		{
+			uint16_t monitor : 1;
+			uint16_t is_unix : 1;
+			uint16_t sign : 1;
+			uint16_t disable_flag : 1;
+#ifdef ENABLE_UPSTREAM_SSL
+			uint16_t no_sni : 1;
+#endif
+			uint16_t tcp : 1;
+			uint16_t lifeTime;
+		};
+		uint32_t flags;
+	};
 protected:
 	KUpstream* new_upstream(kconnection* cn);
 	KUpstream* get_pool_socket();
@@ -91,15 +107,7 @@ protected:
 	 * 把连接真正放入池中
 	 */
 	void PutPoolSocket(KUpstream *st);
-	union
-	{
-		struct
-		{
-			uint16_t tcp : 1;
-			uint16_t lifeTime;
-		};
-		uint32_t flags;
-	};
+
 	kgl_refs_string* param;
 	KMutex lock;
 private:

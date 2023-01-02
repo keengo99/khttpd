@@ -18,11 +18,10 @@ public:
 	virtual ~KSockPoolHelper();
 	void health(KUpstream *st,HealthStatus stage) override
 	{
-		katom_inc64((void *)&this->total_error);
 		switch(stage){
 		case HealthStatus::Err:
-			error_count++;
-			if (error_count>=max_error_count) {
+			katom_inc64((void*)&this->total_error);
+			if (katom_inc16((void *)&error_count)>=max_error_count) {
 				disable();
 			}
 			break;
@@ -67,7 +66,6 @@ public:
 		return false;
 	}
 	void start_monitor_call_back();
-	//void syncCheckConnect();
 	void setErrorTryTime(int max_error_count, int error_try_time)
 	{
 		lock.Lock();
@@ -83,14 +81,11 @@ public:
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
 	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);
-	void checkActive() {
-		startMonitor();
-	}
 	bool setHostPort(std::string host,int port,const char *ssl);
 	bool setHostPort(std::string host, const char *port);
 	void disable();
 	void enable();
-	bool isEnable();
+	bool is_enabled();
 	void setIp(const char *ip)
 	{
 		if (this->ip) {
@@ -107,20 +102,18 @@ public:
 	}
 	std::string host;
 	uint64_t hit;
+	volatile uint64_t total_error = 0;
+	volatile uint64_t total_connect = 0;
+	int avg_monitor_tick = 0;
+	int error_try_time;	
+	/*
+	 * 连续错误连接次数，如果超过MAX_ERROR_COUNT次，就会认为是问题的。
+	 * 下次试连接时间会从当前时间加ERROR_RECONNECT_TIME秒。
+	 */
+	volatile uint16_t error_count;
+	uint16_t max_error_count;
 	uint16_t weight;
 	uint16_t port;
-	union {
-		struct {
-			uint32_t monitor : 1;
-			uint32_t is_unix : 1;
-			uint32_t sign : 1;
-			uint32_t disable_flag : 1;
-#ifdef ENABLE_UPSTREAM_SSL
-			uint32_t no_sni : 1;
-#endif
-		};
-		uint32_t flags;
-	};
 #ifdef ENABLE_UPSTREAM_SSL
 #ifdef ENABLE_UPSTREAM_HTTP2
 	u_char alpn;
@@ -131,13 +124,6 @@ public:
 	}
 	std::string ssl;
 #endif
-	int error_try_time;
-	/*
-	 * 连续错误连接次数，如果超过MAX_ERROR_COUNT次，就会认为是问题的。
-	 * 下次试连接时间会从当前时间加ERROR_RECONNECT_TIME秒。
-	 */
-	uint16_t error_count;
-	uint16_t max_error_count;
 	void stopMonitor()
 	{
 		lock.Lock();
@@ -150,9 +136,6 @@ public:
 		}
 		return error_try_time;
 	}
-	volatile uint64_t total_error;
-	volatile uint64_t total_connect;
-	int avg_monitor_tick = 0;
 	KSockPoolHelper* next = nullptr;
 	KSockPoolHelper *prev = nullptr;
 private:
@@ -162,7 +145,6 @@ private:
 		monitor = 0;
 	}
 	char *ip;
-	KMutex lock;
 #ifdef ENABLE_UPSTREAM_SSL
 	SSL_CTX *ssl_ctx;
 #endif
