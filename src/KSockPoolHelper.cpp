@@ -152,10 +152,10 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 		}
 	}
 	sockaddr_i* bind_addr = NULL;
-	sockaddr_i bind_tmp_addr;
+	sockaddr_i tmp_addr;
 	const char* bind_ip = ip;
 	if (bind_ip) {
-		bind_addr = &bind_tmp_addr;
+		bind_addr = &tmp_addr;
 		if (!ksocket_getaddr(bind_ip, 0, AF_UNSPEC, AI_NUMERICHOST, bind_addr)) {
 			return NULL;
 		}
@@ -179,6 +179,10 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 #ifdef ENABLE_UPSTREAM_SSL
 	if (this->ssl_ctx) {
 		if (this->no_sni) {
+			sni_host = NULL;
+		}
+		if (sni_host && ksocket_getaddr(sni_host, 0, AF_UNSPEC, AI_NUMERICHOST, &tmp_addr)) {
+			/* sni_host is ip address, then do not send sni to remote. */
 			sni_host = NULL;
 		}
 		if (!kconnection_ssl_connect(cn, ssl_ctx, sni_host)) {
