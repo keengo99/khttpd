@@ -177,7 +177,6 @@ public:
 	bool start_response_body(INT64 body_len);
 	int write(WSABUF* buf, int bc);
 	int write(const char* buf, int len);
-	bool write(kbuf* buf);
 	int read(char* buf, int len);
 	bool write_all(const char* buf, int len);
 	bool parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first);

@@ -456,16 +456,6 @@ int KSink::read(char* buf, int len)
 	}
 	return length;
 }
-bool KSink::write(kbuf* buf)
-{
-	while (buf) {
-		if (!write_all(buf->data, buf->used)) {
-			return false;
-		}
-		buf = buf->next;
-	}
-	return true;
-}
 bool KSink::write_all(const char* buf, int len)
 {
 	while (len > 0) {
