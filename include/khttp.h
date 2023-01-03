@@ -139,8 +139,10 @@
 #define  NBUFF_SIZE     8192
 
 #define KGL_REQUEST_POOL_SIZE 4096
-#define        IS_SPACE(a)     isspace((unsigned char)a)
-#define        IS_DIGIT(a)     isdigit((unsigned char)a)
+#define IS_SPACE(a)     isspace((unsigned char)a)
+#define IS_DIGIT(a)     isdigit((unsigned char)a)
+
+
 KBEGIN_DECLS
 typedef unsigned short hlen_t;
 typedef enum _kgl_header_type
@@ -213,6 +215,12 @@ struct _KHttpHeader
 	};
 
 };
+#define KGL_HEADER_VALUE_INT64 -1
+#define KGL_HEADER_VALUE_INT   -2
+#define KGL_HEADER_VALUE_TIME  -3
+
+#define KGL_IS_HEADER_RAW_VALUE(val)  (val<0)
+
 typedef enum _KGL_RESULT
 {
 	KGL_OK = 0,

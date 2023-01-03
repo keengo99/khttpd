@@ -5,12 +5,7 @@
 #include "kstring.h"
 #include "khttp.h"
 
-
-#define KGL_HEADER_VALUE_INT64 1
-#define KGL_HEADER_VALUE_INT   2
-#define KGL_HEADER_VALUE_TIME  3
-
-char *make_http_time(time_t time, char* buf, int size);
+char* make_http_time(time_t time, char* buf, int size);
 KBEGIN_DECLS
 typedef struct _kgl_header_string
 {
@@ -20,10 +15,8 @@ typedef struct _kgl_header_string
 } kgl_header_string;
 
 extern kgl_header_string kgl_header_type_string[];
-#define kgl_value_type(type) (type<<16)
 #define kgl_cpymem(dst, src, n)   (((u_char *) kgl_memcpy(dst, src, n)) + (n))
-inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result)
-{
+inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result) {
 	if (header->name_is_know) {
 		result->data = kgl_header_type_string[header->know_header].value.data;
 		result->len = kgl_header_type_string[header->know_header].value.len;
@@ -50,24 +43,34 @@ inline KHttpHeader* new_pool_http_header(kgl_pool_t* pool, const char* attr, int
 	return header;
 }
 inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, int val_len) {
-	assert(type>=0 && type<kgl_header_unknow);
+	assert(type >= 0 && type < kgl_header_unknow);
 	KHttpHeader* header = (KHttpHeader*)malloc(sizeof(KHttpHeader));
 	memset(header, 0, sizeof(KHttpHeader));
-	int val_type = (val_len >> 16);
-	switch (val_type) {
+	switch (val_len) {
 	case KGL_HEADER_VALUE_INT64:
-		header->buf = (char*)malloc(KGL_INT64_LEN+1);
+		header->buf = (char*)malloc(KGL_INT64_LEN + 1);
 		header->val_len = snprintf(header->buf, KGL_INT64_LEN, INT64_FORMAT, *(int64_t*)val);
 		break;
+	case KGL_HEADER_VALUE_INT:
+	{
+		header->buf = (char*)malloc(KGL_INT32_LEN + 1);
+		header->val_len = snprintf(header->buf, KGL_INT32_LEN, "%d", *(int*)val);
+		break;
+	}
 	case KGL_HEADER_VALUE_TIME:
 	{
-		header->buf = (char*)malloc(KGL_1123_TIME_LEN+1);
+		header->buf = (char*)malloc(KGL_1123_TIME_LEN + 1);
 		char* end = make_http_time(*(time_t*)val, header->buf, KGL_1123_TIME_LEN);
 		header->val_len = (hlen_t)(end - header->buf);
 		break;
 	}
 	default:
-		header->buf = (char*)malloc(val_len+1);
+		if (val_len <= 0 || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
+			xfree(header);
+			fprintf(stderr, "unknow header=[%d] val_len=[%d]\n", type, val_len);
+			return NULL;
+		}
+		header->buf = (char*)malloc(val_len + 1);
 		kgl_memcpy(header->buf, val, val_len);
 		header->val_len = val_len;
 		break;

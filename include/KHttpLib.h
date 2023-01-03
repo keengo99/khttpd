@@ -118,10 +118,28 @@ inline bool is_absolute_path(const char* str) {
 	return false;
 }
 void CTIME_R(time_t* a, char* b, size_t l);
-/*
- * 18446744073709551616
- * buf min size length is 22
- */
+inline int kgl_parse_value_time(const char* val, int val_len, time_t* value) {
+	if (val_len == KGL_HEADER_VALUE_TIME) {
+		*value = *(time_t*)val;
+		return 0;
+	}
+	if (val_len <= 0) {
+		return -1;
+	}
+	*value = kgl_parse_http_time((u_char*)val, val_len);
+	return 0;
+}
+inline int kgl_parse_value_int64(const char* val, int val_len, int64_t* value) {
+	if (val_len == KGL_HEADER_VALUE_INT64) {
+		*value = *(int64_t*)val;
+		return 0;
+	}
+	if (val_len <= 0) {
+		return -1;
+	}
+	*value = kgl_atol((u_char*)val, val_len);
+	return 0;
+}
 extern int program_rand_value;
 extern int open_file_limit;
 #endif	/* !_LIB_H_INCLUDED_ */
