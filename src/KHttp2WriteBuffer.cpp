@@ -19,9 +19,7 @@ void http2_buff::clean(bool fin)
 		if (ctx->write_wait) {
 			kgl_http2_event *e = ctx->write_wait;
 			ctx->write_wait = NULL;
-			kassert(e->fiber);
-			kfiber_wakeup(e->fiber,e,  fin ? -1 : e->len);
-			//e->result(ctx->data, e->arg, fin?-1:e->len);
+			e->on_write(fin ? -1 : e->len);
 			delete e;
 		}
 		ctx = NULL;

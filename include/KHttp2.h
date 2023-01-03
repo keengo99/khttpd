@@ -144,9 +144,7 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 #define KGL_HTTP_V2_CONNECTION_RECV_WINDOW      KGL_HTTP_V2_MAX_WINDOW
 #define KGL_HTTP_V2_ROOT                         (KHttp2Node *) -1
 #pragma pack(push,1)
-#define IS_WRITE_WAIT_FOR_WINDOW(we)	(we->len<0 && we->buf!=NULL)
-#define IS_WRITE_WAIT_FOR_HUP(we)		(we->buf==NULL)
-#define IS_WRITE_WAIT_FOR_WRITING(we)	(we->len>=0 && we->buf!=NULL)
+
 
 
 struct http2_frame_header
@@ -154,12 +152,10 @@ struct http2_frame_header
 	uint32_t length_type;
 	uint8_t flags;
 	uint32_t stream_id;
-	int get_type()
-	{
+	int get_type() {
 		return (length_type & 0xff);
 	}
-	int get_length()
-	{
+	int get_length() {
 		return (length_type >> 8);
 	}
 	void set_length_type(int length, int type) {
@@ -235,7 +231,7 @@ struct kgl_http_v2_state_t
 	u_char* field_end;
 	kgl_pool_t* pool;
 	kgl_http_v2_header_t             header;
-	uint32_t                         header_length;	
+	uint32_t                         header_length;
 	uint32_t                         buffer_used;
 	u_char                           buffer[8192];
 	kgl_http_v2_handler_pt           handler;
@@ -260,8 +256,7 @@ typedef struct
 class KHttp2Node
 {
 public:
-	KHttp2Node()
-	{
+	KHttp2Node() {
 		memset(this, 0, sizeof(KHttp2Node));
 	}
 	uint32_t                  id;
@@ -309,8 +304,7 @@ public:
 	kgl_http2_event* write_wait;
 	kgl_http2_event* read_wait;
 	KSendBuffer* read_buffer;
-	bool Available()
-	{
+	bool Available() {
 		if (rst) {
 			return false;
 		}
@@ -320,8 +314,7 @@ public:
 		}
 		return true;
 	}
-	http2_buff* build_write_buffer(kgl_http2_event* e, int& len)
-	{
+	http2_buff* build_write_buffer(kgl_http2_event* e, int& len) {
 		http2_buff* buf_out = NULL;
 		http2_buff* last = NULL;
 		//WSABUF vc[MAX_HTTP2_BUFFER_SIZE];
@@ -378,8 +371,7 @@ public:
 		len = total_len;
 		return new_buf;
 	}
-	void CreateWriteWaitWindow(WSABUF* buf, int bc)
-	{
+	void CreateWriteWaitWindow(WSABUF* buf, int bc) {
 		kassert(write_wait == NULL);
 		write_wait = new kgl_http2_event;
 		write_wait->buf = buf;
@@ -398,21 +390,18 @@ public:
 			know_content_length = 0;
 		}
 	}
-	void RemoveQueue()
-	{
+	void RemoveQueue() {
 		if (queue.next) {
 			klist_remove(&queue);
 			queue.next = NULL;
 		}
 	}
-	void AddQueue(kgl_list* list)
-	{
+	void AddQueue(kgl_list* list) {
 		tmo_left = tmo;
 		active_msec = kgl_current_msec;
 		klist_append(list, &queue);
 	}
-	void Init(int send_window)
-	{
+	void Init(int send_window) {
 		memset(this, 0, sizeof(KHttp2Context));
 		recv_window = KGL_HTTP_V2_STREAM_RECV_WINDOW;
 		this->send_window = send_window;
@@ -448,8 +437,7 @@ public:
 	KHttp2Upstream* client(kconnection* cn);
 	KHttp2Upstream* connect();
 	KHttp2Upstream* get_admin_stream();
-	bool IsClientModel()
-	{
+	bool IsClientModel() {
 		return client_model;
 	}
 #endif//}}
@@ -463,11 +451,10 @@ public:
 	bool add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, const char* val, hlen_t val_len);
 	bool send_altsvc(KHttp2Context* ctx, const char* val, int val_len);
 	//kev_result read(KHttp2Context *ctx,result_callback result,buffer_callback buffer,void *arg);
-	void read_hup(KHttp2Context* ctx, result_callback result, void* arg);
-	void remove_read_hup(KHttp2Context* ctx);
+	bool readhup(KHttp2Context* ctx, result_callback result, void* arg);
+	void remove_readhup(KHttp2Context* ctx);
 	void shutdown(KHttp2Context* ctx);
-	KHttp2Node** GetAllStream()
-	{
+	KHttp2Node** GetAllStream() {
 		return streams_index;
 	}
 	//kev_result write(KHttp2Context *ctx,result_callback result,buffer_callback buffer,void *arg);
@@ -505,7 +492,7 @@ private:
 	bool check_recv_window(KHttp2Context* ctx);
 	bool add_header_cookie(KHttp2Context* ctx, const char* val, hlen_t val_len);
 	KHttp2Node* get_node(uint32_t id, bool alloc);
-	int WriteWindowReady(KHttp2Context* ctx);
+	int on_write_window_ready(KHttp2Context* ctx);
 	u_char* close(bool read, int status);
 	void init(kconnection* c);
 	~KHttp2();
@@ -524,11 +511,6 @@ private:
 	int copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc);
 	void set_dependency(KHttp2Node* node, uint32_t depend, bool exclusive);
 	intptr_t parse_int(u_char** pos, u_char* end, uintptr_t prefix);
-	volatile uint32_t                  send_window;
-	uint32_t                           recv_window;
-	uint32_t                           init_window;
-	uint32_t                           frame_size;
-	uint32_t						   max_stream;
 	KHttp2WriteBuffer write_buffer;
 	kgl_list active_queue;
 	KHttp2Node** streams_index;
@@ -537,6 +519,12 @@ private:
 	INT64 last_stream_msec;
 	uint32_t last_peer_sid;
 	uint32_t last_self_sid;
+	volatile int32_t processing;
+	volatile uint32_t send_window;
+	uint32_t recv_window;
+	uint32_t init_window;
+	uint32_t frame_size;
+	uint32_t max_stream;
 	uint16_t write_processing : 1;
 	uint16_t read_processing : 1;
 	uint16_t peer_goaway : 1;
@@ -544,13 +532,11 @@ private:
 	uint16_t closed : 1;
 	uint16_t pinged : 1;
 	uint16_t destroyed : 1;
-	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t client_model : 1;
 	uint16_t has_admin_stream : 1;
 	KHttp2Upstream* NewClientStream(bool admin);
-#endif//}}
-	volatile int32_t processing;
+#endif	
 private:
 	kconnection* c;
 	bool send_settings(bool ack);
@@ -582,13 +568,11 @@ private:
 private:
 	bool get_indexed_header(uintptr_t index, bool name_only);
 	void check_stream_timeout();
-	void AddQueue(KHttp2Context* stream)
-	{
+	void AddQueue(KHttp2Context* stream) {
 		stream->RemoveQueue();
 		stream->AddQueue(&active_queue);
 	}
-	void FlushQueue(KHttp2Context* stream)
-	{
+	void FlushQueue(KHttp2Context* stream) {
 		stream->RemoveQueue();
 		if (stream->read_wait || (stream->write_wait && IS_WRITE_WAIT_FOR_WINDOW(stream->write_wait))) {
 			stream->AddQueue(&active_queue);
@@ -598,8 +582,7 @@ private:
 	bool table_account(size_t size);
 	bool add_header(kgl_http_v2_header_t* header);
 	bool add_cookie(kgl_http_v2_header_t* header);
-	bool IsWriteClosed(KHttp2Context* ctx)
-	{
+	bool IsWriteClosed(KHttp2Context* ctx) {
 		if (read_processing == 0 || closed || ctx->out_closed) {
 			return true;
 		}

@@ -16,6 +16,11 @@
 #include "kfiber.h"
 
 #ifdef ENABLE_HTTP2
+
+#define IS_WRITE_WAIT_FOR_WINDOW(we)	(we->len<0 && we->buf!=NULL)
+#define IS_WRITE_WAIT_FOR_HUP(we)		(we->buf==NULL)
+#define IS_WRITE_WAIT_FOR_WRITING(we)	(we->len>=0 && we->buf!=NULL)
+
 #define ENABLE_HTTP2_TCP_CORK 1
 class KHttp2Context;
 class KHttp2;
@@ -30,8 +35,32 @@ public:
 		memset(this, 0, sizeof(kgl_http2_event));
 	}
 	~kgl_http2_event();
-	kfiber* fiber;
+	void on_read(int got) {
+		if (fiber) {
+			kfiber_wakeup(fiber, this, got);
+		}
+	}
+	void on_write(int got) {
+		if (IS_WRITE_WAIT_FOR_HUP(this)) {
+			readhup_result(NULL, readhup_arg, got);
+		} else {
+			kfiber_wakeup(fiber, this, got);
+		}
+	}
+	union
+	{
+		/**
+		* write_event use readhup_result or fiber to wait result.
+		* when use readhup_result the buf must be NULL otherwise buf must not NULL.
+		*/
+		kfiber* fiber;
+		result_callback readhup_result;
+	};
 	union {
+		/**
+		* on client model before complete read header. 
+		* read_event will use header callback and the fiber must set NULL.
+		*/
 		WSABUF* buf;
 		kgl_header_callback header;
 	};
@@ -41,6 +70,7 @@ public:
 			int len;
 		};
 		void* header_arg;
+		void* readhup_arg;
 	};
 };
 class http2_buff

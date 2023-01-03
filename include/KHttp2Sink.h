@@ -49,14 +49,13 @@ public:
 		}
 		return false;
 	}
-	bool read_hup(void* arg, result_callback result) override
+	bool readhup(void* arg, result_callback result) override
 	{
-		http2->read_hup(ctx, result, arg);
-		return true;
+		return http2->readhup(ctx, result, arg);
 	}
-	void remove_read_hup() override
+	void remove_readhup() override
 	{
-		http2->remove_read_hup(ctx);
+		http2->remove_readhup(ctx);
 	}
 	int internal_read(char* buf, int len) override
 	{

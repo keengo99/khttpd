@@ -74,8 +74,8 @@ public:
 		assert(know_header<kgl_header_unknow);
 		return response_header(kgl_header_type_string[know_header].value.data, (int)kgl_header_type_string[know_header].value.len, val, val_len);
 	}
-	virtual bool read_hup(void* arg, result_callback result) = 0;
-	virtual void remove_read_hup() = 0;
+	virtual bool readhup(void* arg, result_callback result) = 0;
+	virtual void remove_readhup() = 0;
 	virtual bool set_transfer_chunked() {
 		return response_header(kgl_header_transfer_encoding, _KS("chunked"), true);
 	}

@@ -22,11 +22,11 @@ public:
 	bool response_connection(const char* val, int val_len) override {
 		return response_header(kgl_header_connection, val, val_len, true);
 	}
-	bool read_hup(void* arg, result_callback result) override
+	bool readhup(void* arg, result_callback result) override
 	{
 		return selectable_readhup(&cn->st, result, arg);
 	}
-	void remove_read_hup() override
+	void remove_readhup() override
 	{
 		selectable_remove_readhup(&cn->st);
 	}

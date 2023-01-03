@@ -97,12 +97,12 @@ public:
 	{
 		return KBIT_TEST(st_flags, STF_READ | STF_WRITE) > 0;
 	}
-	bool read_hup(void* arg, result_callback result) override
+	bool readhup(void* arg, result_callback result) override
 	{
 		//http2->read_hup(ctx, result, arg);
 		return true;
 	}
-	void remove_read_hup() override
+	void remove_readhup() override
 	{
 		//http2->remove_read_hup(ctx);
 	}
