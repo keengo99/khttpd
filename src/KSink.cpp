@@ -404,7 +404,7 @@ bool KSink::response_content_length(int64_t content_len)
 		return response_header(kgl_header_content_length, len_str, len, false);
 	}
 	//Œﬁcontent-length ±
-	if (data.http_minor == 0) {
+	if (data.http_major==1 && data.http_minor == 0) {
 		//A HTTP/1.0 client no support TE head.
 		//The connection MUST close
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
