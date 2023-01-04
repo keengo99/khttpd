@@ -245,13 +245,11 @@ u_char* KHttp2::close(bool read, int status) {
 			}
 			stream->RemoveQueue();
 			if (read_event) {
-				if (read_event->fiber) {
-					kfiber_wakeup(read_event->fiber, read_event, -1);
-				}
+				read_event->on_read(-1);
 				delete read_event;
 			}
 			if (write_event) {
-				kfiber_wakeup(write_event->fiber, write_event, -1);
+				write_event->on_write(-1);
 				delete write_event;
 			}
 		}
@@ -563,10 +561,7 @@ bool KHttp2::ReadHeaderSuccess(KHttp2Context* stream) {
 		if (read_wait) {
 			stream->read_wait = NULL;
 			kassert(stream->queue.next == NULL);
-			if (read_wait->fiber) {
-				kfiber_wakeup(read_wait->fiber, read_wait, 0);
-				//read_wait->resul(stream->data, read_wait->arg, 0);
-			}
+			read_wait->on_read(0);
 			delete read_wait;
 		}
 		return true;
@@ -1520,14 +1515,12 @@ u_char* KHttp2::state_read_data(u_char* pos, u_char* end) {
 		klog(KLOG_DEBUG, "skipping http2 DATA frame, reason: %d", stream->skip_data);
 		if (state.flags & KGL_HTTP_V2_END_STREAM_FLAG) {
 			stream->in_closed = 1;
-			kgl_http2_event* wait = stream->read_wait;
-			if (wait) {
+			kgl_http2_event* read_wait = stream->read_wait;
+			if (read_wait) {
 				stream->read_wait = NULL;
 				FlushQueue(stream);
-				if (wait->fiber) {
-					kfiber_wakeup(wait->fiber, wait, 0);
-				}
-				delete wait;
+				read_wait->on_read(0);
+				delete read_wait;
 			}
 		}
 		return state_skip_padded(pos, end);
@@ -1546,14 +1539,14 @@ u_char* KHttp2::state_read_data(u_char* pos, u_char* end) {
 			stream->read_buffer = new KSendBuffer();
 		}
 		stream->read_buffer->append((char*)pos, (uint16_t)size);
-		kgl_http2_event* wait = stream->read_wait;
-		if (wait) {
-			assert(wait->fiber);
+		kgl_http2_event* read_wait = stream->read_wait;
+		if (read_wait) {
+			assert(read_wait->fiber);
 			stream->read_wait = NULL;
 			FlushQueue(stream);
-			int got = copy_read_buffer(stream, wait->buf, wait->bc);
-			kfiber_wakeup(wait->fiber, wait, got);
-			delete wait;
+			int got = copy_read_buffer(stream, read_wait->buf, read_wait->bc);
+			read_wait->on_read(got);
+			delete read_wait;
 		}
 		state.length -= (uint32_t)size;
 		pos += size;
@@ -1565,14 +1558,13 @@ u_char* KHttp2::state_read_data(u_char* pos, u_char* end) {
 
 	if (state.flags & KGL_HTTP_V2_END_STREAM_FLAG) {
 		stream->in_closed = 1;
-		kgl_http2_event* wait = stream->read_wait;
-		if (wait) {
-			assert(wait->fiber);
+		kgl_http2_event* read_wait = stream->read_wait;
+		if (read_wait) {
+			assert(read_wait->fiber);
 			stream->read_wait = NULL;
 			FlushQueue(stream);
-			kfiber_wakeup(wait->fiber, wait, 0);
-			//wait->result(stream->data, wait->arg, 0);
-			delete wait;
+			read_wait->on_read(0);
+			delete read_wait;
 		}
 	}
 
