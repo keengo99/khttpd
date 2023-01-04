@@ -495,6 +495,39 @@ int kgl_atoi(const u_char* line, size_t n)
 	}
 	return value;
 }
+
+/* parse a fixed point number, e.g., ngx_atofp("10.5", 4, 2) returns 1050 */
+int64_t kgl_atofp(const char* line, size_t n, size_t point) {
+	int64_t   value;
+	unsigned  dot;
+	if (n == 0) {
+		return 0;
+	}
+	dot = 0;
+	for (value = 0; n--; line++) {
+		if (point == 0) {
+			return 0;
+		}
+		if (*line == '.') {
+			if (dot) {
+				return value;
+			}
+			dot = 1;
+			continue;
+		}
+		if (*line < '0' || *line > '9') {
+			return value;
+		}
+		value = value * 10 + (*line - '0');
+		point -= dot;
+	}
+	while (point--) {
+		value = value * 10;
+	}
+	return value;
+}
+
+
 int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2)
 {
 	size_t     n;
@@ -1310,45 +1343,3 @@ u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...)
 
 	return p;
 }
-#if 0
-int kgl_strcasecmp_size(const char* s1, const char* s2, size_t n)
-{
-	u_char  c1, c2;
-
-	while (n) {
-		c1 = (u_char)*s1++;
-		c2 = (u_char)*s2++;
-
-		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-		if (c1 == c2) {
-			if (c1) {
-				n--;
-				continue;
-			}
-			return 0;
-		}
-		return c1 - c2;
-	}
-	return (int)*s1;
-}
-int kgl_strcmp_size(const char* s1, const char* s2, size_t n)
-{
-	u_char  c1, c2;
-
-	while (n) {
-		c1 = (u_char)*s1++;
-		c2 = (u_char)*s2++;
-
-		if (c1 == c2) {
-			if (c1) {
-				n--;
-				continue;
-			}
-			return 0;
-		}
-		return c1 - c2;
-	}
-	return (int)*s1;
-}
-#endif

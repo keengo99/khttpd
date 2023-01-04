@@ -10,8 +10,7 @@ struct kgl_request_ts
 	kgl_list sinks;
 };
 static pthread_key_t kgl_request_key;
-kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got)
-{
+kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got) {
 	kgl_request_ts* rq = new kgl_request_ts;
 	klist_init(&rq->sinks);
 	pthread_setspecific(kgl_request_key, rq);
@@ -23,8 +22,7 @@ struct kgl_sink_iterator_param
 	kgl_sink_iterator it;
 	kfiber_cond* cond;
 };
-static kev_result ksink_iterator(KOPAQUE data, void* arg, int got)
-{
+static kev_result ksink_iterator(KOPAQUE data, void* arg, int got) {
 	kgl_sink_iterator_param* param = (kgl_sink_iterator_param*)arg;
 	kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
 	kgl_list* pos;
@@ -37,8 +35,7 @@ static kev_result ksink_iterator(KOPAQUE data, void* arg, int got)
 	param->cond->f->notice(param->cond, got);
 	return kev_ok;
 }
-void kgl_iterator_sink(kgl_sink_iterator it, void* ctx)
-{
+void kgl_iterator_sink(kgl_sink_iterator it, void* ctx) {
 	kgl_sink_iterator_param param;
 	param.ctx = ctx;
 	param.it = it;
@@ -51,23 +48,20 @@ void kgl_iterator_sink(kgl_sink_iterator it, void* ctx)
 	}
 	param.cond->f->release(param.cond);
 }
-KSink::KSink(kgl_pool_t* pool)
-{
+KSink::KSink(kgl_pool_t* pool) {
 	init_pool(pool);
 	kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
 	assert(ts);
 	klist_append(&ts->sinks, &queue);
 }
-KSink::~KSink()
-{
+KSink::~KSink() {
 	if (pool) {
 		kgl_destroy_pool(pool);
 	}
 	set_state(STATE_UNKNOW);
 	klist_remove(&queue);
 }
-bool KSink::start_response_body(INT64 body_len)
-{
+bool KSink::start_response_body(INT64 body_len) {
 	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
 	if (KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER)) {
 		return true;
@@ -80,8 +74,7 @@ bool KSink::start_response_body(INT64 body_len)
 	add_down_flow(header_len, true);
 	return header_len > 0;
 }
-bool KSink::begin_request()
-{
+bool KSink::begin_request() {
 	katom_inc64((void*)&kgl_total_requests);
 	set_state(STATE_RECV);
 	assert(data.url == NULL);
@@ -108,8 +101,7 @@ bool KSink::begin_request()
 	}
 	return true;
 }
-bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first)
-{
+bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first) {
 	//printf("attr=[%s],val=[%s]\n",attr,val);
 	if (is_first) {
 		start_parse();
@@ -187,7 +179,14 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Accept-Encoding"))) {
 		KHttpFieldValue field(val, val + val_len);
-		do {
+		int64_t q;
+		for (;;) {
+			const char* field_end = field.get_field_end();
+			if (field.get_double_param(_KS("q"), field_end, 3, &q)) {
+				if (q == 0) {
+					goto next_field;
+				}
+			}
 			if (field.is(kgl_expand_string("gzip"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
 			} else if (field.is(kgl_expand_string("deflate"))) {
@@ -199,7 +198,11 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 			} else if (!field.is(kgl_expand_string("identity"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
 			}
-		} while (field.next());
+		next_field:
+			if (!field.next(field_end)) {
+				break;
+			}
+		}
 		return data.add_header(kgl_header_accept_encoding, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
@@ -304,8 +307,7 @@ void KSink::init_pool(kgl_pool_t* pool) {
 		this->pool = kgl_create_pool(KGL_REQUEST_POOL_SIZE);
 	}
 }
-void KSink::reset_pipeline()
-{
+void KSink::reset_pipeline() {
 	data.clean();
 	data.init();
 	if (pool) {
@@ -314,8 +316,7 @@ void KSink::reset_pipeline()
 	}
 	set_state(STATE_IDLE);
 }
-const char* KSink::get_state()
-{
+const char* KSink::get_state() {
 	switch (data.state) {
 	case STATE_IDLE:
 		return "idle";
@@ -328,8 +329,7 @@ const char* KSink::get_state()
 	}
 	return "unknow";
 }
-void KSink::set_state(uint8_t state)
-{
+void KSink::set_state(uint8_t state) {
 #ifdef ENABLE_STAT_STUB
 	if (data.state == state) {
 		return;
@@ -363,8 +363,7 @@ void KSink::set_state(uint8_t state)
 	}
 #endif
 }
-bool KSink::adjust_range(int64_t* len)
-{
+bool KSink::adjust_range(int64_t* len) {
 	if (data.range_from >= 0) {
 		if (data.range_from >= (*len)) {
 			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
@@ -395,8 +394,7 @@ void KSink::start_parse() {
 		KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
 	}
 }
-bool KSink::response_content_length(int64_t content_len)
-{
+bool KSink::response_content_length(int64_t content_len) {
 	if (content_len >= 0) {
 		//有content-length时
 		char len_str[INT2STRING_LEN];
@@ -404,7 +402,7 @@ bool KSink::response_content_length(int64_t content_len)
 		return response_header(kgl_header_content_length, len_str, len, false);
 	}
 	//无content-length时
-	if (data.http_major==1 && data.http_minor == 0) {
+	if (data.http_major == 1 && data.http_minor == 0) {
 		//A HTTP/1.0 client no support TE head.
 		//The connection MUST close
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
@@ -413,23 +411,20 @@ bool KSink::response_content_length(int64_t content_len)
 	}
 	return true;
 }
-int KSink::write(WSABUF* buf, int bc)
-{
+int KSink::write(WSABUF* buf, int bc) {
 	int got = internal_write(buf, bc);
 	if (got > 0) {
 		add_down_flow(got);
 	}
 	return got;
 }
-int KSink::write(const char* buf, int len)
-{
+int KSink::write(const char* buf, int len) {
 	WSABUF bufs;
 	bufs.iov_base = (char*)buf;
 	bufs.iov_len = len;
 	return write(&bufs, 1);
 }
-int KSink::read(char* buf, int len)
-{
+int KSink::read(char* buf, int len) {
 	KBIT_SET(data.flags, RQ_HAS_READ_POST);
 	kassert(!kfiber_is_main());
 	if (KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
@@ -456,8 +451,7 @@ int KSink::read(char* buf, int len)
 	}
 	return length;
 }
-bool KSink::write_all(const char* buf, int len)
-{
+bool KSink::write_all(const char* buf, int len) {
 	while (len > 0) {
 		int this_len = write(buf, len);
 		if (this_len <= 0) {
@@ -468,8 +462,7 @@ bool KSink::write_all(const char* buf, int len)
 	}
 	return true;
 }
-bool kgl_init_sink_queue()
-{
+bool kgl_init_sink_queue() {
 	pthread_key_create(&kgl_request_key, NULL);
 	if (0 != selector_manager_thread_init(kgl_request_thread_init, NULL)) {
 		klog(KLOG_ERR, "init_http_server_callback must called early!!!\n");

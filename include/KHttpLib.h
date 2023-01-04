@@ -26,6 +26,7 @@ bool parse_url(const char* src, KUrl* url);
 bool parse_url(const char* src, size_t len, KUrl* url);
 int64_t kgl_atol(const u_char* line, size_t n);
 int kgl_atoi(const u_char* line, size_t n);
+int64_t kgl_atofp(const char* line, size_t n, size_t point);
 INLINE int64_t string2int(const char* buf) {
 	return kgl_atol((u_char *)buf, strlen(buf));
 }
