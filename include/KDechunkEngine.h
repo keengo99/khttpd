@@ -10,6 +10,7 @@ enum class KDechunkResult
 {
 	Success,//解码成功，有数据返回，但要继续解码
 	Continue,//解码成功，无数据返回，要继续喂数据
+	Trailer,//解码成功，返回的数据是trailer
 	End,//解码成功，无数据返回，解码结束
 	Failed//解码错误
 };
@@ -39,6 +40,7 @@ public:
 		chunk_size = KHTTPD_CHUNK_STATUS_READ_SIZE;
 	}
 	//piece_length是in,out参数，in时指示最大块长度
+	//如果返回的是trailer数据，piece_length会忽略传进来的值。
 	KDechunkResult dechunk(const char** buf, const char* end, const char** piece, int* piece_length);
 	KDechunkResult dechunk(const char** buf, int buf_len, const char** piece, int* piece_length);
 	bool is_success() {

@@ -78,8 +78,8 @@
 #define RQ_CONNECTION_CLOSE    (1<<24)
 #define RQ_OBJ_STORED          (1<<25)
 #define RQ_HAVE_EXPECT         (1<<26)
+#define RQ_HAS_SEND_CHUNK_0    (1<<28)
 
-#define RQ_TEMPFILE_HANDLED    (1<<28)
 #define RQ_IS_ERROR_PAGE       (1<<29)
 #define RQ_UPSTREAM            (1<<30)
 #define RQ_UPSTREAM_ERROR      (1<<31)

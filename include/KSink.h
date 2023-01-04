@@ -79,6 +79,9 @@ public:
 	virtual bool set_transfer_chunked() {
 		return response_header(kgl_header_transfer_encoding, _KS("chunked"), true);
 	}
+	virtual bool response_trailer(const char* name, int name_len, const char* val, int val_len) {
+		return true;
+	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
 	virtual sockaddr_i* get_peer_addr() = 0;
 	bool get_peer_ip(char* ips, int ips_len)

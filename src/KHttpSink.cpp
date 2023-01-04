@@ -8,20 +8,17 @@
 #include "KHttpServer.h"
 
 #define MAX_HTTP_CHUNK_SIZE 8192
-kev_result delete_request_fiber(KOPAQUE data, void* arg, int got)
-{
+kev_result delete_request_fiber(KOPAQUE data, void* arg, int got) {
 	KSink* rq = (KSink*)arg;
 	delete rq;
 	return kev_ok;
 }
-kev_result end_http_sink_fiber(KOPAQUE data, void* arg, int got)
-{
+kev_result end_http_sink_fiber(KOPAQUE data, void* arg, int got) {
 	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
 	sink->EndFiber();
 	return kev_ok;
 }
-kev_result result_skip_chunk_request(KOPAQUE data, void* arg, int got)
-{
+kev_result result_skip_chunk_request(KOPAQUE data, void* arg, int got) {
 	KSink* s = (KSink*)arg;
 	if (got < 0) {
 		delete s;
@@ -36,8 +33,7 @@ kev_result result_skip_chunk_request(KOPAQUE data, void* arg, int got)
 	sink->SkipPost();
 	return kev_ok;
 }
-kev_result result_skip_post(KOPAQUE data, void* arg, int got)
-{
+kev_result result_skip_post(KOPAQUE data, void* arg, int got) {
 	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
 	if (got <= 0) {
 		delete sink;
@@ -47,8 +43,7 @@ kev_result result_skip_post(KOPAQUE data, void* arg, int got)
 	sink->SkipPost();
 	return kev_ok;
 }
-kev_result result_read_http_sink(KOPAQUE data, void* arg, int got)
-{
+kev_result result_read_http_sink(KOPAQUE data, void* arg, int got) {
 	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
 	if (got <= 0) {
 		delete sink;
@@ -58,15 +53,13 @@ kev_result result_read_http_sink(KOPAQUE data, void* arg, int got)
 	return sink->Parse();
 }
 
-int buffer_read_http_sink(KOPAQUE data, void* arg, WSABUF *buf, int bufCount)
-{
+int buffer_read_http_sink(KOPAQUE data, void* arg, WSABUF* buf, int bufCount) {
 	KHttpSink* sink = static_cast<KHttpSink*>((KSink*)arg);
 	int bc = ks_get_write_buffers(&sink->buffer, buf, bufCount);
 	return bc;
 }
 #ifdef KSOCKET_SSL
-static int handle_http2https_error(void* arg, int got)
-{
+static int handle_http2https_error(void* arg, int got) {
 	KSink* sink = (KSink*)arg;
 	KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
 	if (http2https_error) {
@@ -85,8 +78,7 @@ static int handle_http2https_error(void* arg, int got)
 	return 0;
 }
 #endif
-KHttpSink::KHttpSink(kconnection* c, kgl_pool_t* pool) : KTcpServerSink(pool)
-{
+KHttpSink::KHttpSink(kconnection* c, kgl_pool_t* pool) : KTcpServerSink(pool) {
 	this->cn = c;
 	ks_buffer_init(&buffer, MAX_HTTP_CHUNK_SIZE);
 	memset(&parser, 0, sizeof(parser));
@@ -103,22 +95,19 @@ KHttpSink::~KHttpSink() {
 	}
 	kconnection_destroy(cn);
 }
-void KHttpSink::start_header()
-{
+void KHttpSink::start_header() {
 	if (rc == NULL) {
 		rc = new KResponseContext(pool);
 	}
 }
-bool KHttpSink::internal_response_status(uint16_t status_code)
-{
+bool KHttpSink::internal_response_status(uint16_t status_code) {
 	kassert(rc);
 	kgl_str_t request_line;
 	KHttpKeyValue::get_request_line(pool, status_code, &request_line);
 	rc->head_insert_const(request_line.data, (uint16_t)request_line.len);
 	return true;
 }
-kev_result KHttpSink::Parse()
-{
+kev_result KHttpSink::Parse() {
 	khttp_parse_result rs;
 	char* hot = buffer.buf;
 	char* end = buffer.buf + buffer.used;
@@ -171,8 +160,7 @@ kev_result KHttpSink::Parse()
 		}
 	}
 }
-bool KHttpSink::response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value)
-{
+bool KHttpSink::response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) {
 	assert(know_header < kgl_header_unknow);
 	rc->head_append_const(kgl_header_type_string[know_header].http11.data, (uint16_t)kgl_header_type_string[know_header].http11.len);
 	if (lock_value) {
@@ -184,8 +172,7 @@ bool KHttpSink::response_header(kgl_header_type know_header, const char* val, in
 	}
 	return true;
 }
-bool KHttpSink::response_header(const char* name, int name_len, const char* val, int val_len)
-{
+bool KHttpSink::response_header(const char* name, int name_len, const char* val, int val_len) {
 	kassert(rc);
 	int len = name_len + val_len + 4;
 	char* buf = (char*)kgl_pnalloc(rc->ab.pool, len);
@@ -201,8 +188,7 @@ bool KHttpSink::response_header(const char* name, int name_len, const char* val,
 	rc->head_append(buf, len);
 	return true;
 }
-int KHttpSink::internal_start_response_body(int64_t body_size)
-{
+int KHttpSink::internal_start_response_body(int64_t body_size) {
 	if (rc == NULL) {
 		return 0;
 	}
@@ -230,8 +216,7 @@ int KHttpSink::internal_start_response_body(int64_t body_size)
 	rc = NULL;
 	return header_len;
 }
-int KHttpSink::internal_read(char* buf, int len)
-{
+int KHttpSink::internal_read(char* buf, int len) {
 	if (dechunk) {
 		return dechunk->read(this, buf, len);
 	}
@@ -243,17 +228,49 @@ int KHttpSink::internal_read(char* buf, int len)
 	}
 	return kfiber_net_read(cn, buf, len);
 }
-int KHttpSink::internal_write(WSABUF* buf, int bc)
-{
+int KHttpSink::internal_write(WSABUF* buf, int bc) {
 	assert(!kfiber_is_main());
+	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
+		int size = 0;
+		for (int i = 0; i < bc; i++) {
+			size += buf[i].iov_len;
+		}
+		char header[32];
+		WSABUF* new_bufs = (WSABUF*)alloca(sizeof(WSABUF) * (bc + 2));
+		new_bufs[0].iov_len = sprintf(header, "%x\r\n", size);
+		new_bufs[0].iov_base = header;
+		memcpy(new_bufs + 1, buf, sizeof(WSABUF) * bc);
+		bc++;
+		new_bufs[bc].iov_base = (char*)"\r\n";
+		new_bufs[bc].iov_len = 2;
+		bc++;
+		if (!kfiber_net_writev_full(cn, new_bufs, &bc)) {
+			return -1;
+		}
+		return size;
+	}
 	return kfiber_net_writev(cn, buf, bc);
 }
-int KHttpSink::end_request()
-{
+int KHttpSink::end_request() {
 	if (rc) {
 		delete rc;
 		rc = NULL;
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+	} else if (KBIT_TEST(data.flags, RQ_TE_CHUNKED | RQ_BODY_NOT_COMPLETE) == RQ_TE_CHUNKED) {
+		//has chunked but body is complete successful.
+		WSABUF bufs;
+		int bc = 1;
+		if (!KBIT_TEST(data.flags, RQ_HAS_SEND_CHUNK_0)) {
+			KBIT_SET(data.flags, RQ_HAS_SEND_CHUNK_0);
+			bufs.iov_base = (char*)"0\r\n\r\n";
+			bufs.iov_len = 5;
+		} else {
+			bufs.iov_base = (char*)"\r\n";
+			bufs.iov_len = 2;
+		}
+		if (!kfiber_net_writev_full(cn, &bufs, &bc)) {
+			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+		}
 	}
 	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 		return kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
@@ -269,8 +286,7 @@ int KHttpSink::end_request()
 	}
 	return StartPipeLine();
 }
-void KHttpSink::SkipPost()
-{
+void KHttpSink::SkipPost() {
 	kassert(data.left_read != 0);
 	if (dechunk) {
 		for (;;) {
@@ -312,16 +328,14 @@ void KHttpSink::SkipPost()
 	}
 	StartPipeLine();
 }
-void KHttpSink::EndFiber()
-{
+void KHttpSink::EndFiber() {
 	if (buffer.used > 0) {
 		Parse();
 		return;
 	}
 	ReadHeader();
 }
-int KHttpSink::StartPipeLine()
-{
+int KHttpSink::StartPipeLine() {
 	kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
 	reset_pipeline();
 	memset(&parser, 0, sizeof(parser));
@@ -331,7 +345,35 @@ int KHttpSink::StartPipeLine()
 	}
 	return kfiber_exit_callback(NULL, end_http_sink_fiber, (KSink*)this);
 }
-kev_result KHttpSink::ReadHeader()
-{
+kev_result KHttpSink::ReadHeader() {
 	return selectable_read(&cn->st, result_read_http_sink, buffer_read_http_sink, (KSink*)this);
+}
+bool KHttpSink::response_trailer(const char* name, int name_len, const char* val, int val_len) {
+	if (!KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
+		return true;
+	}
+	WSABUF bufs[5];
+	int bc = 0;
+	if (!KBIT_TEST(data.flags, RQ_HAS_SEND_CHUNK_0)) {
+		KBIT_SET(data.flags, RQ_HAS_SEND_CHUNK_0);
+		bufs[bc].iov_base = (char*)"0\r\n";
+		bufs[bc].iov_len = 3;
+		bc++;
+	}
+	bufs[bc].iov_base = (char*)name;
+	bufs[bc].iov_len = name_len;
+	bc++;
+	bufs[bc].iov_base = (char*)": ";
+	bufs[bc].iov_len = 2;
+	bc++;
+	bufs[bc].iov_base = (char*)val;
+	bufs[bc].iov_len = val_len;
+	bc++;
+	bufs[bc].iov_base = (char*)"\r\n";
+	bufs[bc].iov_len = 2;
+	bc++;
+	if (!kfiber_net_writev_full(cn, bufs, &bc)) {
+		return -1;
+	}
+	return true;
 }

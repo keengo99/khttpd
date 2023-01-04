@@ -16,14 +16,32 @@ restart:
 	{
 		const char* next_line = (const char*)memchr(*buf, '\n', end - (*buf));
 		if (next_line == NULL) {
-			*buf = end;
+			if (chunk_size == KHTTPD_CHUNK_STATUS_READ_END) {
+				*buf = end;
+			}
 			return KDechunkResult::Continue;
 		}
-		(*buf) += (int)(next_line - (*buf) + 1);
 		if (chunk_size == KHTTPD_CHUNK_STATUS_READ_LAST) {
-			chunk_size = KHTTPD_CHUNK_STATUS_IS_END;
-			return KDechunkResult::End;
+			//trim left
+			while ((*buf) < next_line && isspace((unsigned char)*(*buf))) {
+				(*buf)++;
+			}
+			const char* trailer_end = next_line;
+			//trim right
+			while (trailer_end > (*buf) && isspace((unsigned char)*trailer_end)) {
+				trailer_end--;
+			}
+			if (*buf == trailer_end) {
+				(*buf) = next_line + 1;
+				chunk_size = KHTTPD_CHUNK_STATUS_IS_END;
+				return KDechunkResult::End;
+			}
+			*piece = *buf;
+			*piece_length = (int)(trailer_end - (*buf) + 1);
+			(*buf) = next_line + 1;
+			return KDechunkResult::Trailer;
 		}
+		(*buf) = next_line + 1;
 		chunk_size = KHTTPD_CHUNK_STATUS_READ_SIZE;
 		//这里不加break直接fallthrough,到下面status_read_chunk_size
 	}

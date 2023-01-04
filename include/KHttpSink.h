@@ -65,6 +65,7 @@ public:
 	{
 		return dechunk;
 	}
+	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
 	void SkipPost();
 	int StartPipeLine();
 	void EndFiber();
