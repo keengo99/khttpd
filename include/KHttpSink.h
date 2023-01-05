@@ -84,6 +84,9 @@ protected:
 	int internal_read(char* buf, int len) override;
 	int internal_write(WSABUF* buf, int bc) override;
 protected:
+#ifdef ENABLE_HTTP2
+	bool switch_h2c();
+#endif
 	void start_header() override;
 	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext* dechunk;

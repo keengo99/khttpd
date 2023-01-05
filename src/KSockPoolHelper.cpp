@@ -226,13 +226,32 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 #endif
 	}
 #endif
+#ifdef ENABLE_UPSTREAM_HTTP2
+	if (h2) {
+		KHttp2* http2 = new KHttp2();
+		selectable_bind_opaque(&cn->st, http2);
+		KHttp2Upstream* http2_us = http2->client(cn);
+		bind(http2_us);
+		return http2_us;
+	}
+#endif
 	socket = new_upstream(cn);
 	bind(socket);
 	return socket;
 }
-bool KSockPoolHelper::setHostPort(std::string host, int port, const char* ssl) {
+bool KSockPoolHelper::setHostPort(std::string host, int port, const char* s) {
 	bool destChanged = false;
 	lock.Lock();
+	if (s && *s == 'h') {
+		h2 = 1;
+		s = NULL;
+	} else {
+		h2 = 0;
+	}
+	if (s && (*s != 's' && *s != 'S')) {
+		s = NULL;
+	}
+
 	if (this->host != host || this->port != port) {
 		destChanged = true;
 	}
@@ -242,9 +261,9 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* ssl) {
 	char* ssl_buf = NULL;
 	char* protocols = NULL;
 	char* chiper = NULL;
-	if (ssl) {
-		this->ssl = ssl;
-		ssl_buf = strdup(ssl);
+	if (s) {
+		this->ssl = s;
+		ssl_buf = strdup(s);
 		protocols = strchr(ssl_buf, '/');
 		if (protocols) {
 			*protocols = '\0';
@@ -271,7 +290,7 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* ssl) {
 		SSL_CTX_free(ssl_ctx);
 		ssl_ctx = NULL;
 	}
-	if (ssl) {
+	if (s) {
 		void* ssl_ctx_data = NULL;
 #ifdef ENABLE_UPSTREAM_HTTP2
 		ssl_ctx_data = &alpn;
@@ -327,14 +346,11 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* ssl) {
 	return true;
 }
 bool KSockPoolHelper::setHostPort(std::string host, const char* port) {
-	const char* ssl = port;
-	while (*ssl && IS_DIGIT(*ssl)) {
-		ssl++;
+	const char* s = port;
+	while (*s && IS_DIGIT(*s)) {
+		s++;
 	}
-	if (*ssl != 's' && *ssl != 'S') {
-		ssl = NULL;
-	}
-	return setHostPort(host, atoi(port), ssl);
+	return setHostPort(host, atoi(port), s);
 }
 void KSockPoolHelper::disable() {
 	disable_flag = 1;
@@ -367,16 +383,27 @@ bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
 	sign = (attr["sign"] == "1");
 	return true;
 }
-void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
-	attr["host"] = host;
+std::string KSockPoolHelper::get_port() {
 	std::stringstream s;
+	if (is_unix) {
+		s << "-";
+		return s.str();
+	}
 	s << (int)port;
 #ifdef ENABLE_UPSTREAM_SSL
 	if (!ssl.empty()) {
 		s << ssl;
 	}
 #endif
-	attr["port"] = s.str();
+	if (h2) {
+		s << "h";
+	}
+	return s.str();
+}
+void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
+	attr["host"] = host;
+	std::stringstream s;
+	attr["port"] = get_port();
 	attr["life_time"] = std::to_string(getLifeTime());
 	kgl_refs_string* str = GetParam();
 	if (str) {

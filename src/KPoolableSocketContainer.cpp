@@ -94,21 +94,21 @@ KPoolableSocketContainer::~KPoolableSocketContainer() {
 void KPoolableSocketContainer::unbind(KUpstream *st) {
 	release();
 }
-void KPoolableSocketContainer::gcSocket(KUpstream *st,int lifeTime) {
-	if (this->lifeTime <= 0 || lifeTime < 0) {
+void KPoolableSocketContainer::gcSocket(KUpstream *st,int life_time) {
+	if (this->life_time <= 0 || life_time < 0) {
 		//printf("sorry the lifeTime is zero.we must close it us=[%p]\n",st);
 		st->Destroy();
 		return;
 	}
-	if (lifeTime == 0 || lifeTime>this->lifeTime) {
-		lifeTime = this->lifeTime;
+	if (life_time == 0 || life_time>this->life_time) {
+		life_time = this->life_time;
 	}
 	time_t now_time = kgl_current_sec;
 	if (st->read_header_time > now_time) {
 		st->Destroy();
 		return;
 	}
-	st->expire_time = st->read_header_time + lifeTime;
+	st->expire_time = st->read_header_time + life_time;
 	if (st->expire_time < now_time) {
 		st->Destroy();
 		return;
@@ -171,9 +171,9 @@ void KPoolableSocketContainer::bind(KUpstream *st) {
 	st->container = this;
 	addRef();
 }
-void KPoolableSocketContainer::setLifeTime(int lifeTime) {
-	this->lifeTime = lifeTime;
-	if (lifeTime <= 0) {
+void KPoolableSocketContainer::setLifeTime(int life_time) {
+	this->life_time = life_time;
+	if (life_time <= 0) {
 		clean();
 	}
 }

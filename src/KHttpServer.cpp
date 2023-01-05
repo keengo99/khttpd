@@ -97,7 +97,7 @@ bool start_http_server(kserver* server, int flags, SOCKET sockfd) {
 	if (ksocket_opened(sockfd)) {
 		return kserver_open_exsit(server, sockfd, handle_connection);
 	}
-	return kserver_open(server, 0, handle_connection);
+	return kserver_open(server, flags, handle_connection);
 }
 void shutdown_http_server() {
 #ifdef ENABLE_HTTP3

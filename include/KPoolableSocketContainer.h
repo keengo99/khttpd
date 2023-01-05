@@ -40,16 +40,16 @@ public:
 	close,是否关闭
 	lifeTime 连接时间
 	*/
-	virtual void gcSocket(KUpstream *st,int lifeTime);
+	virtual void gcSocket(KUpstream *st,int life_time);
 	void bind(KUpstream *st);
 	void unbind(KUpstream *st);
 	int getLifeTime() {
-		return lifeTime;
+		return life_time;
 	}
 	/*
 	 * 设置连接超时时间
 	 */
-	void setLifeTime(int lifeTime);
+	void setLifeTime(int life_time);
 	/*
 	 * 定期刷新删除过期连接
 	 */
@@ -101,7 +101,8 @@ public:
 			uint16_t no_sni : 1;
 #endif
 			uint16_t tcp : 1;
-			uint16_t lifeTime;
+			uint16_t h2 : 1;
+			uint16_t life_time;
 		};
 		uint32_t flags;
 	};
@@ -120,12 +121,12 @@ private:
 	KUpstream *internalGetPoolSocket();
 	time_t getHttp2ExpireTime()
 	{
-		int lifeTime = this->lifeTime;
-		if (lifeTime <= 10) {
+		int life_time = this->life_time;
+		if (life_time <= 10) {
 			//http2最少10秒连接时间
-			lifeTime = 10;
+			life_time = 10;
 		}
-		return kgl_current_sec + lifeTime;
+		return kgl_current_sec + life_time;
 	}
 	KPoolableSocketContainerImp *imp;
 };

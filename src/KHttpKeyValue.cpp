@@ -44,7 +44,8 @@ static kgl_str_t http_methods[MAX_METHOD] = {
 		kgl_string("PURGE"),
 		kgl_string("PATCH"),
 		kgl_string("SUBSCRIBE"),
-		kgl_string("UNSUBSCRIBE")
+		kgl_string("UNSUBSCRIBE"),
+		kgl_string("PRI")
 };
 kgl_str_t *KHttpKeyValue::get_method(int meth) {
 	if (meth < 0 || meth >= MAX_METHOD) {

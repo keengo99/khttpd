@@ -147,15 +147,17 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		while (*space && IS_SPACE(*space)) {
 			space++;
 		}
-		bool result;
-		if (data.meth == METH_CONNECT) {
-			result = data.parse_connect_url((u_char*)val, url_len);
-		} else {
-			result = parse_url(val, url_len, data.raw_url);
-		}
-		if (!result) {
-			//klog(KLOG_DEBUG, "httpparse:cann't parse url [%s]\n", val);
-			return false;
+		switch (data.meth) {
+		case METH_CONNECT:
+			if (!data.parse_connect_url((u_char*)val, url_len)) {
+				return false;
+			}
+		case METH_PRI:
+			return true;
+		default:
+			if (!parse_url(val, url_len, data.raw_url)) {
+				return false;
+			}
 		}
 		if (!data.parse_http_version(space, val_len - url_len)) {
 			//klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);

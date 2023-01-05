@@ -447,8 +447,8 @@ public:
 	KHttp2();
 public:
 	void server(kconnection* c);
+	bool server_h2c(kconnection* c, const char* buf, int len);
 	kselector* getSelector();
-	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
 	KHttp2Upstream* client(kconnection* cn);
 	KHttp2Upstream* connect();
@@ -456,7 +456,7 @@ public:
 	bool IsClientModel() {
 		return client_model;
 	}
-#endif//}}
+#endif
 public:
 	int ReadHeader(KHttp2Context* ctx);
 	int read(KHttp2Context* ctx, WSABUF* buf, int bc);

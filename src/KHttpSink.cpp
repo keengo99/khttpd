@@ -6,6 +6,8 @@
 #include "khttp.h"
 #include "KHttpKeyValue.h"
 #include "KHttpServer.h"
+#include "KHttp2.h"
+#include "klog.h"
 
 #define MAX_HTTP_CHUNK_SIZE 8192
 kev_result delete_request_fiber(KOPAQUE data, void* arg, int got) {
@@ -93,7 +95,9 @@ KHttpSink::~KHttpSink() {
 	if (buffer.buf) {
 		xfree(buffer.buf);
 	}
-	kconnection_destroy(cn);
+	if (cn) {
+		kconnection_destroy(cn);
+	}
 }
 void KHttpSink::start_header() {
 	if (rc == NULL) {
@@ -135,6 +139,16 @@ kev_result KHttpSink::Parse() {
 				delete this;
 				return kev_destroy;
 			}
+			if (rs.is_first && data.meth == METH_PRI && KBIT_TEST(cn->server->flags, KGL_SERVER_H2)) {
+#ifdef ENABLE_HTTP2
+				ks_save_point(&buffer, hot);
+				if (!switch_h2c()) {
+					klog(KLOG_ERR, "cann't switch to h2c, buffer size=[%d] may greater than http2 buffer\n", buffer.used);
+				}
+#endif
+				delete this;
+				return kev_destroy;
+			}
 			break;
 		case kgl_parse_finished:
 			kassert(rc == NULL);
@@ -160,6 +174,18 @@ kev_result KHttpSink::Parse() {
 		}
 	}
 }
+#ifdef ENABLE_HTTP2
+bool KHttpSink::switch_h2c() 	{
+	KHttp2* http2 = new KHttp2();
+	selectable_bind_opaque(&cn->st, http2);
+	if (!http2->server_h2c(cn, buffer.buf, buffer.used)) {
+		return false;
+	}
+	//cn is handle by http2
+	cn = nullptr;
+	return true;
+}
+#endif
 bool KHttpSink::response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) {
 	assert(know_header < kgl_header_unknow);
 	rc->head_append_const(kgl_header_type_string[know_header].http11.data, (uint16_t)kgl_header_type_string[know_header].http11.len);

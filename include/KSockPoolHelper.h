@@ -57,7 +57,7 @@ public:
 		if (ip!=sh->ip || (ip && strcmp(ip,sh->ip)!=0)) {
 			return true;
 		}
-		if (lifeTime != sh->lifeTime) {
+		if (life_time != sh->life_time) {
 			return true;
 		}
 		if (sign != sh->sign) {
@@ -82,8 +82,9 @@ public:
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
 	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);
-	bool setHostPort(std::string host,int port,const char *ssl);
+	std::string get_port();
 	bool setHostPort(std::string host, const char *port);
+	bool setHostPort(std::string host, int port, const char* s);
 	void disable();
 	void enable();
 	bool is_enabled();

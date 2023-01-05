@@ -683,7 +683,9 @@ KHttp2Context* KHttp2::create_stream() {
 	KHttp2Sink* sink = new KHttp2Sink(this, stream, state.pool);
 	stream->request = sink;
 	stream->request->data.http_major = 2;
-	KBIT_SET(stream->request->data.raw_url->flags, KGL_URL_SSL);
+	if (kconnection_is_ssl(c)) {
+		KBIT_SET(stream->request->data.raw_url->flags, KGL_URL_SSL);
+	}
 	return stream;
 }
 void KHttp2::set_dependency(KHttp2Node* node, uint32_t depend, bool exclusive) {
@@ -1231,6 +1233,24 @@ KHttp2Upstream* KHttp2::NewClientStream(bool admin) {
 	return new KHttp2Upstream(this, stream);
 }
 #endif
+bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) 	{
+	if (len > sizeof(state.buffer)) {
+		return false;
+	}
+	init(c);
+	state.handler = &KHttp2::state_preface_end;
+	send_settings(false);
+	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
+		start_write();
+	}
+	if (len > 0) {
+		memcpy(state.buffer, buf, len);
+		resultHttp2Read(this, c, len);
+		return true;
+	}
+	start_read();
+	return true;
+}
 void KHttp2::server(kconnection* c) {
 	init(c);
 	state.handler = &KHttp2::state_preface;

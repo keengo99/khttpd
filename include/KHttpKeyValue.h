@@ -44,7 +44,8 @@
 #define METH_PATCH      30
 #define METH_SUBSCRIBE  31
 #define METH_UNSUBSCRIBE 32
-#define MAX_METHOD      33
+#define METH_PRI        33
+#define MAX_METHOD      34
 
 class KHttpKeyValue
 {
