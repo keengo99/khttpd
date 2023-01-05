@@ -72,6 +72,11 @@ void KSockPoolHelper::start_monitor_call_back() {
 	//10 seconds rand sleep
 	kfiber_msleep(rand() % 10000);
 	for (;;) {
+#ifdef MALLOCDEBUG
+		if (kgl_get_tls_selector()->shutdown) {
+			break;
+		}
+#endif
 		if (!monitor) {
 			//monitor is stoped
 			break;
@@ -340,6 +345,10 @@ bool KSockPoolHelper::is_enabled() {
 		return false;
 	}
 	return true;
+}
+void KSockPoolHelper::shutdown() {
+	monitor = 0;
+	refresh(0);
 }
 void KSockPoolHelper::enable() {
 	disable_flag = 0;

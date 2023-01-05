@@ -89,7 +89,7 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 #ifdef KSOCKET_SSL
 	kssl_set_npn_callback(khttp_server_alpn);
 #ifdef ENABLE_HTTP3
-	init_khttp3();
+	kgl_init_khttp3();
 #endif
 #endif
 }
@@ -98,4 +98,10 @@ bool start_http_server(kserver* server, int flags, SOCKET sockfd) {
 		return kserver_open_exsit(server, sockfd, handle_connection);
 	}
 	return kserver_open(server, 0, handle_connection);
+}
+void shutdown_http_server() {
+#ifdef ENABLE_HTTP3
+	kgl_shutdown_khttp3();
+#endif
+	khttp_server_set_ssl_config(NULL, NULL, NULL);
 }

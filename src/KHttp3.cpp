@@ -501,8 +501,10 @@ static int h3_log_buf(void* ctx, const char* buf, size_t len) {
 }
 static const struct lsquic_logger_if logger_if = { h3_log_buf, };
 
-
-bool init_khttp3() {
+void kgl_shutdown_khttp3() {
+	lsquic_global_cleanup();
+}
+bool kgl_init_khttp3() {
 	lsquic_global_init(LSQUIC_GLOBAL_SERVER | LSQUIC_GLOBAL_CLIENT);
 	//lsquic_logger_init(&logger_if, stdout, LLTS_HHMMSSUS);
 	//lsquic_set_log_level("debug");

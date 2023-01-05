@@ -180,7 +180,7 @@ void KPoolableSocketContainer::setLifeTime(int lifeTime) {
 void KPoolableSocketContainer::refresh(time_t nowTime) {
 	lock.Lock();
 	if (imp) {
-		imp->refresh(false);
+		imp->refresh(nowTime==0);
 	}
 	lock.Unlock();
 }

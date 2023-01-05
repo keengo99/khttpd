@@ -78,6 +78,7 @@ public:
 		}
 		lock.Unlock();
 	}
+	void shutdown() override;
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
 	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);

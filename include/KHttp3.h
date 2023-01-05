@@ -17,7 +17,8 @@ struct kgl_h3_cid_header
 };
 #pragma pack(pop)
 
-bool init_khttp3();
+bool kgl_init_khttp3();
+void kgl_shutdown_khttp3();
 
 class KHttp3Server;
 class KHttp3CachedSni

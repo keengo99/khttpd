@@ -11,9 +11,18 @@ struct kgl_request_ts
 };
 static pthread_key_t kgl_request_key;
 kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got) {
-	kgl_request_ts* rq = new kgl_request_ts;
-	klist_init(&rq->sinks);
-	pthread_setspecific(kgl_request_key, rq);
+	if (got == 0) {
+		//init
+		kgl_request_ts* rq = new kgl_request_ts;
+		klist_init(&rq->sinks);
+		pthread_setspecific(kgl_request_key, rq);
+	} else {
+		//shutdown
+		kgl_request_ts* rq = (kgl_request_ts *)pthread_getspecific(kgl_request_key);
+		klist_empty(&rq->sinks);
+		delete rq;
+		pthread_setspecific(kgl_request_key, NULL);
+	}
 	return kev_ok;
 }
 struct kgl_sink_iterator_param

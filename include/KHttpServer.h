@@ -29,5 +29,6 @@ void khttp_server_refs_ssl_config(kgl_refs_string** ca_path, kgl_refs_string** s
 void khttp_server_alpn(void* ssl_ctx_data, const unsigned char** out, unsigned int* outlen);
 int khttp_server_new_request(void* arg, int got);
 void init_http_server_callback(kconnection_start_func on_new_connection, krequest_start_func on_new_request);
+void shutdown_http_server();
 bool start_http_server(kserver* server, int flags, SOCKET sockfd = INVALID_SOCKET);
 #endif

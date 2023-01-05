@@ -75,6 +75,11 @@ public:
 	}
 	kgl_refs_string* GetParam();
 	void SetParam(const char* param);
+	virtual void shutdown() = 0;
+	void remove() {
+		shutdown();
+		release();
+	}
 	virtual void set_tcp(bool tcp)
 	{
 		this->tcp = tcp;
