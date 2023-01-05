@@ -160,19 +160,27 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 			return NULL;
 		}
 	}
-
+	katom_inc64((void*)&total_connect);
 	kgl_addr* addr = NULL;
 	if (kfiber_net_getaddr(host.c_str(), &addr) != 0) {
 		assert(addr == NULL);
 		health(NULL, HealthStatus::Err);
 		return NULL;
 	}
+	auto ai_addr = addr->addr;
 	int tproxy_mask = 0;
-	katom_inc64((void*)&total_connect);
-	kconnection* cn = kfiber_net_open2(addr->addr, port);
-	kgl_addr_release(addr);
-	if (kfiber_net_connect(cn, bind_addr, tproxy_mask) != 0) {
+	kconnection *cn = nullptr;
+	while (ai_addr) {
+		cn = kfiber_net_open2(ai_addr, port);
+		if (kfiber_net_connect(cn, bind_addr, tproxy_mask) == 0) {
+			break;
+		}
 		kfiber_net_close(cn);
+		cn = nullptr;
+		ai_addr = ai_addr->ai_next;
+	}
+	kgl_addr_release(addr);
+	if (!cn) {
 		health(NULL, HealthStatus::Err);
 		return NULL;
 	}
