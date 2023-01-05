@@ -72,11 +72,6 @@ void KSockPoolHelper::start_monitor_call_back() {
 	//10 seconds rand sleep
 	kfiber_msleep(rand() % 10000);
 	for (;;) {
-#ifdef MALLOCDEBUG
-		if (quit_program_flag > 0) {
-			break;
-		}
-#endif
 		if (!monitor) {
 			//monitor is stoped
 			break;
