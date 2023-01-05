@@ -2,54 +2,56 @@
 #include "KStringBuf.h"
 #include "khttp.h"
 #ifdef ENABLE_UPSTREAM_HTTP2
-bool KHttp2Upstream::set_header_callback(void *arg, kgl_header_callback header)
-{
+bool KHttp2Upstream::set_header_callback(void* arg, kgl_header_callback header) {
 	assert(kselector_is_same_thread(http2->c->st.selector));
 	assert(!ctx->in_closed);
 	assert(ctx->read_wait == NULL);
-	kgl_http2_event *e = new kgl_http2_event;
+	kgl_http2_event* e = new kgl_http2_event;
 	e->header_arg = arg;
 	e->header = header;
 	ctx->read_wait = e;
 	return true;
 }
-KGL_RESULT KHttp2Upstream::read_header()
-{
+KGL_RESULT KHttp2Upstream::read_header() {
 	if (ctx->send_header) {
-		http2->send_header(ctx);
+		http2->send_header(ctx, ctx->content_left == 0);
 	}
 	if (0 == http2->ReadHeader(ctx)) {
 		return KGL_OK;
-	} 
+	}
 	return KGL_EUNKNOW;
 }
-KUpstream *KHttp2Upstream::NewStream()
-{
+KUpstream* KHttp2Upstream::NewStream() {
 	kassert(this->ctx->admin_stream);
 	return http2->connect();
 }
-bool KHttp2Upstream::send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
-{
+bool KHttp2Upstream::send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) {
+	if (!ctx->write_trailer) {
+		assert(ctx->content_left == -1);
+		if (ctx->send_header) {
+			http2->send_header(ctx, false);
+		}
+		ctx->write_trailer = 1;
+	}
+	return http2->add_header(ctx, name, name_len, val, val_len);
+}
+bool KHttp2Upstream::send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) {
 	return http2->add_header(ctx, attr, attr_len, val, val_len);
 }
-bool KHttp2Upstream::send_method_path(uint16_t meth, const char* path, hlen_t path_len)
-{
+bool KHttp2Upstream::send_method_path(uint16_t meth, const char* path, hlen_t path_len) {
 	if (!http2->add_method(ctx, (uint8_t)meth)) {
 		return false;
 	}
 	return http2->add_header(ctx, kgl_expand_string(":path"), path, path_len);
 }
-bool KHttp2Upstream::send_host(const char* host, hlen_t host_len)
-{
+bool KHttp2Upstream::send_host(const char* host, hlen_t host_len) {
 	return http2->add_header(ctx, kgl_expand_string(":authority"), host, host_len);
 }
-void KHttp2Upstream::set_content_length(int64_t content_length)
-{
+void KHttp2Upstream::set_content_length(int64_t content_length) {
 	ctx->SetContentLength(content_length);
 	return;
 }
-KGL_RESULT KHttp2Upstream::send_header_complete()
-{
+KGL_RESULT KHttp2Upstream::send_header_complete() {
 	return KGL_OK;
 }
 #endif

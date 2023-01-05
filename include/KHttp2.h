@@ -6,7 +6,7 @@
 #include "kforwin32.h"
 #include "klist.h"
 #include "KSendBuffer.h"
-//#include "KCondWait.h"
+#include "KHttpHeaderManager.h"
 #include "KResponseContext.h"
 #include "KHttp2WriteBuffer.h"
 #include "KHttpHeader.h"
@@ -291,20 +291,29 @@ public:
 	uint16_t  out_closed : 1;
 	uint16_t  rst : 1;
 	uint16_t  parsed_header : 1;
-
+	uint16_t  read_trailer : 1;
+	uint16_t  write_trailer : 1;
 #ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t  admin_stream : 1;
 #endif
 	uint16_t  destroy_by_http2 : 1;
 	uint16_t  skip_data : 1;
-	uint16_t  know_content_length : 1;
 	volatile int send_window;
 	size_t recv_window;
 	KHttp2HeaderFrame* send_header;
 	kgl_http2_event* write_wait;
 	kgl_http2_event* read_wait;
 	KSendBuffer* read_buffer;
-	bool Available() {
+	KHttpHeaderManager* trailer;
+	KHttpHeaderManager* get_trailer_header() {
+		if (trailer) {
+			return trailer;
+		}
+		trailer = new KHttpHeaderManager;
+		memset(trailer, 0, sizeof(KHttpHeaderManager));
+		return trailer;
+	}
+	bool is_available() {
 		if (rst) {
 			return false;
 		}
@@ -357,7 +366,7 @@ public:
 		memset(data, 0, sizeof(http2_frame_header));
 		data->set_length_type(total_len, KGL_HTTP_V2_DATA_FRAME);
 		data->stream_id = ntohl(node->id);
-		if (know_content_length) {
+		if (content_left>0) {
 			content_left -= total_len;
 			if (content_left <= 0) {
 				data->flags |= KGL_HTTP_V2_END_STREAM_FLAG;
@@ -381,13 +390,12 @@ public:
 	}
 	void SetContentLength(INT64 content_length) {
 		if (content_length >= 0) {
-			know_content_length = 1;
 			this->content_left = content_length;
 #ifndef NDEBUG
 			this->orig_content_length = content_length;
 #endif
 		} else {
-			know_content_length = 0;
+			this->content_left = -1;
 		}
 	}
 	void RemoveQueue() {
@@ -421,7 +429,15 @@ public:
 		if (send_header) {
 			delete send_header;
 		}
+		if (trailer) {
+			free_header_list(trailer->header);
+			delete trailer;
+		}
 		delete this;
+	}
+private:
+	~KHttp2Context() {
+
 	}
 };
 class KHttp2Upstream;
@@ -462,7 +478,7 @@ public:
 	void release_stream(KHttp2Context* ctx);
 	void release_admin(KHttp2Context* ctx);
 	//int sync_send_header(KHttp2Context *ctx,INT64 body_len);
-	int send_header(KHttp2Context* ctx);
+	int send_header(KHttp2Context* ctx,bool fin);
 	void write_end(KHttp2Context* ctx);
 public:
 	int get_read_buffer(iovec* buf, int bufCount);
@@ -532,8 +548,8 @@ private:
 	uint16_t closed : 1;
 	uint16_t pinged : 1;
 	uint16_t destroyed : 1;
-#ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t client_model : 1;
+#ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t has_admin_stream : 1;
 	KHttp2Upstream* NewClientStream(bool admin);
 #endif	

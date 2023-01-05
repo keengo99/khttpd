@@ -372,8 +372,5 @@ bool KHttpSink::response_trailer(const char* name, int name_len, const char* val
 	bufs[bc].iov_base = (char*)"\r\n";
 	bufs[bc].iov_len = 2;
 	bc++;
-	if (!kfiber_net_writev_full(cn, bufs, &bc)) {
-		return -1;
-	}
-	return true;
+	return kfiber_net_writev_full(cn, bufs, &bc);
 }

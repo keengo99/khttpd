@@ -49,6 +49,7 @@ public:
 	{
 		return true;
 	}
+	bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) override;
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override;
 	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override;
 	bool send_host(const char* host, hlen_t host_len) override;

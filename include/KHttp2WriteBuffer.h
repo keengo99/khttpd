@@ -59,7 +59,7 @@ public:
 	union {
 		/**
 		* on client model before complete read header. 
-		* read_event will use header callback and the fiber must set NULL.
+		* read_event will use header callback and the fiber can be NULL(no wait header) or NOT NULL(wait the header).
 		*/
 		WSABUF* buf;
 		kgl_header_callback header;

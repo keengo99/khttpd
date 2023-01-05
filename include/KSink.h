@@ -141,6 +141,9 @@ public:
 	virtual void shutdown() = 0;
 	virtual uint32_t get_server_model() = 0;
 	virtual KOPAQUE get_server_opaque() = 0;
+	virtual KHttpHeader* get_trailer() {
+		return nullptr;
+	}
 	virtual void set_time_out(int tmo_count) = 0;
 	virtual kgl_pool_t* get_connection_pool() = 0;
 	virtual int get_time_out() = 0;

@@ -20,12 +20,6 @@ public:
 		assert(ctx.send_header_buffer == NULL);
 		assert(ctx.read_buffer == NULL);
 	}
-	/*
-	int64_t get_left() override
-	{
-		return ctx.left;
-	}
-	*/
 	bool send_connection(const char* val, hlen_t val_len) override;
 	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override;
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override;

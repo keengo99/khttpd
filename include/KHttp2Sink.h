@@ -20,6 +20,12 @@ public:
 	{
 		return false;
 	}
+	KHttpHeader* get_trailer() override {
+		if (!ctx->trailer) {
+			return nullptr;
+		}
+		return ctx->trailer->header;
+	}
 	bool internal_response_status(uint16_t status_code) override
 	{
 		return http2->add_status(ctx, status_code);
@@ -37,7 +43,7 @@ public:
 	{
 		send_alt_svc_header();
 		ctx->SetContentLength(body_size);
-		return http2->send_header(ctx);
+		return http2->send_header(ctx,ctx->content_left==0);
 	}
 	bool is_locked() override
 	{
@@ -102,6 +108,16 @@ public:
 	}
 	void flush() override
 	{
+	}
+	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override {
+		if (!ctx->write_trailer) {
+			assert(ctx->content_left == -1);
+			if (ctx->send_header) {
+				http2->send_header(ctx, false);
+			}
+			ctx->write_trailer = 1;
+		}
+		return http2->add_header(ctx, name, name_len, val, val_len);
 	}
 protected:
 	friend class KHttp2;

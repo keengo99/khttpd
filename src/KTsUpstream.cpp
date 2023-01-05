@@ -18,16 +18,7 @@ struct KTsUpstreamParam {
 		int life_time;
 	};
 };
-void http2_header_callback(KOPAQUE data, void* arg, const char* attr, int attr_len, const char* val, int val_len)
-{
-	return;
-#if 0
-		KHttpRequest* rq = (KHttpRequest*)arg;
-		KAsyncFetchObject* fo = (KAsyncFetchObject*)data;
-		assert(kselector_is_same_thread(rq->sink->get_selector()));
-		fo->PushHeader(rq, attr, attr_len, val, val_len, false);
-#endif
-}
+
 static bool ts_header_callback(KUpstream *us, void *arg, const char *attr, int attr_len, const char *val, int val_len,bool is_first)
 {
 	KTsUpstream *ts = (KTsUpstream *)arg;

@@ -123,6 +123,7 @@ public:
 		KBIT_SET(st_flags, STF_READ);
 		ev[OP_READ].cd->f->wait(ev[OP_READ].cd);
 		assert(!KBIT_TEST(st_flags, STF_READ));
+		printf("http3 read result=[%d]\n", ev[OP_READ].result);
 		return ev[OP_READ].result;
 	}
 	int internal_write(WSABUF* buf, int bc) override {

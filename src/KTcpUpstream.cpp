@@ -54,6 +54,9 @@ bool KTcpUpstream::send_header(const char* attr, hlen_t attr_len, const char* va
 {
 	return false;
 }
+bool KTcpUpstream::send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) {
+	return false;
+}
 bool KTcpUpstream::send_method_path(uint16_t meth, const char* path, hlen_t path_len)
 {
 	return false;

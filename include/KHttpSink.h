@@ -65,6 +65,12 @@ public:
 	{
 		return dechunk;
 	}
+	KHttpHeader* get_trailer() {
+		if (!dechunk || !dechunk->trailer) {
+			return nullptr;
+		}
+		return dechunk->trailer->header;
+	}
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
 	void SkipPost();
 	int StartPipeLine();
