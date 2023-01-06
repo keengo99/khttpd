@@ -81,7 +81,7 @@ bool KSink::start_response_body(INT64 body_len) {
 	}
 	int header_len = internal_start_response_body(body_len);
 	add_down_flow(header_len, true);
-	return header_len > 0;
+	return header_len >= 0;
 }
 bool KSink::begin_request() {
 	katom_inc64((void*)&kgl_total_requests);
