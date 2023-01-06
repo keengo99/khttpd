@@ -172,6 +172,7 @@ typedef enum _kgl_header_type
 	kgl_header_keep_alive,
 	kgl_header_alt_svc,
 	kgl_header_connection,
+	kgl_header_upgrade,
 	kgl_header_unknow
 } kgl_header_type;
 

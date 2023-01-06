@@ -87,6 +87,7 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("Keep-Alive"),_KS("keep-alive"),_KS("\r\nKeep-Alive: ")},
 	{_KS("Alt-Svc"),_KS("alt-svc"),_KS("\r\nAlt-Svc: ")},
 	{_KS("Connection"),_KS("connection"),_KS("\r\nConnection: ")},
+	{_KS("Upgrade"),_KS("upgrade"),_KS("\r\nUpgrade: ")},
 	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -96,8 +97,7 @@ static const char* days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 static uint32_t  mday[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 static int timz_minutes = 0;
-void init_time_zone()
-{
+void init_time_zone() {
 	time_t tt = time(NULL);
 	struct tm t;
 #if defined(HAVE_GMTOFF)
@@ -113,8 +113,7 @@ void init_time_zone()
 	timz_minutes = hours * 60 + t.tm_min - gmt.tm_min;
 #endif
 }
-void CTIME_R(time_t* a, char* b, size_t l)
-{
+void CTIME_R(time_t* a, char* b, size_t l) {
 #if	defined(HAVE_CTIME_R)
 #if	defined(CTIME_R_3)
 	ctime_r(a, b, l);
@@ -138,8 +137,7 @@ void make_last_modified_time(time_t* a, char* b, size_t l) {
 		1900 + tm.tm_year, tm.tm_hour, tm.tm_min);
 
 }
-time_t kgl_parse_http_time(u_char* value, size_t len)
-{
+time_t kgl_parse_http_time(u_char* value, size_t len) {
 
 	u_char* p, * end;
 	int    month;
@@ -393,8 +391,7 @@ time_t kgl_parse_http_time(u_char* value, size_t len)
 
 	return (time_t)time;
 }
-char* make_http_time(time_t time, char* buf, int size)
-{
+char* make_http_time(time_t time, char* buf, int size) {
 	struct tm tm;
 	time_t holder = time;
 	gmtime_r(&holder, &tm);
@@ -467,8 +464,7 @@ char* url_value_encode(const char* s, size_t len, size_t* new_length) {
 	}
 	return (char*)start;
 }
-int64_t kgl_atol(const u_char* line, size_t n)
-{
+int64_t kgl_atol(const u_char* line, size_t n) {
 	int64_t  value;
 	if (n == 0) {
 		return 0;
@@ -481,8 +477,7 @@ int64_t kgl_atol(const u_char* line, size_t n)
 	}
 	return value;
 }
-int kgl_atoi(const u_char* line, size_t n)
-{
+int kgl_atoi(const u_char* line, size_t n) {
 	int  value;
 	if (n == 0) {
 		return 0;
@@ -528,8 +523,7 @@ int64_t kgl_atofp(const char* line, size_t n, size_t point) {
 }
 
 
-int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2)
-{
+int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2) {
 	size_t     n;
 	int  m, z;
 	if (n1 <= n2) {
@@ -545,8 +539,7 @@ int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2)
 	}
 	return z;
 }
-int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2)
-{
+int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2) {
 	size_t     n;
 	int  m, z;
 	if (n1 <= n2) {
@@ -562,8 +555,7 @@ int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2)
 	}
 	return z;
 }
-void kgl_strlow(u_char* dst, u_char* src, size_t n)
-{
+void kgl_strlow(u_char* dst, u_char* src, size_t n) {
 	while (n) {
 		*dst = kgl_tolower(*src);
 		dst++;
@@ -571,8 +563,7 @@ void kgl_strlow(u_char* dst, u_char* src, size_t n)
 		n--;
 	}
 }
-int kgl_casecmp(const char* s1, const char* s2, size_t attr_len)
-{
+int kgl_casecmp(const char* s1, const char* s2, size_t attr_len) {
 	u_char  c1, c2;
 	while (attr_len > 0) {
 		c1 = (u_char)*s1++;
@@ -590,8 +581,7 @@ int kgl_casecmp(const char* s1, const char* s2, size_t attr_len)
 	return 0;
 }
 
-const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen)
-{
+const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen) {
 	const char* p;
 	for (p = (char*)haystack; p <= (haystack - needlen + haystacklen); p++) {
 		if (memcmp(p, needle, needlen) == 0)
@@ -723,8 +713,7 @@ static int my_htoi(char* s) {
 
 	return (value);
 }
-int url_decode(char* str, int len, KUrl* url, bool space2plus)
-{
+int url_decode(char* str, int len, KUrl* url, bool space2plus) {
 	char* dest = str;
 	char* data = str;
 	bool mem_availble = false;
@@ -888,8 +877,7 @@ std::string b64encode(const unsigned char* in, int len)
 	return s.str();
 }
 #define MEMPBRK_CACHE_SIZE  256
-const char* kgl_mempbrk(const char* str, int n, const char* control, int control_len)
-{
+const char* kgl_mempbrk(const char* str, int n, const char* control, int control_len) {
 	const char* p, * min = NULL, * control_ptr = control, * control_end = control + control_len;
 	while (n > 0) {
 		while (control_ptr < control_end) {
@@ -911,8 +899,7 @@ const char* kgl_mempbrk(const char* str, int n, const char* control, int control
 }
 
 static u_char* kgl_sprintf_num(u_char* buf, u_char* last, uint64_t ui64, u_char zero,
-	unsigned hexadecimal, unsigned width)
-{
+	unsigned hexadecimal, unsigned width) {
 	u_char* p, temp[KGL_INT64_LEN + 1];
 	/*
 	 * we need temp[KGL_INT64_LEN] only,
@@ -995,8 +982,7 @@ static u_char* kgl_sprintf_num(u_char* buf, u_char* last, uint64_t ui64, u_char 
 }
 
 
-static u_char* kgl_sprintf_str(u_char* buf, u_char* last, u_char* src, size_t len, unsigned hexadecimal)
-{
+static u_char* kgl_sprintf_str(u_char* buf, u_char* last, u_char* src, size_t len, unsigned hexadecimal) {
 	static u_char   hex[] = "0123456789abcdef";
 	static u_char   HEX[] = "0123456789ABCDEF";
 
@@ -1051,8 +1037,7 @@ static u_char* kgl_sprintf_str(u_char* buf, u_char* last, u_char* src, size_t le
 }
 
 
-u_char* kgl_vslprintf(u_char* buf, u_char* last, const char* fmt, va_list args)
-{
+u_char* kgl_vslprintf(u_char* buf, u_char* last, const char* fmt, va_list args) {
 	u_char* p, zero;
 	int                    d;
 	double                 f;
@@ -1306,8 +1291,7 @@ u_char* kgl_vslprintf(u_char* buf, u_char* last, const char* fmt, va_list args)
 	return buf;
 }
 
-u_char* kgl_sprintf(u_char* buf, const char* fmt, ...)
-{
+u_char* kgl_sprintf(u_char* buf, const char* fmt, ...) {
 	u_char* p;
 	va_list   args;
 
@@ -1319,8 +1303,7 @@ u_char* kgl_sprintf(u_char* buf, const char* fmt, ...)
 }
 
 
-u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...)
-{
+u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...) {
 	u_char* p;
 	va_list   args;
 
@@ -1332,8 +1315,7 @@ u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...)
 }
 
 
-u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...)
-{
+u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...) {
 	u_char* p;
 	va_list   args;
 

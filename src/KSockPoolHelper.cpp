@@ -222,6 +222,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 #ifdef ENABLE_UPSTREAM_HTTP2
 		const unsigned char* protocol_data = NULL;
 		unsigned len = 0;
+		assert(cn->st.ssl);
 		kgl_ssl_get_next_proto_negotiated(cn->st.ssl->ssl, &protocol_data, &len);
 		if (len == sizeof(KGL_HTTP_V2_NPN_NEGOTIATED) - 1 &&
 			memcmp(protocol_data, KGL_HTTP_V2_NPN_NEGOTIATED, len) == 0) {
@@ -235,7 +236,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 	}
 #endif
 #ifdef ENABLE_UPSTREAM_HTTP2
-	if (h2) {
+	if (h2 && !KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET)) {
 		KHttp2* http2 = new KHttp2();
 		selectable_bind_opaque(&cn->st, http2);
 		KHttp2Upstream* http2_us = http2->client(cn);
