@@ -64,7 +64,7 @@ static int kgl_ssl_verify_callback(int ok, X509_STORE_CTX* x509_store) {
 #endif
 static int monitor_fiber(void* arg, int got) {
 	KSockPoolHelper* sock_pool = (KSockPoolHelper*)arg;
-	sock_pool->start_monitor_call_back();	
+	sock_pool->start_monitor_call_back();
 	sock_pool->release();
 	return 0;
 }
@@ -169,7 +169,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 	}
 	auto ai_addr = addr->addr;
 	int tproxy_mask = 0;
-	kconnection *cn = nullptr;
+	kconnection* cn = nullptr;
 	while (ai_addr) {
 		cn = kfiber_net_open2(ai_addr, port);
 		if (kfiber_net_connect(cn, bind_addr, tproxy_mask) == 0) {
@@ -363,7 +363,7 @@ bool KSockPoolHelper::setHostPort(std::string host, const char* port) {
 }
 void KSockPoolHelper::disable() {
 	disable_flag = 1;
-	
+
 }
 bool KSockPoolHelper::is_enabled() {
 	if (disable_flag) {
@@ -384,12 +384,14 @@ bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
 	setHostPort(attr["host"], attr["port"].c_str());
 	setLifeTime(atoi(attr["life_time"].c_str()));
 	SetParam(attr["param"].c_str());
+	lock.Lock();
 #ifdef HTTP_PROXY
 	auth_user = attr["auth_user"];
 	auth_passwd = attr["auth_passwd"];
 #endif
 	setIp(attr["self_ip"].c_str());
 	sign = (attr["sign"] == "1");
+	lock.Unlock();
 	return true;
 }
 std::string KSockPoolHelper::get_port() {
@@ -410,20 +412,20 @@ std::string KSockPoolHelper::get_port() {
 	return s.str();
 }
 void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
+	kgl_refs_string* str = GetParam();
+	lock.Lock();
 	attr["host"] = host;
-	std::stringstream s;
 	attr["port"] = get_port();
 	attr["life_time"] = std::to_string(getLifeTime());
-	kgl_refs_string* str = GetParam();
 	if (str) {
 		attr["param"] = str->data;
 	}
 	kstring_release(str);
 #ifdef HTTP_PROXY
-	if (auth_user.size() > 0) {
+	if (!auth_user.empty()) {
 		attr["auth_user"] = auth_user;
 	}
-	if (auth_passwd.size() > 0) {
+	if (!auth_passwd.empty()) {
 		attr["auth_passwd"] = auth_passwd;
 	}
 #endif
@@ -433,4 +435,20 @@ void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
 	if (sign) {
 		attr["sign"] = "1";
 	}
+	lock.Unlock();
 }
+#ifdef HTTP_PROXY
+KHttpHeader* KSockPoolHelper::get_proxy_header(kgl_pool_t* pool) {
+	KHttpHeader* header = nullptr;
+	lock.Lock();
+	if (!auth_user.empty() && !auth_passwd.empty()) {
+		KStringBuf up;
+		KStringBuf val;
+		up << auth_user.c_str() << ":" << auth_passwd.c_str();
+		val << "Basic " << b64encode((const unsigned char*)up.getString(), up.getSize());
+		header = new_pool_http_header(pool, _KS("Proxy-Authorization"), val.getBuf(), val.getSize());
+	}
+	lock.Unlock();
+	return header;
+}
+#endif

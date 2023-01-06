@@ -41,7 +41,7 @@ public:
 	}
 	inline bool response_connection() {
 #ifdef HTTP_PROXY
-		if (data.connection_connect_proxy) {
+		if (data.meth==METH_CONNECT) {
 			return false;
 		}
 #endif

@@ -85,8 +85,8 @@ public:
 		this->tcp = tcp;
 	}
 #ifdef HTTP_PROXY
-	virtual void addHeader(KHttpRequest *rq,KHttpEnv *s)
-	{
+	virtual KHttpHeader* get_proxy_header(kgl_pool_t *pool) {
+		return nullptr;
 	}
 #endif
 	union

@@ -102,6 +102,11 @@ public:
 	{
 		return this->ip;
 	}
+#ifdef HTTP_PROXY
+	KHttpHeader* get_proxy_header(kgl_pool_t* pool) override;
+	std::string auth_user;
+	std::string auth_passwd;
+#endif
 	std::string host;
 	volatile uint64_t total_hit = 0;
 	volatile uint64_t total_error = 0;

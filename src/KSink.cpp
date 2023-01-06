@@ -173,7 +173,7 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Connection"))
 #ifdef HTTP_PROXY
-		|| mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
+		|| kgl_mem_case_same(attr, attr_len, kgl_expand_string("proxy-connection"))
 #endif
 		) {
 		KHttpFieldValue field(val, val + val_len);
