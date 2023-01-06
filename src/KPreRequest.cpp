@@ -82,7 +82,7 @@ kev_result handle_ssl_accept(KOPAQUE data, void *arg,int got)
 		kconnection_destroy(cn);
 		return kev_destroy;
 	}
-#if (TLSEXT_TYPE_next_proto_neg && ENABLE_HTTP2)
+#if defined(TLSEXT_TYPE_next_proto_neg) && defined(ENABLE_HTTP2)
 	kassert(cn && cn->st.ssl);
 	const unsigned char *protocol_data = NULL;
 	unsigned len = 0;

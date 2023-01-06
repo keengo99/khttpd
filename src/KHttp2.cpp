@@ -683,9 +683,11 @@ KHttp2Context* KHttp2::create_stream() {
 	KHttp2Sink* sink = new KHttp2Sink(this, stream, state.pool);
 	stream->request = sink;
 	stream->request->data.http_major = 2;
+#ifdef KSOCKET_SSL
 	if (kconnection_is_ssl(c)) {
 		KBIT_SET(stream->request->data.raw_url->flags, KGL_URL_SSL);
 	}
+#endif
 	return stream;
 }
 void KHttp2::set_dependency(KHttp2Node* node, uint32_t depend, bool exclusive) {
