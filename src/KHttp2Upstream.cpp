@@ -1,6 +1,8 @@
 #include "KHttp2Upstream.h"
 #include "KStringBuf.h"
 #include "khttp.h"
+#include "KHttpKeyValue.h"
+
 #ifdef ENABLE_UPSTREAM_HTTP2
 bool KHttp2Upstream::set_header_callback(void* arg, kgl_header_callback header) {
 	assert(kselector_is_same_thread(http2->c->st.selector));
@@ -13,6 +15,7 @@ bool KHttp2Upstream::set_header_callback(void* arg, kgl_header_callback header) 
 	return true;
 }
 KGL_RESULT KHttp2Upstream::read_header() {
+	read_header_time = kgl_current_sec;
 	if (ctx->send_header) {
 		http2->send_header(ctx, ctx->content_left == 0);
 	}
@@ -35,6 +38,17 @@ bool KHttp2Upstream::send_trailer(const char* name, hlen_t name_len, const char*
 	}
 	return http2->add_header(ctx, name, name_len, val, val_len);
 }
+bool KHttp2Upstream::send_header(kgl_header_type name, const char* val, hlen_t val_len) {
+	switch (name) {
+	case kgl_header_upgrade:
+		if (ctx->websocket) {
+			return http2->add_header(ctx, _KS(":protocol"), val, val_len);
+		}
+		//fallthough
+	default:
+		return KUpstream::send_header(name, val, val_len);
+	}
+}
 bool KHttp2Upstream::send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) {
 	return http2->add_header(ctx, attr, attr_len, val, val_len);
 }
@@ -42,12 +56,19 @@ bool KHttp2Upstream::send_method_path(uint16_t meth, const char* path, hlen_t pa
 	if (!http2->add_method(ctx, (uint8_t)meth)) {
 		return false;
 	}
+	if (meth == METH_CONNECT) {
+		ctx->websocket = 1;
+		ctx->SetContentLength(-1);
+	}
 	return http2->add_header(ctx, kgl_expand_string(":path"), path, path_len);
 }
 bool KHttp2Upstream::send_host(const char* host, hlen_t host_len) {
 	return http2->add_header(ctx, kgl_expand_string(":authority"), host, host_len);
 }
 void KHttp2Upstream::set_content_length(int64_t content_length) {
+	if (ctx->websocket) {
+		return;
+	}
 	ctx->SetContentLength(content_length);
 	return;
 }

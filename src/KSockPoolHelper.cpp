@@ -146,7 +146,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 	KUpstream* socket = NULL;
 	if (!KBIT_TEST(flags, KSOCKET_FLAGS_SKIP_POOL)) {
 		//如果是发生错误重连或upgrade的连接，则排除连接池
-		socket = get_pool_socket();
+		socket = get_pool_socket(flags);
 		if (socket) {
 			return socket;
 		}

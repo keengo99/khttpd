@@ -15,6 +15,7 @@
 #include "KHttpServer.h"
 #include "KTcpUpstream.h"
 #include "KHttpUpstream.h"
+#include "KSockPoolHelper.h"
 
 using namespace std;
 struct KUpstreamSelectableList {
@@ -133,7 +134,7 @@ void KPoolableSocketContainer::PutPoolSocket(KUpstream *st)
 	lock.Unlock();
 	unbind(st);
 }
-KUpstream *KPoolableSocketContainer::internalGetPoolSocket() {
+KUpstream *KPoolableSocketContainer::internalGetPoolSocket(uint32_t flags) {
 	if (imp == NULL) {
 		imp = new KPoolableSocketContainerImp;
 	}
@@ -144,8 +145,11 @@ KUpstream *KPoolableSocketContainer::internalGetPoolSocket() {
 	while (n!=list_head) {
 		KUpstreamSelectableList *st_list = kgl_list_data(n, KUpstreamSelectableList, queue);
 		socket = st_list->st;
+		if (KBIT_TEST(flags, KSOCKET_FLAGS_WEBSOCKET) && !socket->support_websocket()) {
+			return NULL;
+		}
 		if (socket->IsMultiStream()) {
-			KUpstream *us = st_list->st->NewStream();
+			KUpstream *us = socket->NewStream();
 			if (us==NULL) {
 				imp->size--;
 				kgl_list *next = n->next;
@@ -194,9 +198,9 @@ KUpstream* KPoolableSocketContainer::new_upstream(kconnection *cn)
 	}
 	return us;
 }
-KUpstream *KPoolableSocketContainer::get_pool_socket() {
+KUpstream *KPoolableSocketContainer::get_pool_socket(uint32_t flags) {
 	lock.Lock();
-	KUpstream *socket = internalGetPoolSocket();
+	KUpstream *socket = internalGetPoolSocket(flags);
 	lock.Unlock();
 	if (socket==NULL) {
 		return NULL;

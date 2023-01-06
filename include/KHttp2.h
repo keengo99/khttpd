@@ -129,10 +129,12 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 
 /* settings fields */
 #define KGL_HTTP_V2_HEADER_TABLE_SIZE_SETTING    0x1
+#define KGL_HTTP_V2_ENABLE_PUSH_SETTING          0x2
 #define KGL_HTTP_V2_MAX_STREAMS_SETTING          0x3
 #define KGL_HTTP_V2_INIT_WINDOW_SIZE_SETTING     0x4
 #define KGL_HTTP_V2_MAX_FRAME_SIZE_SETTING       0x5
-
+#define KGL_HTTP_V2_MAX_HEADER_LIST_SIZE_SETTING 0x6
+#define KGL_HTTP_V2_ENABLE_CONNECT_SETTING       0x8
 #define KGL_HTTP_V2_FRAME_BUFFER_SIZE            24
 
 #define KGL_HTTP_V2_DEFAULT_FRAME_SIZE           (1 << 14)
@@ -297,6 +299,7 @@ public:
 	uint16_t  admin_stream : 1;
 #endif
 	uint16_t  destroy_by_http2 : 1;
+	uint16_t  websocket : 1;
 	uint16_t  skip_data : 1;
 	volatile int send_window;
 	size_t recv_window;
@@ -366,7 +369,7 @@ public:
 		memset(data, 0, sizeof(http2_frame_header));
 		data->set_length_type(total_len, KGL_HTTP_V2_DATA_FRAME);
 		data->stream_id = ntohl(node->id);
-		if (content_left>0) {
+		if (content_left > 0) {
 			content_left -= total_len;
 			if (content_left <= 0) {
 				data->flags |= KGL_HTTP_V2_END_STREAM_FLAG;
@@ -478,7 +481,7 @@ public:
 	void release_stream(KHttp2Context* ctx);
 	void release_admin(KHttp2Context* ctx);
 	//int sync_send_header(KHttp2Context *ctx,INT64 body_len);
-	int send_header(KHttp2Context* ctx,bool fin);
+	int send_header(KHttp2Context* ctx, bool fin);
 	void write_end(KHttp2Context* ctx);
 public:
 	int get_read_buffer(iovec* buf, int bufCount);
@@ -541,6 +544,7 @@ private:
 	uint32_t init_window;
 	uint32_t frame_size;
 	uint32_t max_stream;
+	uint16_t enable_connect : 1;
 	uint16_t write_processing : 1;
 	uint16_t read_processing : 1;
 	uint16_t peer_goaway : 1;
@@ -555,7 +559,8 @@ private:
 #endif	
 private:
 	kconnection* c;
-	bool send_settings(bool ack);
+	bool send_settings();
+	bool send_settings_ack();
 	bool send_window_update(uint32_t sid, size_t window);
 	u_char* state_settings_params(u_char* pos, u_char* end);
 	u_char* state_preface(u_char* pos, u_char* end);

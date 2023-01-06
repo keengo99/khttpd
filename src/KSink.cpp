@@ -111,7 +111,7 @@ bool KSink::begin_request() {
 	return true;
 }
 bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first) {
-	//printf("attr=[%s],val=[%s]\n",attr,val);
+	//printf("%p attr=[%s],val=[%s]\n",this, attr,val);
 	if (is_first) {
 		start_parse();
 	}
@@ -119,7 +119,14 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	if (data.http_version>0x100 && *attr == ':') {
 		//pseudo header
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":method"))) {
-			return data.parse_method(val, val_len);
+			if (!data.parse_method(val, val_len)) {
+				return false;
+			}
+			if (data.meth == METH_CONNECT) {
+				data.meth = METH_GET;
+				KBIT_SET(data.flags, RQ_HAS_CONNECTION_UPGRADE);
+			}
+			return true;
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":version"))) {
 			return data.parse_http_version((u_char*)val, val_len);
@@ -129,6 +136,9 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		}
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
 			return data.parse_host(val, val_len);
+		}
+		if (kgl_mem_same(attr, attr_len, _KS(":protocol"))) {
+			return data.add_header(kgl_header_upgrade, val, val_len);
 		}
 		return true;
 	}
@@ -275,6 +285,9 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 			data.flags |= RQ_HAS_NO_CACHE;
 		}
 		return data.add_header(kgl_header_pragma, val, val_len);
+	}
+	if (kgl_mem_case_same(attr, attr_len, _KS("Upgrade"))) {
+		return data.add_header(kgl_header_upgrade, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Cache-Control"))) {
 		KHttpFieldValue field(val, val + val_len);

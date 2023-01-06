@@ -61,6 +61,9 @@ public:
 	bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) override {
 		return us->send_trailer(name, name_len, val, val_len);
 	}
+	bool send_header(kgl_header_type attr, const char* val, hlen_t val_len) override {
+		return us->send_header(attr, val, val_len);
+	}
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override {
 		return us->send_header(attr, attr_len, val, val_len);
 	}

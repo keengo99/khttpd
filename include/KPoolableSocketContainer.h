@@ -108,7 +108,7 @@ public:
 	};
 protected:
 	KUpstream* new_upstream(kconnection* cn);
-	KUpstream* get_pool_socket();
+	KUpstream* get_pool_socket(uint32_t flags);
 	/*
 	 * 把连接真正放入池中
 	 */
@@ -118,7 +118,7 @@ protected:
 	KMutex lock;
 private:
 	
-	KUpstream *internalGetPoolSocket();
+	KUpstream *internalGetPoolSocket(uint32_t flags);
 	time_t getHttp2ExpireTime()
 	{
 		int life_time = this->life_time;

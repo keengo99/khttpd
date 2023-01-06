@@ -59,11 +59,11 @@ public:
 	}
 	KGL_RESULT send_header_complete() override;
 	bool set_header_callback(void* arg, kgl_header_callback cb) override;
-	KGL_RESULT read_header() override;
+	virtual KGL_RESULT read_header() override;
 	int read(char* buf, int len) override;
 	int write(WSABUF* buf, int bc) override;
 	void bind_selector(kselector *selector) override;
-	void gc(int life_time) override;
+	virtual void gc(int life_time) override;
 	void unbind_selector() override;
 	void Destroy() override
 	{

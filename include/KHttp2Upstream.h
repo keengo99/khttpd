@@ -7,39 +7,32 @@
 class KHttp2Upstream : public KUpstream
 {
 public:
-	KHttp2Upstream(KHttp2 *http2, KHttp2Context *ctx)
-	{
+	KHttp2Upstream(KHttp2* http2, KHttp2Context* ctx) {
 		this->http2 = http2;
 		this->ctx = ctx;
 		ctx->us = this;
 		pool = NULL;
 		data = NULL;
 	}
-	~KHttp2Upstream()
-	{
+	~KHttp2Upstream() {
 		kassert(pool == NULL);
 		kassert(http2 == NULL);
 		kassert(ctx == NULL);
 	}
-	kconnection *get_connection() override
-	{
+	kconnection* get_connection() override {
 		return http2->c;
 	}
-	void write_end() override
-	{
+	void write_end() override {
 		http2->write_end(ctx);
 	}
-	void set_time_out(int tmo) override
-	{
+	void set_time_out(int tmo) override {
 		ctx->tmo = tmo;
 		ctx->tmo_left = tmo;
 	}
-	void BindOpaque(KOPAQUE data) override
-	{
+	void BindOpaque(KOPAQUE data) override {
 		this->data = data;
 	}
-	KOPAQUE GetOpaque() override
-	{
+	KOPAQUE GetOpaque() override {
 		return this->data;
 	}
 	KHttpHeader* get_trailer() override {
@@ -57,44 +50,42 @@ public:
 		return -1;
 	}
 	*/
-	int read(char *buf, int len) override
-	{
+	int read(char* buf, int len) override {
 		WSABUF bufs;
 		bufs.iov_base = buf;
 		bufs.iov_len = len;
 		return http2->read(ctx, &bufs, 1);
 	}
-	int write(WSABUF* buf, int bc) override
-	{
+	int write(WSABUF* buf, int bc) override {
 		return http2->write(ctx, buf, bc);
 	}
-	bool send_connection(const char* val, hlen_t val_len) override
-	{
+	bool send_connection(const char* val, hlen_t val_len) override {
 		return true;
 	}
 	bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) override;
 	bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) override;
+	bool send_header(kgl_header_type name, const char* val, hlen_t val_len) override;
 	bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) override;
 	bool send_host(const char* host, hlen_t host_len) override;
 	void set_content_length(int64_t content_length) override;
 	KGL_RESULT send_header_complete() override;
 
 	KGL_RESULT read_header() override;
-	bool set_header_callback(void *arg, kgl_header_callback header) override;
-	KUpstream *NewStream() override;
-	kgl_pool_t *GetPool() override
-	{
+	bool set_header_callback(void* arg, kgl_header_callback header) override;
+	KUpstream* NewStream() override;
+	bool support_websocket() override {
+		return http2->enable_connect;
+	}
+	kgl_pool_t* GetPool() override {
 		if (pool == NULL) {
 			pool = kgl_create_pool(8192);
 		}
 		return pool;
 	}
-	void shutdown() override
-	{
+	void shutdown() override {
 		http2->shutdown(ctx);
 	}
-	void Destroy() override
-	{
+	void Destroy() override {
 		kassert(http2);
 		kassert(ctx);
 		http2->release(ctx);
@@ -102,17 +93,14 @@ public:
 		http2 = NULL;
 		delete this;
 	}
-	bool IsMultiStream() override
-	{
+	bool IsMultiStream() override {
 		return true;
 	}
 
-	sockaddr_i *GetAddr() override
-	{
+	sockaddr_i* GetAddr() override {
 		return &http2->c->addr;
 	}
-	void gc(int life_time) override
-	{
+	void gc(int life_time) override {
 		life_time = 30;
 		clean();
 		if (container == NULL) {
@@ -124,7 +112,7 @@ public:
 			container->gcSocket(this, life_time);
 			return;
 		}
-		KHttp2Upstream *admin_stream = http2->get_admin_stream();
+		KHttp2Upstream* admin_stream = http2->get_admin_stream();
 		if (admin_stream) {
 			container->bind(admin_stream);
 			container->gcSocket(admin_stream, life_time);
@@ -132,8 +120,7 @@ public:
 		Destroy();
 	}
 	friend class KHttp2Env;
-	void clean() override
-	{
+	void clean() override {
 		if (pool) {
 			kgl_destroy_pool(pool);
 			pool = NULL;
@@ -141,9 +128,9 @@ public:
 	}
 private:
 	KOPAQUE data;
-	KHttp2 *http2;
-	KHttp2Context *ctx;
-	kgl_pool_t *pool;
+	KHttp2* http2;
+	KHttp2Context* ctx;
+	kgl_pool_t* pool;
 };
 #endif
 #endif

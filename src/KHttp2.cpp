@@ -154,35 +154,48 @@ KHttp2::~KHttp2() {
 	xfree(streams_index);
 	kassert(klist_empty(&active_queue));
 }
-bool KHttp2::send_settings(bool ack) {
-	int setting_frame_count = 2;
-	if (KGL_HTTP_V2_STREAM_RECV_WINDOW != KGL_HTTP_V2_DEFAULT_WINDOW) {
-		setting_frame_count++;
-	}
-	int len = ack ? 0 : (sizeof(http2_frame_setting)) * setting_frame_count;
+bool KHttp2::send_settings_ack() {
+	int len = 0;
 	http2_buff* buf = new http2_buff;
 	buf->data = (char*)malloc(len + sizeof(http2_frame_header));
 	buf->used = len + sizeof(http2_frame_header);
 	memset(buf->data, 0, len + sizeof(http2_frame_header));
 	http2_frame_header* h = (http2_frame_header*)buf->data;
 	h->set_length_type(len, KGL_HTTP_V2_SETTINGS_FRAME);
-	if (ack) {
-		h->flags = KGL_HTTP_V2_ACK_FLAG;
+	h->flags = KGL_HTTP_V2_ACK_FLAG;
+	write_buffer.push(buf);
+	start_write();
+	return true;
+}
+bool KHttp2::send_settings() {
+	int setting_frame_count = 3;
+	if (KGL_HTTP_V2_STREAM_RECV_WINDOW != KGL_HTTP_V2_DEFAULT_WINDOW) {
+		setting_frame_count++;
 	}
-	if (!ack) {
-		http2_frame_setting* setting = (http2_frame_setting*)(h + 1);
-		setting->id = htons(KGL_HTTP_V2_MAX_STREAMS_SETTING);
-		setting->value = htonl((uint32_t)max_stream);
-		if (KGL_HTTP_V2_STREAM_RECV_WINDOW != KGL_HTTP_V2_DEFAULT_WINDOW) {
-			setting += 1;
-			setting->id = htons(KGL_HTTP_V2_INIT_WINDOW_SIZE_SETTING);
-			setting->value = (uint32_t)htonl(KGL_HTTP_V2_STREAM_RECV_WINDOW);
-		}
-		setting += 1;
-		setting->id = (uint16_t)htons(KGL_HTTP_V2_MAX_FRAME_SIZE_SETTING);
-		setting->value = (uint32_t)htonl(KGL_HTTP_V2_MAX_FRAME_SIZE);
+	int len = (sizeof(http2_frame_setting)) * setting_frame_count;
+	http2_buff* buf = new http2_buff;
+	buf->data = (char*)malloc(len + sizeof(http2_frame_header));
+	buf->used = len + sizeof(http2_frame_header);
+	memset(buf->data, 0, len + sizeof(http2_frame_header));
+	http2_frame_header* h = (http2_frame_header*)buf->data;
+	h->set_length_type(len, KGL_HTTP_V2_SETTINGS_FRAME);
+
+	http2_frame_setting* setting = (http2_frame_setting*)(h + 1);
+	setting->id = htons(KGL_HTTP_V2_MAX_STREAMS_SETTING);
+	setting->value = htonl((uint32_t)max_stream);
+	if (KGL_HTTP_V2_STREAM_RECV_WINDOW != KGL_HTTP_V2_DEFAULT_WINDOW) {
+		setting++;
+		setting->id = htons(KGL_HTTP_V2_INIT_WINDOW_SIZE_SETTING);
+		setting->value = (uint32_t)htonl(KGL_HTTP_V2_STREAM_RECV_WINDOW);
 	}
-	//buf->tcp_nodelay = 1;
+	setting++;
+	setting->id = (uint16_t)htons(KGL_HTTP_V2_MAX_FRAME_SIZE_SETTING);
+	setting->value = (uint32_t)htonl(KGL_HTTP_V2_MAX_FRAME_SIZE);
+
+	setting++;
+	setting->id = (uint16_t)htons(KGL_HTTP_V2_ENABLE_CONNECT_SETTING);
+	setting->value = (uint32_t)htonl(1);
+
 	write_buffer.push(buf);
 	start_write();
 	return true;
@@ -552,6 +565,12 @@ bool KHttp2::ReadHeaderSuccess(KHttp2Context* stream) {
 
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (client_model) {
+		if (!stream->read_trailer && stream->websocket) {
+			kgl_http2_event* re = stream->read_wait;
+			if (re) {
+				re->header(stream->us, re->header_arg, _KS("Connection"), _KS("Upgrade"), false);
+			}
+		}
 		//client模式，可以直接设置parsed_header
 		stream->parsed_header = 1;
 		stream->read_trailer = 1;
@@ -1222,7 +1241,7 @@ KHttp2Upstream* KHttp2::client(kconnection* us) {
 	buf->used = sizeof(preface) - 1;
 	kgl_memcpy(buf->data, preface, buf->used);
 	write_buffer.push(buf);
-	send_settings(false);
+	send_settings();
 	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
 		start_write();
 	}
@@ -1241,7 +1260,7 @@ bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) {
 	}
 	init(c);
 	state.handler = &KHttp2::state_preface_end;
-	send_settings(false);
+	send_settings();
 	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
 		start_write();
 	}
@@ -1256,7 +1275,7 @@ bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) {
 void KHttp2::server(kconnection* c) {
 	init(c);
 	state.handler = &KHttp2::state_preface;
-	send_settings(false);
+	send_settings();
 	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
 		start_write();
 	}
@@ -1285,7 +1304,7 @@ int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
 			assert(http2_ctx->out_closed);
 		}
 #endif
-		if (http2_ctx->out_closed == 0) {
+		if (http2_ctx->out_closed == 0 && !http2_ctx->websocket) {
 			http2_ctx->out_closed = 1;
 			http2_buff* new_buf = get_frame(http2_ctx->node->id, 0, KGL_HTTP_V2_DATA_FRAME, KGL_HTTP_V2_END_STREAM_FLAG);
 			new_buf->tcp_nodelay = 1;
@@ -1889,7 +1908,7 @@ u_char* KHttp2::state_settings(u_char* pos, u_char* end) {
 		return this->close(true, KGL_HTTP_V2_SIZE_ERROR);
 	}
 
-	send_settings(true);
+	send_settings_ack();
 
 	return state_settings_params(pos, end);
 }
@@ -1956,7 +1975,6 @@ u_char* KHttp2::state_settings_params(u_char* pos, u_char* end) {
 		switch (id) {
 
 		case KGL_HTTP_V2_INIT_WINDOW_SIZE_SETTING:
-
 			if (value > KGL_HTTP_V2_MAX_WINDOW) {
 				klog(KLOG_WARNING, "client sent SETTINGS frame with incorrect "
 					"INITIAL_WINDOW_SIZE value %u\n", value);
@@ -1965,7 +1983,6 @@ u_char* KHttp2::state_settings_params(u_char* pos, u_char* end) {
 			}
 			adjust_windows(value);
 			break;
-
 		case KGL_HTTP_V2_MAX_FRAME_SIZE_SETTING:
 			if (value > KGL_HTTP_V2_MAX_FRAME_SIZE
 				|| value < KGL_HTTP_V2_DEFAULT_FRAME_SIZE) {
@@ -1976,14 +1993,14 @@ u_char* KHttp2::state_settings_params(u_char* pos, u_char* end) {
 			}
 			frame_size = (uint32_t)value;
 			break;
-
+		case KGL_HTTP_V2_ENABLE_CONNECT_SETTING:
+			enable_connect = !!value;
+			break;
 		default:
 			break;
 		}
-
 		pos += KGL_HTTP_V2_SETTINGS_PARAM_SIZE;
 	}
-
 	return state_complete(pos, end);
 }
 

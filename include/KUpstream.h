@@ -55,6 +55,9 @@ public:
 	kselector* get_selector() {
 		return get_connection()->st.selector;
 	}
+	virtual bool support_websocket() {
+		return false;
+	}
 	KGL_RESULT write_all(const char* buf, int len) {
 		while (len > 0) {
 			WSABUF bufs;
@@ -73,6 +76,9 @@ public:
 		return nullptr;
 	}
 	virtual bool send_connection(const char* val, hlen_t val_len) = 0;
+	virtual bool send_header(kgl_header_type attr, const char* val, hlen_t val_len) {
+		return send_header(kgl_header_type_string[attr].value.data, (hlen_t)kgl_header_type_string[attr].value.len, val, val_len);
+	}
 	virtual bool send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) = 0;
 	virtual bool send_method_path(uint16_t meth, const char* path, hlen_t path_len) = 0;
