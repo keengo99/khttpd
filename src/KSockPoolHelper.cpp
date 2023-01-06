@@ -389,9 +389,9 @@ bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
 	auth_user = attr["auth_user"];
 	auth_passwd = attr["auth_passwd"];
 #endif
-	setIp(attr["self_ip"].c_str());
 	sign = (attr["sign"] == "1");
 	lock.Unlock();
+	setIp(attr["self_ip"].c_str());	
 	return true;
 }
 std::string KSockPoolHelper::get_port() {

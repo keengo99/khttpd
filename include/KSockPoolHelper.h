@@ -12,16 +12,16 @@
 #define KSOCKET_FLAGS_WEBSOCKET (1<<1)
 
 #define ERROR_RECONNECT_TIME	600
-class KSockPoolHelper : public KPoolableSocketContainer {
+class KSockPoolHelper : public KPoolableSocketContainer
+{
 public:
 	KSockPoolHelper();
 	virtual ~KSockPoolHelper();
-	void health(KUpstream *st,HealthStatus stage) override
-	{
-		switch(stage){
+	void health(KUpstream* st, HealthStatus stage) override {
+		switch (stage) {
 		case HealthStatus::Err:
 			katom_inc64((void*)&this->total_error);
-			if (katom_inc16((void *)&error_count)>=max_error_count) {
+			if (katom_inc16((void*)&error_count) >= max_error_count) {
 				disable();
 			}
 			break;
@@ -30,31 +30,30 @@ public:
 			break;
 		default:
 			break;
-		}		
+		}
 	}
-	bool isChanged(KSockPoolHelper *sh)
-	{
-		if (host!=sh->host) {
+	bool isChanged(KSockPoolHelper* sh) {
+		if (host != sh->host) {
 			return true;
 		}
-		if (port!=sh->port) {
+		if (port != sh->port) {
 			return true;
 		}
 #ifdef ENABLE_UPSTREAM_SSL
-		if (ssl!=sh->ssl) {
+		if (ssl != sh->ssl) {
 			return true;
 		}
 		if (no_sni != sh->no_sni) {
 			return true;
 		}
 #endif
-		if (weight!=sh->weight) {
+		if (weight != sh->weight) {
 			return true;
 		}
-		if (is_unix!=sh->is_unix) {
+		if (is_unix != sh->is_unix) {
 			return true;
 		}
-		if (ip!=sh->ip || (ip && strcmp(ip,sh->ip)!=0)) {
+		if (ip != sh->ip || (ip && strcmp(ip, sh->ip) != 0)) {
 			return true;
 		}
 		if (life_time != sh->life_time) {
@@ -66,8 +65,7 @@ public:
 		return false;
 	}
 	void start_monitor_call_back();
-	void setErrorTryTime(int max_error_count, int error_try_time)
-	{
+	void setErrorTryTime(int max_error_count, int error_try_time) {
 		lock.Lock();
 		this->max_error_count = max_error_count;
 		this->error_try_time = error_try_time;
@@ -81,15 +79,15 @@ public:
 	void shutdown() override;
 	bool parse(std::map<std::string, std::string>& attr);
 	void build(std::map<std::string, std::string>& attr);
-	KUpstream* get_upstream(uint32_t flags ,const char *sni_host = NULL);
+	KUpstream* get_upstream(uint32_t flags, const char* sni_host = NULL);
 	std::string get_port();
-	bool setHostPort(std::string host, const char *port);
+	bool setHostPort(std::string host, const char* port);
 	bool setHostPort(std::string host, int port, const char* s);
 	void disable();
 	void enable();
 	bool is_enabled();
-	void setIp(const char *ip)
-	{
+	void setIp(const char* ip) {
+		lock.Lock();
 		if (this->ip) {
 			free(this->ip);
 			this->ip = NULL;
@@ -97,9 +95,9 @@ public:
 		if (ip && *ip) {
 			this->ip = strdup(ip);
 		}
+		lock.Unlock();
 	}
-	const char *getIp()
-	{
+	const char* getIp() {
 		return this->ip;
 	}
 #ifdef HTTP_PROXY
@@ -112,7 +110,7 @@ public:
 	volatile uint64_t total_error = 0;
 	volatile uint64_t total_connect = 0;
 	int avg_monitor_tick = 0;
-	int error_try_time;	
+	int error_try_time;
 	/*
 	 * 连续错误连接次数，如果超过MAX_ERROR_COUNT次，就会认为是问题的。
 	 * 下次试连接时间会从当前时间加ERROR_RECONNECT_TIME秒。
@@ -125,14 +123,12 @@ public:
 #ifdef ENABLE_UPSTREAM_HTTP2
 	u_char alpn;
 #endif
-	bool need_verify()
-	{
+	bool need_verify() {
 		return ssl == "S";
 	}
 	std::string ssl;
 #endif
-	void stopMonitor()
-	{
+	void stopMonitor() {
 		lock.Lock();
 		internalStopMonitor();
 		lock.Unlock();
@@ -144,16 +140,15 @@ public:
 		return error_try_time;
 	}
 	KSockPoolHelper* next = nullptr;
-	KSockPoolHelper *prev = nullptr;
+	KSockPoolHelper* prev = nullptr;
 private:
 	void startMonitor();
-	void internalStopMonitor()
-	{
+	void internalStopMonitor() {
 		monitor = 0;
 	}
-	char *ip;
+	char* ip;
 #ifdef ENABLE_UPSTREAM_SSL
-	SSL_CTX *ssl_ctx;
+	SSL_CTX* ssl_ctx;
 #endif
 };
 
