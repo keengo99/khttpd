@@ -50,7 +50,7 @@ public:
 		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 			return response_connection(kgl_expand_string("close"));
 		}
-		if (data.http_major == 1 && data.http_minor >= 1) {
+		if (data.http_version > 0x100) {
 			//HTTP/1.1 default keep-alive
 			return true;
 		}

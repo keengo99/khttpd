@@ -30,7 +30,7 @@ public:
 		this->cn = cn;
 		this->st = NULL;
 		this->data.raw_url = new KUrl;
-		data.http_major = 3;
+		data.set_http_version(3, 0);
 		st_flags = 0;
 		for (int i = 0; i < 2; i++) {
 			ev[i].cd = kfiber_cond_init(true);

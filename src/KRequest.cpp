@@ -91,9 +91,10 @@ bool KRequestData::parse_http_version(u_char* ver, size_t len) {
 	if (dot == NULL) {
 		return false;
 	}
-	http_major = *(dot - 1) - 0x30;//major;
 	if ((size_t)(dot - ver) < len) {
-		http_minor = *(dot + 1) - 0x30;//minor;
+		set_http_version(!!(*(dot - 1) - 0x30), !!(*(dot + 1) - 0x30));
+	} else {
+		set_http_version(!!(*(dot - 1) - 0x30), 0);
 	}
 	return true;
 }

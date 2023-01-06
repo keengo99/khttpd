@@ -51,11 +51,10 @@ public:
 		memset(this, 0, sizeof(*this));
 		begin_time_msec = kgl_current_msec;
 	}
-	uint8_t http_major;
-	uint8_t http_minor;
+	uint32_t mark;
+	uint16_t http_version;
 	uint8_t state;
 	uint8_t meth;
-	uint32_t mark;
 	/*
 	 * ԭʼurl
 	 */
@@ -64,6 +63,15 @@ public:
 	KHttpOpaque* opaque;
 
 	friend class KSink;
+	void set_http_version(uint8_t major, uint8_t minor) {
+		http_version = ((major << 8) | minor);
+	}
+	uint8_t get_http_version_major() {
+		return http_version >> 8;
+	}
+	uint8_t get_http_version_minor() {
+		return (http_version & 0xff);
+	}
 	void bind_opaque(KHttpOpaque* opaque)
 	{
 		if (this->opaque) {

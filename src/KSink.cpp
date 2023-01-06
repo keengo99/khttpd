@@ -116,7 +116,8 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		start_parse();
 	}
 #if defined(ENABLE_HTTP2) || defined(ENABLE_HTTP3)
-	if (data.http_major > 1 && *attr == ':') {
+	if (data.http_version>0x100 && *attr == ':') {
+		//pseudo header
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":method"))) {
 			return data.parse_method(val, val_len);
 		}
@@ -132,7 +133,7 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		return true;
 	}
 #endif
-	if (is_first && data.http_major <= 1) {
+	if (is_first && data.http_version < 0x200) {
 		if (!data.parse_method(attr, attr_len)) {
 			//klog(KLOG_DEBUG, "httpparse:cann't parse meth=[%s]\n", attr);
 			return false;
@@ -163,7 +164,7 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 			//klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
 			return false;
 		}
-		if (data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
+		if (data.http_version>0x100) {//data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
 			KBIT_SET(data.flags, RQ_HAS_KEEP_CONNECTION);
 		}
 		return true;
@@ -413,8 +414,8 @@ bool KSink::response_content_length(int64_t content_len) {
 		return response_header(kgl_header_content_length, len_str, len, false);
 	}
 	//Œﬁcontent-length ±
-	if (data.http_major == 1 && data.http_minor == 0) {
-		//A HTTP/1.0 client no support TE head.
+	if (data.http_version==0x100) {
+		//HTTP/1.0 client not support transfer-encoding
 		//The connection MUST close
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 	} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && set_transfer_chunked()) {

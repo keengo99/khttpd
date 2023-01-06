@@ -681,8 +681,8 @@ KHttp2Context* KHttp2::create_stream() {
 	kassert(kselector_is_same_thread(c->st.selector));
 	state.keep_pool = 1;
 	KHttp2Sink* sink = new KHttp2Sink(this, stream, state.pool);
+	sink->data.set_http_version(2, 0);
 	stream->request = sink;
-	stream->request->data.http_major = 2;
 #ifdef KSOCKET_SSL
 	if (kconnection_is_ssl(c)) {
 		KBIT_SET(stream->request->data.raw_url->flags, KGL_URL_SSL);
@@ -1235,7 +1235,7 @@ KHttp2Upstream* KHttp2::NewClientStream(bool admin) {
 	return new KHttp2Upstream(this, stream);
 }
 #endif
-bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) 	{
+bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) {
 	if (len > sizeof(state.buffer)) {
 		return false;
 	}
