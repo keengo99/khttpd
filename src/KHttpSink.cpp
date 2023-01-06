@@ -298,7 +298,7 @@ int KHttpSink::end_request() {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}
-	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
+	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE|RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 		return kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
 	}
 	ksocket_no_delay(cn->st.fd, false);

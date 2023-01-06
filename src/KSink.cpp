@@ -455,7 +455,8 @@ int KSink::read(char* buf, int len) {
 		return 0;
 	}
 	if (length > 0) {
-		if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && data.left_read != -1) {
+		if (data.left_read>0) {
+			assert(data.left_read >= length);
 			data.left_read -= length;
 		}
 		add_up_flow(length);
