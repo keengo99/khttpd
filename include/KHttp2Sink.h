@@ -92,6 +92,9 @@ public:
 		if (unlikely(ctx->content_left>0)) {
 			http2->shutdown(ctx);
 		} else {
+			if(KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
+				ctx->in_closed = 1;
+			}
 			http2->write_end(ctx);
 		}
 		http2->release(ctx);
