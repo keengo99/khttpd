@@ -1,4 +1,5 @@
 #include "KHttp2Sink.h"
+#ifdef ENABLE_HTTP2
 kev_result KHttp2Sink::read_header() {
 	return kev_ok;
 }
@@ -9,3 +10,4 @@ bool KHttp2Sink::parse_header(const char* attr, int attr_len, const char* val, i
 	}
 	return KSink::parse_header(attr, attr_len, val, val_len, false);
 }
+#endif

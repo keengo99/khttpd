@@ -65,7 +65,7 @@ public:
 	{
 		return dechunk;
 	}
-	KHttpHeader* get_trailer() {
+	KHttpHeader* get_trailer() override {
 		if (!dechunk || !dechunk->trailer) {
 			return nullptr;
 		}
