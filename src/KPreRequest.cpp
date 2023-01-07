@@ -16,12 +16,12 @@ static kev_result handle_http_request(kconnection *cn)
 	if (KBIT_TEST(cn->server->flags, WORK_MODEL_TCP)) {
 		KTcpSink *sink = new KTcpSink(cn, NULL);
 		selectable_bind_opaque(&cn->st, (KSink *)sink);
-		return sink->StartRequest();
+		return sink->read_header();
 	}
 #endif
 	KHttpSink *sink = new KHttpSink(cn,NULL);
 	selectable_bind_opaque(&cn->st, (KSink*)sink);
-	return sink->ReadHeader();
+	return sink->read_header();
 }
 
 static kev_result handle_ssl_proxy_callback(KOPAQUE data, void *arg, int got)

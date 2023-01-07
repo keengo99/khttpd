@@ -53,7 +53,7 @@ public:
 	}
 	int end_request() override;
 	ks_buffer buffer;
-	kev_result ReadHeader();
+	kev_result read_header() override;
 	kev_result Parse();
 	KResponseContext* rc;
 	kconnection* cn;
@@ -80,14 +80,13 @@ protected:
 	{
 		return response_header(kgl_header_alt_svc, val, val_len, false);
 	}
-	int internal_start_response_body(int64_t body_size) override;
+	int internal_start_response_body(int64_t body_size, bool is_100_continue) override;
 	int internal_read(char* buf, int len) override;
 	int internal_write(WSABUF* buf, int bc) override;
 protected:
 #ifdef ENABLE_HTTP2
 	bool switch_h2c();
 #endif
-	void start_header() override;
 	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext* dechunk;
 	khttp_parser parser;

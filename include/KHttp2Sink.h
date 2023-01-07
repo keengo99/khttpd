@@ -24,7 +24,7 @@ public:
 		if (!ctx->trailer) {
 			return nullptr;
 		}
-		return ctx->trailer->header;
+		return ctx->trailer->get_header();
 	}
 	bool internal_response_status(uint16_t status_code) override
 	{
@@ -39,10 +39,13 @@ public:
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int internal_start_response_body(int64_t body_size) override
+	int internal_start_response_body(int64_t body_size, bool is_100_continue) override
 	{
+		if (is_100_continue) {
+			return http2->send_header(ctx, false);
+		}
 		send_alt_svc_header();
-		ctx->SetContentLength(body_size);
+		ctx->set_content_length(body_size);
 		return http2->send_header(ctx,ctx->content_left==0);
 	}
 	bool is_locked() override
@@ -109,6 +112,7 @@ public:
 	void flush() override
 	{
 	}
+	kev_result read_header() override;
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override {
 		if (!ctx->write_trailer) {
 			assert(ctx->content_left == -1);
@@ -119,8 +123,11 @@ public:
 		}
 		return http2->add_header(ctx, name, name_len, val, val_len);
 	}
+
+	bool parse_header(const char* attr, int attr_len, const char* val, int val_len);
 protected:
 	friend class KHttp2;
+
 	bool response_altsvc_header(const char* val, int val_len) override
 	{
 		return response_header(_KS("Alt-Svc"), val, val_len);

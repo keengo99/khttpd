@@ -141,6 +141,17 @@ inline int kgl_parse_value_int64(const char* val, int val_len, int64_t* value) {
 	*value = kgl_atol((u_char*)val, val_len);
 	return 0;
 }
+inline int kgl_parse_value_int(const char* val, int val_len, int* value) {
+	if (val_len == KGL_HEADER_VALUE_INT) {
+		*value = *(int*)val;
+		return 0;
+	}
+	if (val_len <= 0) {
+		return -1;
+	}
+	*value = (int)kgl_atol((u_char*)val, val_len);
+	return 0;
+}
 extern int program_rand_value;
 extern int open_file_limit;
 #endif	/* !_LIB_H_INCLUDED_ */

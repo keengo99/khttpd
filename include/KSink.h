@@ -27,6 +27,8 @@ public:
 			helper = helper->next;
 		}
 	}
+	//called by low level to start sink.
+	virtual kev_result read_header() = 0;
 	bool adjust_range(int64_t* len);
 	void add_down_flow(int flow, bool is_header_length = false)
 	{
@@ -214,10 +216,6 @@ public:
 	KRequestData data;
 	friend class KHttp2;
 protected:
-	virtual void start_header()
-	{
-
-	}
 	void start_parse();
 	void reset_pipeline();
 	void init_pool(kgl_pool_t* pool);
@@ -225,7 +223,9 @@ protected:
 	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
 	virtual bool response_connection(const char* val, int val_len) = 0;
-	virtual int internal_start_response_body(int64_t body_size) = 0;
+	virtual int internal_start_response_body(int64_t body_size, bool is_100_continue) = 0;
+private:
+	bool response_100_continue();
 };
 bool kgl_init_sink_queue();
 typedef bool (*kgl_sink_iterator)(void* ctx, KSink* sink);

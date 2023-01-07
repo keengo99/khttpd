@@ -82,15 +82,17 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 KGL_RESULT KHttpUpstream::read_header()
 {
 	read_header_time = kgl_current_sec;
-	assert(ctx.read_buffer == NULL);
-	if (ctx.read_buffer != NULL) {
+	assert(ctx.read_buffer == NULL || ctx.read_buffer->used==0);
+	if (ctx.read_buffer != NULL && ctx.read_buffer->used>0) {
 		return KGL_EUNKNOW;
 	}
 	assert(stack.header);
 	KGL_RESULT result = KGL_OK;
 	khttp_parser parser;
 	memset(&parser, 0, sizeof(parser));
-	ctx.read_buffer = ks_buffer_new(8192);
+	if (ctx.read_buffer == nullptr) {
+		ctx.read_buffer = ks_buffer_new(8192);
+	}
 	int64_t begin_time_msec = kgl_current_msec;
 	for (;;) {
 	continue_read:

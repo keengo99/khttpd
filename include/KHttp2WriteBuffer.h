@@ -37,7 +37,9 @@ public:
 	~kgl_http2_event();
 	void on_read(int got) {
 		if (fiber) {
-			kfiber_wakeup(fiber, this, got);
+			kfiber* f = fiber;
+			fiber = nullptr;
+			kfiber_wakeup(f, this, got);
 		}
 	}
 	void on_write(int got) {

@@ -4,6 +4,36 @@
 #include "KHttpKeyValue.h"
 
 #ifdef ENABLE_UPSTREAM_HTTP2
+bool KHttp2Upstream::parse_header(const char* attr, int attr_len, const char* val, int val_len) {
+	int status_code;
+	if (kgl_mem_same(attr, attr_len, _KS(":status"))) {
+		status_code = (int)kgl_atol((u_char *)val, val_len);
+		attr = NULL;
+		attr_len = (int)kgl_header_status;
+		val = (char*)&status_code;
+		val_len = KGL_HEADER_VALUE_INT;
+		if (status_code == 100) {
+			//next headers is not trailer header
+			ctx->is_100_continue = 1;
+			assert(ctx->parsed_header == 0);
+			goto skip_trailer;
+		}
+	}
+	if (ctx->parsed_header) {
+		if (attr) {
+			return ctx->get_trailer_header()->add_header(attr, attr_len, val, val_len) != nullptr;
+		}
+		return ctx->get_trailer_header()->add_header((kgl_header_type)attr_len, val, val_len) != nullptr;
+	}
+skip_trailer:
+	kgl_http2_event* re = ctx->read_wait;
+	if (re) {
+		//client模式中在等待读header的过程中，有可能就会被客户端connection broken而导致shutdown.
+		kassert(re->header);
+		return re->header(this, re->header_arg, attr, attr_len, val, val_len, false);
+	}
+	return true;
+}
 bool KHttp2Upstream::set_header_callback(void* arg, kgl_header_callback header) {
 	assert(kselector_is_same_thread(http2->c->st.selector));
 	assert(!ctx->in_closed);
@@ -40,11 +70,14 @@ bool KHttp2Upstream::send_trailer(const char* name, hlen_t name_len, const char*
 }
 bool KHttp2Upstream::send_header(kgl_header_type name, const char* val, hlen_t val_len) {
 	switch (name) {
+	case kgl_header_expect:
+		ctx->has_expect = 1;
+		return KUpstream::send_header(name, val, val_len);
 	case kgl_header_upgrade:
-		if (ctx->websocket) {
+		if (ctx->has_upgrade) {
 			return http2->add_header(ctx, _KS(":protocol"), val, val_len);
 		}
-		//fallthough
+		return KUpstream::send_header(name, val, val_len);
 	default:
 		return KUpstream::send_header(name, val, val_len);
 	}
@@ -57,8 +90,8 @@ bool KHttp2Upstream::send_method_path(uint16_t meth, const char* path, hlen_t pa
 		return false;
 	}
 	if (meth == METH_CONNECT) {
-		ctx->websocket = 1;
-		ctx->SetContentLength(-1);
+		ctx->has_upgrade = 1;
+		ctx->set_content_length(-1);
 	}
 	return http2->add_header(ctx, kgl_expand_string(":path"), path, path_len);
 }
@@ -66,11 +99,10 @@ bool KHttp2Upstream::send_host(const char* host, hlen_t host_len) {
 	return http2->add_header(ctx, kgl_expand_string(":authority"), host, host_len);
 }
 void KHttp2Upstream::set_content_length(int64_t content_length) {
-	if (ctx->websocket) {
+	if (ctx->has_upgrade) {
 		return;
 	}
-	ctx->SetContentLength(content_length);
-	return;
+	ctx->set_content_length(content_length);
 }
 KGL_RESULT KHttp2Upstream::send_header_complete() {
 	return KGL_OK;

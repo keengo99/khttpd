@@ -70,6 +70,16 @@ KSink::~KSink() {
 	set_state(STATE_UNKNOW);
 	klist_remove(&queue);
 }
+bool KSink::response_100_continue() {
+	if (!internal_response_status(100)) {
+		return false;
+	}
+	if (internal_start_response_body(0,true)<0) {
+		return false;
+	}
+	flush();
+	return true;
+}
 bool KSink::start_response_body(INT64 body_len) {
 	assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
 	if (KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER)) {
@@ -79,7 +89,7 @@ bool KSink::start_response_body(INT64 body_len) {
 	if (data.meth == METH_HEAD) {
 		body_len = 0;
 	}
-	int header_len = internal_start_response_body(body_len);
+	int header_len = internal_start_response_body(body_len, false);
 	add_down_flow(header_len, true);
 	return header_len >= 0;
 }
@@ -269,7 +279,9 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Expect"))) {
 		if (kgl_memstr(val, val_len, kgl_expand_string("100-continue")) != NULL) {
 			data.flags |= RQ_HAVE_EXPECT;
+			return data.add_header(kgl_header_expect, val, val_len);
 		}
+		//unknow expect header.
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
@@ -454,10 +466,7 @@ int KSink::read(char* buf, int len) {
 	kassert(!kfiber_is_main());
 	if (KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
 		KBIT_CLR(data.flags, RQ_HAVE_EXPECT);
-		response_status(100);
-		start_response_body(0);
-		flush();
-		start_header();
+		response_100_continue();
 	}
 	int length;
 	if (data.left_read >= 0 && !KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {

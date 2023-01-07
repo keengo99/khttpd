@@ -126,6 +126,7 @@ public:
 			pool = NULL;
 		}
 	}
+	bool parse_header(const char* attr, int attr_len, const char* val, int val_len);
 private:
 	KOPAQUE data;
 	KHttp2* http2;

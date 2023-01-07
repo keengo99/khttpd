@@ -88,6 +88,8 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("Alt-Svc"),_KS("alt-svc"),_KS("\r\nAlt-Svc: ")},
 	{_KS("Connection"),_KS("connection"),_KS("\r\nConnection: ")},
 	{_KS("Upgrade"),_KS("upgrade"),_KS("\r\nUpgrade: ")},
+	{_KS("Expect"),_KS("expect"),_KS("\r\nExpect: ")},
+	{_KS("Status"),_KS("status"),_KS("\r\nStatus: ")},
 	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

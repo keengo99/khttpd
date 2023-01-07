@@ -47,11 +47,11 @@ void dump_hex(void* d, int len) {
 }
 kev_result resultHttp2Read(KOPAQUE data, void* arg, int got) {
 	KHttp2* http2 = (KHttp2*)data;
-	return http2->resultRead(arg, got);
+	return http2->on_read_result(arg, got);
 }
 kev_result resultHttp2Write(KOPAQUE data, void* arg, int got) {
 	KHttp2* http2 = (KHttp2*)data;
-	return http2->resultWrite(arg, got);
+	return http2->on_write_result(arg, got);
 }
 kev_result http2_next_write(KOPAQUE data, void* arg, int got) {
 	kassert(got <= 0);
@@ -71,7 +71,7 @@ int bufferHttp2Write(KOPAQUE data, void* arg, iovec* buf, int bufCount) {
 	return c->get_write_buffer(buf, bufCount);
 }
 
-static bool construct_cookie_header(KHttp2Context* ctx, KSink* r) {
+static bool construct_cookie_header(KHttp2Context* ctx, KHttp2Sink* r) {
 	char* buf, * p, * end;
 	size_t                      len;
 	kgl_str_t* vals;
@@ -118,11 +118,12 @@ static bool construct_cookie_header(KHttp2Context* ctx, KSink* r) {
 
 	h.value.len = len;
 	h.value.data = buf;
+#if 0
 	if (ctx->read_trailer) {
 		ctx->get_trailer_header()->add_header(h.name.data, (int)h.name.len, h.value.data, (int)h.value.len);
-	} else {
-		r->parse_header(h.name.data, (int)h.name.len, h.value.data, (int)h.value.len, false);
 	}
+#endif
+	r->parse_header(h.name.data, (int)h.name.len, h.value.data, (int)h.value.len);
 	return true;
 }
 KHttp2::KHttp2() {
@@ -289,7 +290,7 @@ u_char* KHttp2::close(bool read, int status) {
 	}
 	return NULL;
 }
-kev_result KHttp2::resultRead(void* arg, int got) {
+kev_result KHttp2::on_read_result(void* arg, int got) {
 	assert(arg == c);
 	assert(read_processing);
 	//printf("http2=[%p] got=[%d]\n",this,got);
@@ -368,7 +369,7 @@ u_char* KHttp2::handle_continuation(u_char* pos, u_char* end, kgl_http_v2_handle
 bool KHttp2::add_cookie(kgl_http_v2_header_t* header) {
 	kgl_str_t* val;
 	kgl_array_t* cookies;
-	KSink* r = state.stream->request;
+	KSink* r = state.stream->sink;
 	cookies = state.stream->cookies;
 
 	if (cookies == NULL) {
@@ -396,7 +397,7 @@ u_char* KHttp2::state_process_header(u_char* pos, u_char* end) {
 	size_t                      len;
 	//intptr_t                   rc;
 	//kgl_table_elt_t            *h;
-	KSink* r;
+	KHttp2Sink* r;
 	kgl_http_v2_header_t* header;
 
 	static kgl_str_t cookie = kgl_string("cookie");
@@ -451,25 +452,23 @@ u_char* KHttp2::state_process_header(u_char* pos, u_char* end) {
 		}
 		return state_header_complete(pos, end);
 	}
+#if 0
 	if (stream->read_trailer) {
 		stream->get_trailer_header()->add_header(header->name.data, (int)header->name.len, header->value.data, (int)header->value.len);
 		return state_header_complete(pos, end);
 	}
+#endif
+
 	//printf("request name=[%s][%d %d] val=[%s][%d]\n", header->name.data, header->name.len, strlen(header->name.data), header->value.data, header->value.len);
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (client_model) {
 		kassert(state.stream->node);
-		kgl_http2_event* re = state.stream->read_wait;
-		if (re) {
-			//client模式中在等待读header的过程中，有可能就会被客户端connection broken而导致shutdown.
-			kassert(re->header);
-			re->header(state.stream->us, re->header_arg, header->name.data, (int)header->name.len, header->value.data, (int)header->value.len, false);
-		}
+		stream->us->parse_header(header->name.data, (int)header->name.len, header->value.data, (int)header->value.len);
 		return state_header_complete(pos, end);
 	}
 #endif	
-	r = state.stream->request;
-	r->parse_header(header->name.data, (int)header->name.len, header->value.data, (int)header->value.len, false);
+	r = state.stream->sink;
+	r->parse_header(header->name.data, (int)header->name.len, header->value.data, (int)header->value.len);
 	return state_header_complete(pos, end);
 }
 
@@ -561,33 +560,39 @@ u_char* KHttp2::state_skip_padded(u_char* pos, u_char* end) {
 	return state_skip(pos, end);
 }
 
-bool KHttp2::ReadHeaderSuccess(KHttp2Context* stream) {
+bool KHttp2::on_header_success(KHttp2Context* stream) {
 
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (client_model) {
-		if (!stream->read_trailer && stream->websocket) {
+		if (stream->has_upgrade) {
 			kgl_http2_event* re = stream->read_wait;
 			if (re) {
 				re->header(stream->us, re->header_arg, _KS("Connection"), _KS("Upgrade"), false);
 			}
 		}
-		//client模式，可以直接设置parsed_header
+		if (stream->is_100_continue) {
+			stream->is_100_continue = 0;
+			if (stream->read_wait) {
+				//不能删除read_wait,因为还要继续读.
+				stream->read_wait->on_read(0);
+			}
+			return true;
+		}
 		stream->parsed_header = 1;
-		stream->read_trailer = 1;
 	}
 #endif
 	if (!stream->is_available()) {
 		return true;
 	}
 	if (!client_model) {
-		if (!construct_cookie_header(stream, stream->request)) {
+		if (!construct_cookie_header(stream, stream->sink)) {
 			return false;
 		}
 	}
 	//printf("%lld http2=[%p] stream=[%d] header complete\n", kgl_current_sec,this, stream->node->id);
 	//client模式中在等待读header的过程中，有可能就会被客户端connection broken而导致shutdown.
 	//而发生stream已经被释放时，stream->request会变成无效
-	if (stream->read_trailer || client_model) {
+	if (client_model || stream->parsed_header) {
 		state.stream = NULL;
 		kgl_http2_event* read_wait = stream->read_wait;
 		if (read_wait) {
@@ -598,17 +603,16 @@ bool KHttp2::ReadHeaderSuccess(KHttp2Context* stream) {
 		}
 		return true;
 	}
-	if (!KBIT_TEST(stream->request->data.flags, RQ_HAS_CONTENT_LEN) && !stream->in_closed) {
-		stream->request->data.content_length = -1;
+	if (!KBIT_TEST(stream->sink->data.flags, RQ_HAS_CONTENT_LEN) && !stream->in_closed) {
+		stream->sink->data.content_length = -1;
 	}
 	//server模式，调用了parsed_header，就要调用handleStartRequest
 	//否则会早成stream泄漏
 	stream->parsed_header = 1;
-	stream->read_trailer = 1;
 	assert(processing >= 0);
 	katom_inc((void*)&processing);
 	state.stream = NULL;
-	kfiber_create(khttp_server_new_request, stream->request, (int)state.header_length, http_config.fiber_stack_size, NULL);
+	kfiber_create(khttp_server_new_request, stream->sink, (int)state.header_length, http_config.fiber_stack_size, NULL);
 	return true;
 }
 u_char* KHttp2::state_header_complete(u_char* pos, u_char* end) {
@@ -622,7 +626,7 @@ u_char* KHttp2::state_header_complete(u_char* pos, u_char* end) {
 	}
 	stream = state.stream;
 	if (stream) {
-		if (!ReadHeaderSuccess(stream)) {
+		if (!on_header_success(stream)) {
 			return this->close(true, KGL_HTTP_V2_INTERNAL_ERROR);
 		}
 	}
@@ -701,10 +705,10 @@ KHttp2Context* KHttp2::create_stream() {
 	state.keep_pool = 1;
 	KHttp2Sink* sink = new KHttp2Sink(this, stream, state.pool);
 	sink->data.set_http_version(2, 0);
-	stream->request = sink;
+	stream->sink = sink;
 #ifdef KSOCKET_SSL
 	if (kconnection_is_ssl(c)) {
-		KBIT_SET(stream->request->data.raw_url->flags, KGL_URL_SSL);
+		KBIT_SET(stream->sink->data.raw_url->flags, KGL_URL_SSL);
 	}
 #endif
 	return stream;
@@ -738,7 +742,7 @@ kev_result KHttp2::NextWrite(int got) {
 	}
 	return CloseWrite();
 }
-kev_result KHttp2::resultWrite(void* arg, int got) {
+kev_result KHttp2::on_write_result(void* arg, int got) {
 	if (got <= 0) {
 		close(false, KGL_HTTP_V2_CONNECT_ERROR);
 		return kev_destroy;
@@ -808,7 +812,7 @@ void KHttp2::write_end(KHttp2Context* ctx) {
 	}
 	if (ctx->send_header && !ctx->write_trailer) {
 		//try to send header
-		ctx->SetContentLength(0);
+		ctx->set_content_length(0);
 		send_header(ctx, true);
 		return;
 	}
@@ -1180,7 +1184,12 @@ bool KHttp2::add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, c
 	ctx->send_header->write_lower_string(name, name_len);
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
 	ctx->send_header->write(val, val_len);
-	//printf("http2 add header name=[%s: %s]\n", name, val);
+#if 0
+	fwrite(name, 1, name_len, stdout);
+	fwrite(": ", 1, 2, stdout);
+	fwrite(val, 1, val_len, stdout);
+	fwrite("\r\n", 1, 2, stdout);
+#endif
 	return true;
 }
 void KHttp2::init(kconnection* c) {
@@ -1299,12 +1308,12 @@ int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (client_model) {
 #ifndef NDEBUG
-		if (http2_ctx->content_left >= 0) {
+		if (http2_ctx->content_left >= 0 && !http2_ctx->has_expect) {
 			assert(http2_ctx->content_left == 0);
 			assert(http2_ctx->out_closed);
 		}
 #endif
-		if (http2_ctx->out_closed == 0 && !http2_ctx->websocket) {
+		if (http2_ctx->out_closed == 0 && (!http2_ctx->has_upgrade || http2_ctx->has_expect)) {
 			http2_ctx->out_closed = 1;
 			http2_buff* new_buf = get_frame(http2_ctx->node->id, 0, KGL_HTTP_V2_DATA_FRAME, KGL_HTTP_V2_END_STREAM_FLAG);
 			new_buf->tcp_nodelay = 1;
@@ -1711,7 +1720,7 @@ u_char* KHttp2::state_headers(u_char* pos, u_char* end) {
 			klog(KLOG_WARNING, "http2 stream in is not available [%d]\n", state.sid);
 			return state_skip(pos, end);
 		}
-		assert(stream->read_wait || stream->read_trailer);
+		//assert(stream->read_wait || stream->read_trailer);
 		assert(stream->us);
 		state.pool = stream->us->GetPool();
 		state.keep_pool = 1;
@@ -1749,7 +1758,7 @@ u_char* KHttp2::state_headers(u_char* pos, u_char* end) {
 		return this->close(true, KGL_HTTP_V2_INTERNAL_ERROR);
 	}
 	if (node->stream) {
-		assert(node->stream->read_trailer);
+		//assert(node->stream->read_trailer);
 		stream = node->stream;
 		kassert(state.pool == NULL);
 		stream->RemoveQueue();
@@ -1757,7 +1766,7 @@ u_char* KHttp2::state_headers(u_char* pos, u_char* end) {
 			klog(KLOG_WARNING, "http2 stream is not available [%d]\n", state.sid);
 			return state_skip(pos, end);
 		}
-		state.pool = stream->request->pool;
+		state.pool = stream->sink->pool;
 		state.keep_pool = 1;
 		kassert(state.pool);
 		kassert(state.stream == NULL);
@@ -1777,7 +1786,7 @@ u_char* KHttp2::state_headers(u_char* pos, u_char* end) {
 	node->stream = stream;
 	assert(state.stream == NULL);
 	state.stream = stream;
-	assert(state.pool == stream->request->pool);
+	assert(state.pool == stream->sink->pool);
 	/*
 	if (priority || node->parent == NULL) {
 		node->weight = weight;
@@ -2153,9 +2162,9 @@ void KHttp2::ReleaseStateStream() {
 #endif//}}
 		) {
 		//incomplete stream
-		kassert(state.stream->request);
-		if (state.stream->request) {
-			KSink* rq = state.stream->request;
+		kassert(state.stream->sink);
+		if (state.stream->sink) {
+			KSink* rq = state.stream->sink;
 #ifndef NDEBUG
 			//调试模式时，~KHttp2Sink里面会对ctx有检查。
 			KHttp2Sink* sink = static_cast<KHttp2Sink*>(rq);

@@ -75,7 +75,7 @@ public:
 		return false;
 	}
 	//返回头长度,-1表示出错
-	int internal_start_response_body(int64_t body_size) override {
+	int internal_start_response_body(int64_t body_size,bool is_100_continue) override {
 		if (st == NULL) {
 			return -1;
 		}
@@ -147,6 +147,7 @@ public:
 	}
 	void on_read(lsquic_stream_t* st);
 	void on_write(lsquic_stream_t* st);
+	kev_result read_header() override;
 	int end_request() override {
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		if (st && (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE)) || content_left > 0)) {

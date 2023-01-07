@@ -11,7 +11,7 @@ KTcpSink::~KTcpSink()
 {
 	kconnection_destroy(cn);
 }
-kev_result KTcpSink::StartRequest()
+kev_result KTcpSink::read_header()
 {
 	assert(data.raw_url == NULL);
 	sockaddr_i addr;

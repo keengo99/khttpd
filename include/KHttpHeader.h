@@ -26,13 +26,13 @@ inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result) {
 	result->len = header->name_len;
 	return;
 }
-inline KHttpHeader* new_pool_http_header(kgl_pool_t* pool, const char* attr, int attr_len, const char* val, int val_len) {
+inline KHttpHeader* new_pool_http_header(const char* attr, int attr_len, const char* val, int val_len, kgl_malloc m, void* arg) {
 	if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
 		return NULL;
 	}
-	KHttpHeader* header = (KHttpHeader*)kgl_pnalloc(pool, sizeof(KHttpHeader));
+	KHttpHeader* header = (KHttpHeader*)m(arg, sizeof(KHttpHeader));
 	memset(header, 0, sizeof(KHttpHeader));
-	header->buf = (char*)kgl_pnalloc(pool, attr_len + val_len + 2);
+	header->buf = (char*)m(arg, attr_len + val_len + 2);
 	kgl_memcpy(header->buf, attr, attr_len);
 	header->buf[attr_len] = '\0';
 	header->val_offset = attr_len + 1;
@@ -42,24 +42,24 @@ inline KHttpHeader* new_pool_http_header(kgl_pool_t* pool, const char* attr, int
 	header->name_len = attr_len;
 	return header;
 }
-inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, int val_len) {
+inline KHttpHeader* new_pool_http_know_header(kgl_header_type type, const char* val, int val_len, kgl_malloc m, void *arg) {
 	assert(type >= 0 && type < kgl_header_unknow);
-	KHttpHeader* header = (KHttpHeader*)malloc(sizeof(KHttpHeader));
+	KHttpHeader* header = (KHttpHeader*)m(arg, sizeof(KHttpHeader));
 	memset(header, 0, sizeof(KHttpHeader));
 	switch (val_len) {
 	case KGL_HEADER_VALUE_INT64:
-		header->buf = (char*)malloc(KGL_INT64_LEN + 1);
+		header->buf = (char*)m(arg, KGL_INT64_LEN + 1);
 		header->val_len = snprintf(header->buf, KGL_INT64_LEN, INT64_FORMAT, *(int64_t*)val);
 		break;
 	case KGL_HEADER_VALUE_INT:
 	{
-		header->buf = (char*)malloc(KGL_INT32_LEN + 1);
+		header->buf = (char*)m(arg, KGL_INT32_LEN + 1);
 		header->val_len = snprintf(header->buf, KGL_INT32_LEN, "%d", *(int*)val);
 		break;
 	}
 	case KGL_HEADER_VALUE_TIME:
 	{
-		header->buf = (char*)malloc(KGL_1123_TIME_LEN + 1);
+		header->buf = (char*)m(arg,KGL_1123_TIME_LEN + 1);
 		char* end = make_http_time(*(time_t*)val, header->buf, KGL_1123_TIME_LEN);
 		header->val_len = (hlen_t)(end - header->buf);
 		break;
@@ -70,7 +70,7 @@ inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, 
 			fprintf(stderr, "unknow header=[%d] val_len=[%d]\n", type, val_len);
 			return NULL;
 		}
-		header->buf = (char*)malloc(val_len + 1);
+		header->buf = (char*)m(arg,val_len + 1);
 		kgl_memcpy(header->buf, val, val_len);
 		header->val_len = val_len;
 		break;
@@ -80,21 +80,11 @@ inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, 
 	header->name_is_know = 1;
 	return header;
 }
+inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, int val_len) {
+	return new_pool_http_know_header(type, val, val_len, kgl_sys_malloc, NULL);
+}
 inline KHttpHeader* new_http_header(const char* attr, int attr_len, const char* val, int val_len) {
-	if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
-		return NULL;
-	}
-	KHttpHeader* header = (KHttpHeader*)malloc(sizeof(KHttpHeader));
-	memset(header, 0, sizeof(KHttpHeader));
-	header->buf = (char*)malloc(attr_len + val_len + 2);
-	kgl_memcpy(header->buf, attr, attr_len);
-	header->buf[attr_len] = '\0';
-	header->val_offset = attr_len + 1;
-	kgl_memcpy(header->buf + header->val_offset, val, val_len);
-	header->buf[attr_len + val_len + 1] = '\0';
-	header->val_len = val_len;
-	header->name_len = attr_len;
-	return header;
+	return new_pool_http_header(attr, attr_len, val, val_len, kgl_sys_malloc, NULL);
 }
 inline void xfree_header(KHttpHeader* av) {
 	free(av->buf);

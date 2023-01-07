@@ -99,11 +99,6 @@ KHttpSink::~KHttpSink() {
 		kconnection_destroy(cn);
 	}
 }
-void KHttpSink::start_header() {
-	if (rc == NULL) {
-		rc = new KResponseContext(pool);
-	}
-}
 bool KHttpSink::internal_response_status(uint16_t status_code) {
 	kassert(rc);
 	kgl_str_t request_line;
@@ -132,7 +127,7 @@ kev_result KHttpSink::Parse() {
 				return kev_destroy;
 			}
 			ks_save_point(&buffer, hot);
-			return ReadHeader();
+			return read_header();
 		}
 		case kgl_parse_success:
 			if (!parse_header(rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
@@ -214,7 +209,7 @@ bool KHttpSink::response_header(const char* name, int name_len, const char* val,
 	rc->head_append(buf, len);
 	return true;
 }
-int KHttpSink::internal_start_response_body(int64_t body_size) {
+int KHttpSink::internal_start_response_body(int64_t body_size, bool is_100_continue) {
 	if (rc == NULL) {
 		return 0;
 	}
@@ -238,8 +233,10 @@ int KHttpSink::internal_start_response_body(int64_t body_size) {
 			break;
 		}
 	}
-	delete rc;
-	rc = NULL;
+	if (!is_100_continue) {
+		delete rc;
+		rc = NULL;
+	}
 	return header_len;
 }
 int KHttpSink::internal_read(char* buf, int len) {
@@ -359,7 +356,7 @@ void KHttpSink::EndFiber() {
 		Parse();
 		return;
 	}
-	ReadHeader();
+	read_header();
 }
 int KHttpSink::StartPipeLine() {
 	kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
@@ -371,7 +368,7 @@ int KHttpSink::StartPipeLine() {
 	}
 	return kfiber_exit_callback(NULL, end_http_sink_fiber, (KSink*)this);
 }
-kev_result KHttpSink::ReadHeader() {
+kev_result KHttpSink::read_header() {
 	return selectable_read(&cn->st, result_read_http_sink, buffer_read_http_sink, (KSink*)this);
 }
 bool KHttpSink::response_trailer(const char* name, int name_len, const char* val, int val_len) {

@@ -25,7 +25,8 @@ enum class HealthStatus
 class KPoolableSocketContainer;
 class KWriteStream;
 class KUpstream;
-typedef bool (*kgl_header_callback)(KUpstream* us, void* arg, const char* attr, int attr_len, const char* val, int val_len, bool is_first);
+//when attr is NULL, and attr_len treated as kgl_header_type
+typedef bool (*kgl_header_callback)(KUpstream* us, void* arg, const char* attr, int attr_len, const char* val, int val_len, bool request_line);
 
 class KUpstreamCallBack
 {

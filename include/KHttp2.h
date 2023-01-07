@@ -196,7 +196,8 @@ struct http2_frame_goaway
 #pragma pack(pop)
 class KHttp2Context;
 class KHttp2;
-class KSink;
+class KHttp2Sink;
+class KHttp2Upstream;
 bool test_http2();
 typedef int (*http2_header_parser_pt)(KHttp2Context* ctx, kgl_str_t* name, kgl_str_t* value);
 typedef int (*http2_accept_handler_pt)(KHttp2Context* ctx);
@@ -274,8 +275,8 @@ public:
 	KHttp2Node* node;
 	union
 	{
-		KSink* request;
-		KUpstream* us;
+		KHttp2Sink* sink;
+		KHttp2Upstream* us;
 	};
 	kgl_array_t* cookies;
 #ifndef NDEBUG
@@ -287,19 +288,20 @@ public:
 	uint8_t tmo_left;
 	uint8_t tmo;
 #ifndef NDEBUG
-	uint16_t timeout : 1;
+	uint16_t  timeout : 1;
 #endif
 	uint16_t  in_closed : 1;
 	uint16_t  out_closed : 1;
 	uint16_t  rst : 1;
+	uint16_t  is_100_continue : 1;
 	uint16_t  parsed_header : 1;
-	uint16_t  read_trailer : 1;
 	uint16_t  write_trailer : 1;
 #ifdef ENABLE_UPSTREAM_HTTP2
 	uint16_t  admin_stream : 1;
 #endif
 	uint16_t  destroy_by_http2 : 1;
-	uint16_t  websocket : 1;
+	uint16_t  has_upgrade : 1;
+	uint16_t  has_expect : 1;
 	uint16_t  skip_data : 1;
 	volatile int send_window;
 	size_t recv_window;
@@ -391,7 +393,7 @@ public:
 		write_wait->fiber = kfiber_self();
 		write_wait->len = -1;
 	}
-	void SetContentLength(INT64 content_length) {
+	void set_content_length(INT64 content_length) {
 		if (content_length >= 0) {
 			this->content_left = content_length;
 #ifndef NDEBUG
@@ -486,8 +488,8 @@ public:
 public:
 	int get_read_buffer(iovec* buf, int bufCount);
 	int get_write_buffer(iovec* buf, int bufCount);
-	kev_result resultRead(void* arg, int got);
-	kev_result resultWrite(void* arg, int got);
+	kev_result on_read_result(void* arg, int got);
+	kev_result on_write_result(void* arg, int got);
 	kev_result NextWrite(int got);
 	kev_result NextRead(int got);
 	friend class http2_buff;
@@ -507,7 +509,7 @@ private:
 	u_char* state_continuation(u_char* pos, u_char* end);
 	u_char* state_altsvc(u_char* pos, u_char* end);
 private:
-	bool ReadHeaderSuccess(KHttp2Context* stream);
+	bool on_header_success(KHttp2Context* stream);
 	bool check_recv_window(KHttp2Context* ctx);
 	bool add_header_cookie(KHttp2Context* ctx, const char* val, hlen_t val_len);
 	KHttp2Node* get_node(uint32_t id, bool alloc);

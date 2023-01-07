@@ -46,7 +46,7 @@ public:
 	{
 		return cn;
 	}
-	kev_result StartRequest();
+	kev_result read_header() override;
 	int end_request() override;
 	bool internal_response_status(uint16_t status_code) override
 	{
@@ -60,7 +60,7 @@ public:
 	{
 		return false;
 	}
-	int internal_start_response_body(int64_t body_size) override
+	int internal_start_response_body(int64_t body_size, bool is_100_continue) override
 	{
 		return 0;
 	}

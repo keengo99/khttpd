@@ -19,11 +19,16 @@ struct KTsUpstreamParam {
 	};
 };
 
-static bool ts_header_callback(KUpstream *us, void *arg, const char *attr, int attr_len, const char *val, int val_len,bool is_first)
+static bool ts_header_callback(KUpstream *us, void *arg, const char *attr, int attr_len, const char *val, int val_len,bool request_line)
 {
 	KTsUpstream *ts = (KTsUpstream *)arg;
 	kgl_pool_t *pool = ts->us->GetPool();
-	KHttpHeader *header = new_pool_http_header(pool, attr, attr_len, val, val_len);
+	KHttpHeader* header = nullptr;
+	if (!attr) {
+		header = new_pool_http_know_header((kgl_header_type)attr_len, val, val_len, (kgl_malloc)kgl_pnalloc, pool);
+	} else {
+		header = new_pool_http_header(attr, attr_len, val, val_len, (kgl_malloc)kgl_pnalloc, pool);
+	}
 	if (ts->header) {
 		ts->last_header->next = header;
 		ts->last_header = header;
@@ -93,7 +98,7 @@ KGL_RESULT KTsUpstream::read_header()
 	kfiber_join(fiber, &ret);
 	bool is_first = true;
 	while (header) {
-		stack.header(us, stack.arg, header->buf, header->name_len, header->buf + header->val_offset, header->val_len, is_first);
+		stack.header(us, stack.arg, (header->name_is_know?NULL:header->buf), header->name_len, header->buf + header->val_offset, header->val_len, is_first);
 		is_first = false;
 		header = header->next;
 	}
