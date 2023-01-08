@@ -80,8 +80,7 @@ static int handle_http2https_error(void* arg, int got) {
 	return 0;
 }
 #endif
-KHttpSink::KHttpSink(kconnection* c, kgl_pool_t* pool) : KTcpServerSink(pool) {
-	this->cn = c;
+KHttpSink::KHttpSink(kconnection* c, kgl_pool_t* pool) : KSingleConnectionSink(c, pool) {
 	ks_buffer_init(&buffer, MAX_HTTP_CHUNK_SIZE);
 	memset(&parser, 0, sizeof(parser));
 	rc = NULL;
@@ -94,9 +93,6 @@ KHttpSink::~KHttpSink() {
 	}
 	if (buffer.buf) {
 		xfree(buffer.buf);
-	}
-	if (cn) {
-		kconnection_destroy(cn);
 	}
 }
 bool KHttpSink::internal_response_status(uint16_t status_code) {
@@ -170,7 +166,7 @@ kev_result KHttpSink::Parse() {
 	}
 }
 #ifdef ENABLE_HTTP2
-bool KHttpSink::switch_h2c() 	{
+bool KHttpSink::switch_h2c() {
 	KHttp2* http2 = new KHttp2();
 	selectable_bind_opaque(&cn->st, http2);
 	if (!http2->server_h2c(cn, buffer.buf, buffer.used)) {
@@ -251,6 +247,26 @@ int KHttpSink::internal_read(char* buf, int len) {
 	}
 	return kfiber_net_read(cn, buf, len);
 }
+int KHttpSink::sendfile(kfiber_file* fp, int len) {
+	if (!KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
+		return KSingleConnectionSink::sendfile(fp, len);
+	}
+	char header[32];
+	int size = sprintf(header, "%x\r\n", len);
+	if (!kfiber_net_write_full(cn, header, &size)) {
+		return -1;
+	}
+	size = len;
+	if (!kfiber_sendfile_full(cn, fp, &size)) {
+		return -1;
+	}
+	size = sizeof("\r\n");
+	if (!kfiber_net_write_full(cn, "\r\n", &size)) {
+		return -1;
+	}
+	add_down_flow(len);
+	return len;
+}
 int KHttpSink::internal_write(WSABUF* buf, int bc) {
 	assert(!kfiber_is_main());
 	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
@@ -295,7 +311,7 @@ int KHttpSink::end_request() {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}
-	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE|RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
+	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE | RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
 		return kfiber_exit_callback(NULL, delete_request_fiber, (KSink*)this);
 	}
 	ksocket_no_delay(cn->st.fd, false);

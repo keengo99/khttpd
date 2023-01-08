@@ -8,7 +8,7 @@
 #include "KDechunkContext.h"
 
 //handle http/1.x protocol
-class KHttpSink : public KTcpServerSink
+class KHttpSink : public KSingleConnectionSink
 {
 public:
 	KHttpSink(kconnection* c, kgl_pool_t* pool);
@@ -56,7 +56,6 @@ public:
 	kev_result read_header() override;
 	kev_result Parse();
 	KResponseContext* rc;
-	kconnection* cn;
 	kconnection* get_connection() override
 	{
 		return cn;
@@ -75,6 +74,7 @@ public:
 	void SkipPost();
 	int StartPipeLine();
 	void EndFiber();
+	int sendfile(kfiber_file* fp, int len) override;
 protected:
 	bool response_altsvc_header(const char* val, int val_len) override
 	{

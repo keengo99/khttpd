@@ -7,6 +7,7 @@
 #include "kgl_ssl.h"
 #include "kstring.h"
 #include "KRequest.h"
+#include "kfiber.h"
 
 class KSink
 {
@@ -209,6 +210,12 @@ public:
 	virtual void* get_sni()
 	{
 		return nullptr;
+	}
+	virtual bool support_sendfile() {
+		return false;
+	}
+	virtual int sendfile(kfiber_file* fp, int len) {
+		return -1;
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
 	kgl_list queue;

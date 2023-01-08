@@ -95,4 +95,27 @@ protected:
 		return get_connection()->server;
 	}
 };
+class KSingleConnectionSink : public KTcpServerSink
+{
+public:
+	KSingleConnectionSink(kconnection* cn, kgl_pool_t* pool) : KTcpServerSink(pool) {
+		this->cn = cn;
+	}
+	virtual ~KSingleConnectionSink() {
+		if (cn) {
+			kconnection_destroy(cn);
+		}
+	}
+	virtual bool support_sendfile() override {
+		return selectable_support_sendfile(&cn->st);
+	}
+	virtual int sendfile(kfiber_file* fp, int len) override {
+		int got = kfiber_sendfile(cn, fp, len);
+		if (got > 0) {
+			add_down_flow(got);
+		}
+		return got;
+	}
+	kconnection* cn;
+};
 #endif

@@ -2,6 +2,8 @@
 #define KHTTPSTREAM_H
 #include "KStream.h"
 #include "kmalloc.h"
+#include "kfiber.h"
+#include "ksapi.h"
 
 class KWriteStream
 {
@@ -9,12 +11,16 @@ public:
 	virtual ~KWriteStream() {
 
 	}
-	virtual KGL_RESULT flush(void *arg)
-	{
+	virtual KGL_RESULT flush(void* arg) {
 		return KGL_OK;
 	}
-	virtual KGL_RESULT write_all(void*rq, const char *buf, int len)
-	{
+	virtual bool support_sendfile(void* arg) {
+		return false;
+	}
+	virtual KGL_RESULT sendfile(void* rq, kfiber_file* fp, int64_t* len) {
+		return KGL_ENOT_SUPPORT;
+	}
+	virtual KGL_RESULT write_all(void* rq, const char* buf, int len) {
 		while (len > 0) {
 			int r = write(rq, buf, len);
 			if (r <= 0)
@@ -24,30 +30,28 @@ public:
 		}
 		return STREAM_WRITE_SUCCESS;
 	}
-	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result)
-	{
+	virtual KGL_RESULT write_end(void* rq, KGL_RESULT result) {
 		if (result != KGL_OK) {
 			flush(rq);
 			return result;
 		}
 		return flush(rq);
 	}
-	virtual KGL_RESULT write_direct(void*rq, char *buf, int len) {
+	virtual KGL_RESULT write_direct(void* rq, char* buf, int len) {
 		KGL_RESULT result = write_all(rq, buf, len);
 		xfree(buf);
 		return result;
 	}
 
 	//@deprecated
-	inline KWriteStream & operator <<(const char *str)
-	{
+	inline KWriteStream& operator <<(const char* str) {
 		if (KGL_OK != write_all(NULL, str, (int)strlen(str))) {
 			fprintf(stderr, "cann't write to http stream\n");
 		}
 		return *this;
 	}
 	//@deprecated
-	inline bool add(const int c, const char *fmt) {
+	inline bool add(const int c, const char* fmt) {
 		char buf[16];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -56,7 +60,7 @@ public:
 		return false;
 	}
 	//@deprecated
-	inline bool add(const INT64 c, const char *fmt) {
+	inline bool add(const INT64 c, const char* fmt) {
 		char buf[INT2STRING_LEN];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -65,16 +69,16 @@ public:
 		return false;
 	}
 	//@deprecated
-	inline KWriteStream & operator <<(const std::string str) {
+	inline KWriteStream& operator <<(const std::string str) {
 		write_all(NULL, str.c_str(), (int)str.size());
 		return *this;
 	}
 	//@deprecated
-	inline KWriteStream & operator <<(const char c) {
+	inline KWriteStream& operator <<(const char c) {
 		write_all(NULL, &c, 1);
 		return *this;
 	}
-	inline KWriteStream & operator <<(const int value) {
+	inline KWriteStream& operator <<(const int value) {
 		char buf[16];
 		int len = snprintf(buf, 15, "%d", value);
 		if (len <= 0) {
@@ -86,7 +90,7 @@ public:
 		return *this;
 	}
 	//@deprecated
-	inline KWriteStream & operator <<(const INT64 value) {
+	inline KWriteStream& operator <<(const INT64 value) {
 		char buf[INT2STRING_LEN];
 		int2string(value, buf, false);
 		if (KGL_OK != write_all(NULL, buf, (int)strlen(buf))) {
@@ -95,16 +99,15 @@ public:
 		return *this;
 	}
 	//@deprecated
-	inline void addHex(const int value)
-	{
+	inline void addHex(const int value) {
 		char buf[16];
 		int len = snprintf(buf, 15, "%x", value);
 		write_all(NULL, buf, len);
 	}
 	//@deprecated
-	inline KWriteStream & operator <<(const unsigned value) {
+	inline KWriteStream& operator <<(const unsigned value) {
 		char buf[16];
-		const char *fmt = "%u";
+		const char* fmt = "%u";
 		//if (sfmt != stream::def) {
 		//	fmt = stream::getFormat(sfmt);
 		//}
@@ -118,7 +121,7 @@ public:
 		return *this;
 	}
 protected:
-	virtual int write(void*rq, const char *buf, int len) {
+	virtual int write(void* rq, const char* buf, int len) {
 		return -1;
 	}
 };
@@ -129,15 +132,15 @@ public:
 	KBridgeStream() {
 		st = NULL;
 	}
-	KBridgeStream(KWriteStream *st) {
+	KBridgeStream(KWriteStream* st) {
 		this->st = st;
 		autoDelete = true;
 	}
-	KBridgeStream(KWriteStream *st, bool autoDelete) {
+	KBridgeStream(KWriteStream* st, bool autoDelete) {
 		this->st = st;
 		this->autoDelete = autoDelete;
 	}
-	void connect(KWriteStream *st, bool autoDelete) {
+	void connect(KWriteStream* st, bool autoDelete) {
 		if (this->st && this->autoDelete) {
 			delete this->st;
 		}
@@ -155,7 +158,7 @@ public:
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(const char *buf, int len) {
+	virtual KGL_RESULT write_all(const char* buf, int len) {
 		if (st) {
 			return st->write_all(NULL, buf, len);
 		}
@@ -168,7 +171,7 @@ public:
 		return STREAM_WRITE_SUCCESS;
 	}
 protected:
-	KWriteStream *st;
+	KWriteStream* st;
 	bool autoDelete;
 
 };
@@ -177,16 +180,17 @@ class KBridgeStream2 : public KWriteStream
 public:
 	KBridgeStream2() {
 		st = NULL;
+		autoDelete = false;
 	}
-	KBridgeStream2(KWStream *st) {
+	KBridgeStream2(KWStream* st) {
 		this->st = st;
 		autoDelete = true;
 	}
-	KBridgeStream2(KWStream *st, bool autoDelete) {
+	KBridgeStream2(KWStream* st, bool autoDelete) {
 		this->st = st;
 		this->autoDelete = autoDelete;
 	}
-	void connect(KWStream *st, bool autoDelete) {
+	void connect(KWStream* st, bool autoDelete) {
 		if (this->st && this->autoDelete) {
 			delete this->st;
 		}
@@ -198,26 +202,26 @@ public:
 			delete st;
 		}
 	}
-	virtual KGL_RESULT flush(void*rq) {
+	virtual KGL_RESULT flush(void* rq) {
 		if (st) {
 			return st->flush();
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(void*rq, const char *buf, int len) {
+	virtual KGL_RESULT write_all(void* rq, const char* buf, int len) {
 		if (st) {
 			return st->write_all(buf, len);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result) {
+	virtual KGL_RESULT write_end(void* rq, KGL_RESULT result) {
 		if (st) {
 			return st->write_end(result);
 		}
 		return STREAM_WRITE_SUCCESS;
 	}
 protected:
-	KWStream *st;
+	KWStream* st;
 	bool autoDelete;
 };
 /*
@@ -227,17 +231,21 @@ class KHttpStream : public KWriteStream
 {
 public:
 	KHttpStream() {
-		st = NULL;
+		st = nullptr;
+		autoDelete = false;
 	}
-	KHttpStream(KWriteStream *st) {
+	KHttpStream(KWriteStream* st) {
 		this->st = st;
 		autoDelete = true;
 	}
-	KHttpStream(KWriteStream *st, bool autoDelete) {
+	KHttpStream(KWriteStream* st, bool autoDelete) {
 		this->st = st;
 		this->autoDelete = autoDelete;
 	}
-	void connect(KWriteStream *st, bool autoDelete) {
+	virtual int32_t get_feature() {
+		return KGL_FILTER_NOT_CACHE;
+	}
+	virtual void connect(KWriteStream* st, bool autoDelete) {
 		if (this->st && this->autoDelete) {
 			delete this->st;
 		}
@@ -245,29 +253,41 @@ public:
 		this->autoDelete = autoDelete;
 	}
 	virtual ~KHttpStream() {
-		if (autoDelete && st) {
+		if (st && autoDelete) {
 			delete st;
 		}
 	}
-	virtual KGL_RESULT flush(void *rq) override {
+	bool forward_support_sendfile(void* arg) {
+		if (st) {
+			return st->support_sendfile(arg);
+		}
+		return false;
+	}
+	virtual KGL_RESULT sendfile(void* rq, kfiber_file* fp, int64_t* len) override {
+		if (st) {
+			return st->sendfile(rq, fp, len);
+		}
+		return KGL_ENOT_SUPPORT;
+	}
+	virtual KGL_RESULT flush(void* rq) override {
 		if (st) {
 			return st->flush(rq);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(void*rq, const char *buf, int len) override {
+	virtual KGL_RESULT write_all(void* rq, const char* buf, int len) override {
 		if (st) {
 			return st->write_all(rq, buf, len);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_end(void*rq, KGL_RESULT result) override {
+	virtual KGL_RESULT write_end(void* rq, KGL_RESULT result) override {
 		if (st) {
 			return st->write_end(rq, result);
 		}
 		return result;
 	}
-	KWriteStream *st;
+	KWriteStream* st;
 	bool autoDelete;
 };
 #endif
