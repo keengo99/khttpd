@@ -36,6 +36,9 @@
 #include "KHttpLib.h"
 #include "KUrl.h"
 #include "KHttpHeader.h"
+#include "klib.h"
+#include "kfiber.h"
+
 
  /*
 	kgl_header_host,
@@ -412,11 +415,11 @@ const char* mk1123time(time_t time, char* buf, int size) {
 	return buf;
 }
 void my_msleep(int msec) {
-#if defined(_WIN32)
-	Sleep(msec);
-#else
-	usleep(msec * 1000);
-#endif
+	if (kfiber_is_main()) {
+		kgl_msleep(100);
+	} else {
+		kfiber_msleep(500);
+	}
 }
 #define	BU_FREE	1
 #define	BU_BUSY	2
