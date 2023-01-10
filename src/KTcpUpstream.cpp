@@ -48,7 +48,9 @@ int KTcpUpstream::write(WSABUF* buf, int bc)
 void KTcpUpstream::bind_selector(kselector *selector)
 {
 	kassert(cn->st.selector == NULL || cn->st.selector == selector);
-	selectable_bind(&cn->st, selector);
+	if (cn->st.selector == NULL) {
+		selectable_bind(&cn->st, selector);
+	}
 }
 bool KTcpUpstream::send_header(const char* attr, hlen_t attr_len, const char* val, hlen_t val_len)
 {
