@@ -9,6 +9,7 @@ http2_buff::~http2_buff()
 {
 	kassert(ctx == NULL);
 	if (!skip_data_free) {
+		assert(!sendfile);
 		xfree(data);
 	}
 }

@@ -65,6 +65,7 @@ public:
 		*/
 		WSABUF* buf;
 		kgl_header_callback header;
+		kasync_file* file;
 	};
 	union {
 		struct {
@@ -84,10 +85,15 @@ public:
 	}
 	~http2_buff();
 	void clean(bool fin);
-	char *data;
+	union
+	{
+		char* data;
+		kasync_file* file;
+	};
 	int used;
 	int skip_data_free:1;
-	int tcp_nodelay : 1;
+	int sendfile : 1;
+	int tcp_nodelay : 1;	
 	KHttp2Context *ctx;
 	http2_buff *next;
 };
@@ -211,7 +217,7 @@ public:
 		http2_buff *buf = clean();
 		KHttp2WriteBuffer::remove_buff(buf,true);
 	}
-	int getReadBuffer(SOCKET fd,LPWSABUF buffer,int bc)
+	int getReadBuffer(SOCKET fd, WSABUF *buffer,int bc)
 	{
 #ifdef ENABLE_HTTP2_TCP_CORK
 		if (!tcp_cork) {
@@ -225,6 +231,12 @@ public:
 			kassert(false);
 		}
 #endif
+		if (header->sendfile) {
+			assert(bc == 1);
+			buffer[0].iov_base = (char *)header->file;
+			buffer[0].iov_len = header->used;
+			return 1;
+		}
 		assert(hot);
 		int got = left;
 		assert(header);
@@ -237,7 +249,7 @@ public:
 		int i;
 		for (i=1;i<bc;i++) {
 			tmp = tmp->next;
-			if (tmp==NULL || got<=0) {
+			if (tmp==NULL || got<=0 || tmp->sendfile) {
 				break;
 			}
 			buffer[i].iov_base = tmp->data;
@@ -251,11 +263,21 @@ public:
 		http2_buff *remove_list = NULL;
 		left -= got;
 		while (got>0) {
-			int hot_left = header->used - (int)(hot - header->data);
-			int this_len = KGL_MIN(got,hot_left);
-			hot += this_len;
-			got -= this_len;
-			if (header->used == hot - header->data) {
+			bool header_is_empty;
+			if (header->sendfile) {
+				header->file->st.offset += got;
+				int this_len = KGL_MIN(got, header->used);
+				header->used -= this_len;
+				got -= this_len;
+				header_is_empty = (header->used == 0);
+			} else {
+				int hot_left = header->used - (int)(hot - header->data);
+				int this_len = KGL_MIN(got, hot_left);
+				hot += this_len;
+				got -= this_len;
+				header_is_empty = (header->used == hot - header->data);
+			}
+			if (header_is_empty) {
 #ifdef ENABLE_HTTP2_TCP_CORK
 				if (header->tcp_nodelay) {
 					tcp_no_cork_at_empty = 1;
@@ -291,8 +313,12 @@ public:
 		}
 	}
 	int getBufferSize()
-	{
+	{		
 		return left;
+	}
+	bool is_sendfile() {
+		assert(header);
+		return header->sendfile;
 	}
 	http2_buff *clean();
 	/* return fin */

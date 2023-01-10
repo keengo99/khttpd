@@ -730,14 +730,21 @@ kev_result KHttp2::NextRead(int got) {
 	return start_read();
 }
 kev_result KHttp2::NextWrite(int got) {
-	//printf("NextWrite=[%p]\n", this);
-	kassert(write_processing == 1);
 	if (got < 0) {
 		close(false, KGL_HTTP_V2_CONNECT_ERROR);
 		return kev_destroy;
 	}
-	kassert(write_buffer.getBufferSize() > 0);
+	return try_write();
+}
+kev_result KHttp2::try_write() 	{
+	assert(write_processing == 1);
 	if (write_buffer.getBufferSize() > 0) {
+		if (write_buffer.is_sendfile()) {
+			if (!kgl_selector_module.sendfile(&c->st, resultHttp2Write, bufferHttp2Write, this)) {
+				return resultHttp2Write(c->st.data, this, -1);
+			}
+			return kev_ok;
+		}
 		return selectable_write(&c->st, resultHttp2Write, bufferHttp2Write, this);
 	}
 	return CloseWrite();
@@ -749,11 +756,8 @@ kev_result KHttp2::on_write_result(void* arg, int got) {
 	}
 	http2_buff* remove_list = write_buffer.readSuccess(c->st.fd, got);
 	KHttp2WriteBuffer::remove_buff(remove_list, false);
-	assert(write_processing == 1);
-	if (write_buffer.getBufferSize() > 0) {
-		return selectable_write(&c->st, resultHttp2Write, bufferHttp2Write, this);
-	}
-	return CloseWrite();
+	
+	return try_write();
 }
 kev_result KHttp2::start_read() {
 	int32_t pc = katom_get((void*)&processing);
@@ -1363,6 +1367,26 @@ int KHttp2::on_write_window_ready(KHttp2Context* http2_ctx) {
 	}
 	return len;
 }
+int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {	
+	if (ctx->write_wait) {
+		kassert(IS_WRITE_WAIT_FOR_HUP(ctx->write_wait));
+		delete ctx->write_wait;
+		ctx->write_wait = NULL;
+	}
+	kassert(kselector_is_same_thread(c->st.selector));
+	if (IsWriteClosed(ctx)) {
+		return -1;
+	}
+	if (ctx->send_header) {
+		//try to send header
+		assert(!ctx->write_trailer);
+		send_header(ctx, ctx->content_left == 0);
+	}
+	ctx->sendfile = 1;
+	ctx->CreateWriteWaitWindow((WSABUF *)file, length);
+	on_write_window_ready(ctx);
+	return kfiber_wait(ctx->write_wait);
+}
 int KHttp2::write(KHttp2Context* ctx, WSABUF* buf, int bc) {
 	if (ctx->write_wait) {
 		kassert(IS_WRITE_WAIT_FOR_HUP(ctx->write_wait));
@@ -1378,6 +1402,7 @@ int KHttp2::write(KHttp2Context* ctx, WSABUF* buf, int bc) {
 		assert(!ctx->write_trailer);
 		send_header(ctx, ctx->content_left == 0);
 	}
+	ctx->sendfile = 0;
 	ctx->CreateWriteWaitWindow(buf, bc);
 	on_write_window_ready(ctx);
 	return kfiber_wait(ctx->write_wait);

@@ -303,6 +303,7 @@ public:
 	uint16_t  has_upgrade : 1;
 	uint16_t  has_expect : 1;
 	uint16_t  skip_data : 1;
+	uint16_t  sendfile : 1; //write_wait is sendfile.
 	volatile int send_window;
 	size_t recv_window;
 	KHttp2HeaderFrame* send_header;
@@ -333,27 +334,37 @@ public:
 		http2_buff* last = NULL;
 		//WSABUF vc[MAX_HTTP2_BUFFER_SIZE];
 		int total_len = 0;
-		//int bufferCount = e->buffer(data, e->arg, vc, MAX_HTTP2_BUFFER_SIZE);
-		for (int i = 0; i < e->bc; i++) {
-			if (len <= 0) {
-				break;
-			}
+		if (sendfile) {
 			http2_buff* new_buf = new http2_buff;
 			new_buf->skip_data_free = 1;
-			new_buf->data = (char*)e->buf[i].iov_base;
-			new_buf->used = (uint16_t)KGL_MIN(len, (int)e->buf[i].iov_len);
+			new_buf->sendfile = 1;
+			new_buf->file = e->file;
+			total_len = (uint16_t)KGL_MIN(len, e->bc);
+			new_buf->used = total_len;
+			buf_out = last = new_buf;
+		} else {
+			//int bufferCount = e->buffer(data, e->arg, vc, MAX_HTTP2_BUFFER_SIZE);
+			for (int i = 0; i < e->bc; i++) {
+				if (len <= 0) {
+					break;
+				}
+				http2_buff* new_buf = new http2_buff;
+				new_buf->skip_data_free = 1;
+				new_buf->data = (char*)e->buf[i].iov_base;
+				new_buf->used = (uint16_t)KGL_MIN(len, (int)e->buf[i].iov_len);
 #ifndef NDEBUG
-			//KMD5Update(&md5, (unsigned char *)new_buf->data, new_buf->used);
+				//KMD5Update(&md5, (unsigned char *)new_buf->data, new_buf->used);
 #endif
 			//fwrite(new_buf->data, 1, new_buf->used, stdout);
-			len -= new_buf->used;
-			total_len += new_buf->used;
-			if (last) {
-				last->next = new_buf;
-			} else {
-				buf_out = new_buf;
+				len -= new_buf->used;
+				total_len += new_buf->used;
+				if (last) {
+					last->next = new_buf;
+				} else {
+					buf_out = new_buf;
+				}
+				last = new_buf;
 			}
-			last = new_buf;
 		}
 		assert(last);
 		assert(total_len > 0);
@@ -466,6 +477,7 @@ public:
 	int ReadHeader(KHttp2Context* ctx);
 	int read(KHttp2Context* ctx, WSABUF* buf, int bc);
 	int write(KHttp2Context* ctx, WSABUF* buf, int bc);
+	int sendfile(KHttp2Context* ctx, kasync_file* file, int length);
 	bool add_status(KHttp2Context* ctx, uint16_t status_code);
 	bool add_method(KHttp2Context* ctx, u_char meth);
 	bool add_header(KHttp2Context* ctx, kgl_header_type name, const char* val, hlen_t val_len);
@@ -509,6 +521,7 @@ private:
 	u_char* state_continuation(u_char* pos, u_char* end);
 	u_char* state_altsvc(u_char* pos, u_char* end);
 private:
+	kev_result try_write();
 	bool on_header_success(KHttp2Context* stream);
 	bool check_recv_window(KHttp2Context* ctx);
 	bool add_header_cookie(KHttp2Context* ctx, const char* val, hlen_t val_len);

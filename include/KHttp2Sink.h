@@ -20,6 +20,12 @@ public:
 	{
 		return false;
 	}
+	bool support_sendfile() override {
+		return selectable_support_sendfile(&http2->c->st);
+	}
+	virtual int sendfile(kfiber_file* fp, int len) override {
+		return http2->sendfile(ctx, fp, len);
+	}
 	KHttpHeader* get_trailer() override {
 		if (!ctx->trailer) {
 			return nullptr;
