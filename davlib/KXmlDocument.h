@@ -30,7 +30,7 @@ public:
 		tag = nullptr;
 		vary = nullptr;
 	}
-	void set_tag(std::string& tag) {
+	void set_tag(const std::string& tag) {
 		assert(this->tag == nullptr);
 		this->tag = kstring_from2(tag.c_str(), tag.size());
 	}
