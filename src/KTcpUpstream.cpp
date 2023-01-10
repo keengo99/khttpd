@@ -8,7 +8,7 @@ void KTcpUpstream::unbind_selector()
 		selectable_remove(&cn->st);
 		cn->st.selector = NULL;
 	}
-	kassert(KBIT_TEST(cn->st.st_flags, STF_READ | STF_WRITE | STF_REV | STF_WEV) == 0);
+	kassert(KBIT_TEST(cn->st.st_flags, STF_READ | STF_WRITE ) == 0);
 #endif
 }
 bool KTcpUpstream::set_header_callback(void* arg, kgl_header_callback cb)

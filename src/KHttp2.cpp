@@ -1556,7 +1556,7 @@ u_char* KHttp2::state_data(u_char* pos, u_char* end) {
 
 	node = get_node(state.sid, false);
 	if (node == NULL || node->stream == NULL) {
-		klog(KLOG_WARNING, "unknown http2 stream [%u]\n", state.sid);
+		klog(KLOG_WARNING, "unknown http2 stream [%u] for data frame.\n", state.sid);
 		if (send_window_flag) {
 			start_write();
 		}
