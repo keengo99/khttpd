@@ -13,7 +13,6 @@ char *url_encode(const char *s, size_t len, size_t *new_length);
 char *url_value_encode(const char *s, size_t len, size_t *new_length);
 std::string url_encode(const char *str, size_t len_string);
 
-void my_msleep(int msec);
 u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...);
 u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...);
 u_char* kgl_sprintf(u_char* buf, const char* fmt, ...);

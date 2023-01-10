@@ -37,8 +37,6 @@
 #include "KUrl.h"
 #include "KHttpHeader.h"
 #include "klib.h"
-#include "kfiber.h"
-
 
  /*
 	kgl_header_host,
@@ -413,13 +411,6 @@ char* make_http_time(time_t time, char* buf, int size) {
 const char* mk1123time(time_t time, char* buf, int size) {
 	make_http_time(time, buf, size);
 	return buf;
-}
-void my_msleep(int msec) {
-	if (kfiber_is_main()) {
-		kgl_msleep(100);
-	} else {
-		kfiber_msleep(500);
-	}
 }
 #define	BU_FREE	1
 #define	BU_BUSY	2
