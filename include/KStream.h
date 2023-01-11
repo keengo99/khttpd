@@ -31,6 +31,7 @@
 #include "kforwin32.h"
 #include "kstring.h"
 #include "khttp.h"
+#include "ksapi.h"
 
 #define KBuffedWStream KWStream
 #define WSTR(x) write_all(x,sizeof(x)-1)
@@ -101,24 +102,21 @@ public:
 	KWStream() {
 		
 	}
-	virtual bool support_sendfile()
-	{
+	virtual bool support_sendfile() {
 		return false;
 	}
-	virtual StreamState write_all(const char *buf, int len);
-	virtual StreamState flush() {
-		return STREAM_WRITE_SUCCESS;
+	virtual KGL_RESULT sendfile(KASYNC_FILE fp, int64_t* len) {
+		return KGL_ENOT_SUPPORT;
 	}
-	virtual StreamState write_end(KGL_RESULT result) {
+	virtual KGL_RESULT write_all(WSABUF* bufs, int bc);
+	virtual KGL_RESULT write_all(const char *buf, int len);
+	virtual KGL_RESULT flush() {
+		return KGL_OK;
+	}
+	virtual KGL_RESULT write_end(KGL_RESULT result) {
 		return flush();
 	}
-	/*
-	 直接写，buf由被调用者自行处理。
-	 注意:在串流的情况下调用这个函数必须要显式调用，即st->write_direct
-	 不能使用KUpStream::write_direct，否则有可能死循环。
-	 */
-	virtual StreamState write_direct(char *buf, int len);
-	StreamState write_all(const char *buf);
+	KGL_RESULT write_all(const char *buf);
 	inline KWStream & operator <<(const char *str)
 	{
 		if (KGL_OK!= write_all(str, (int)strlen(str))) {
@@ -169,19 +167,14 @@ public:
 		}
 		return *this;
 	}
-	inline void addHex(const int value)
+	inline bool add_as_hex(const int value)
 	{
-		char buf[16];
-		int len = snprintf(buf,15,"%x",value);
-		write_all(buf,len);
+		return add(value, "%x");
 	}
 	inline KWStream & operator <<(const unsigned value) {
 		char buf[16];
 		const char *fmt = "%u";
-		//if (sfmt != stream::def) {
-		//	fmt = stream::getFormat(sfmt);
-		//}
-		int len = snprintf(buf, 15, fmt, value);
+		int len = snprintf(buf, sizeof(buf)-1, fmt, value);
 		if (len <= 0) {
 			return *this;
 		}

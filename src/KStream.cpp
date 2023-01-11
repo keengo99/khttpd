@@ -54,22 +54,27 @@ bool KRStream::read_all(char *buf, int len) {
 	}
 	return true;
 }
-StreamState KWStream::write_direct(char *buf, int len) {
-	StreamState result = write_all(buf, len);
-	xfree(buf);
-	return result;
+KGL_RESULT KWStream::write_all(WSABUF* bufs, int bc) {
+	for (int i = 0; i < bc; i++) {
+		KGL_RESULT result = write_all(bufs[i].iov_base, bufs[i].iov_len);
+		if (result != KGL_OK) {
+			return result;
+		}
+	}
+	return KGL_OK;
 }
-StreamState KWStream::write_all(const char *buf, int len) {
+KGL_RESULT KWStream::write_all(const char *buf, int len) {
 	while (len > 0) {
 		int r = write(buf, len);
-		if (r <= 0)
-			return STREAM_WRITE_FAILED;
+		if (r <= 0) {
+			return KGL_EIO;
+		}
 		len -= r;
 		buf += r;
 	}
-	return STREAM_WRITE_SUCCESS;
+	return KGL_OK;
 }
-StreamState KWStream::write_all(const char *buf) {
+KGL_RESULT KWStream::write_all(const char *buf) {
 	return write_all(buf, (int)strlen(buf));
 }
 int KConsole::write(const char *buf, int len) {

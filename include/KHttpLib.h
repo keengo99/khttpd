@@ -5,7 +5,7 @@
 #include <cstring>
 #include "khttp.h"
 #include "KHttpHeader.h"
-
+#include "klib.h"
 
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);
@@ -103,20 +103,6 @@ inline const char* kgl_skip_space(const char* start, const char* end, bool space
 	return NULL;
 }
 int url_decode(char* str, int len, KUrl* url, bool space2plus);
-inline bool is_absolute_path(const char* str) {
-	if (str[0] == '/') {
-		return true;
-	}
-#ifdef _WIN32
-	if (str[0] == '\\') {
-		return true;
-	}
-	if (strlen(str) > 1 && str[1] == ':') {
-		return true;
-	}
-#endif
-	return false;
-}
 void CTIME_R(time_t* a, char* b, size_t l);
 inline int kgl_parse_value_time(const char* val, int val_len, time_t* value) {
 	if (val_len == KGL_HEADER_VALUE_TIME) {

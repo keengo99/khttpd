@@ -214,7 +214,7 @@ public:
 	virtual bool support_sendfile() {
 		return false;
 	}
-	virtual int sendfile(kfiber_file* fp, int len) {
+	virtual int sendfile(kasync_file* fp, int len) {
 		return -1;
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
