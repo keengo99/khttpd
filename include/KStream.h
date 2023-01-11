@@ -32,14 +32,15 @@
 #include "kstring.h"
 #include "khttp.h"
 #include "ksapi.h"
+#include "kbuf.h"
 
 #define KBuffedWStream KWStream
 #define WSTR(x) write_all(x,sizeof(x)-1)
 #define WSTRING(x) write_all(NULL, x,sizeof(x)-1)
 
 #define INT2STRING_LEN	32
-inline int int2string2(int64_t value, char *buf, bool hex = false) {
-	const char *formatString = INT64_FORMAT;
+inline int int2string2(int64_t value, char* buf, bool hex = false) {
+	const char* formatString = INT64_FORMAT;
 	if (hex) {
 		formatString = INT64_FORMAT_HEX;
 	}
@@ -47,13 +48,12 @@ inline int int2string2(int64_t value, char *buf, bool hex = false) {
 	buf[size] = '\0';
 	return size;
 }
-inline const char * int2string(int64_t value, char *buf,bool hex=false) {
+inline const char* int2string(int64_t value, char* buf, bool hex = false) {
 	int2string2(value, buf, hex);
 	return buf;
 }
 
-inline char* kgl_upstrndup(const char* val,size_t val_len)
-{
+inline char* kgl_upstrndup(const char* val, size_t val_len) {
 	size_t len;
 	char* copy;
 	len = strnlen(val, val_len);
@@ -70,11 +70,10 @@ inline char* kgl_upstrndup(const char* val,size_t val_len)
 	}
 	return copy;
 }
-inline char *upstrdup(const char *val)
-{
-	char *buf = strdup(val);
-	char *v = buf;
-	while(*v){
+inline char* upstrdup(const char* val) {
+	char* buf = strdup(val);
+	char* v = buf;
+	while (*v) {
 		*v = toupper(*v);
 		v++;
 	}
@@ -85,22 +84,24 @@ inline char *upstrdup(const char *val)
 #define STREAM_WRITE_SUCCESS KGL_OK
 #define STREAM_WRITE_END     KGL_END
 
-class KRStream {
+class KRStream
+{
 public:
 	virtual ~KRStream() {
 	}
 	virtual int64_t get_left() = 0;
-	virtual int read(char *buf, int len) = 0;
-	bool read_all(char *buf, int len);
-	char *read_line();
+	virtual int read(char* buf, int len) = 0;
+	bool read_all(char* buf, int len);
+	char* read_line();
 };
-class KWStream {
+class KWStream
+{
 public:
 	virtual ~KWStream() {
 
 	}
 	KWStream() {
-		
+
 	}
 	virtual bool support_sendfile() {
 		return false;
@@ -109,22 +110,57 @@ public:
 		return KGL_ENOT_SUPPORT;
 	}
 	virtual KGL_RESULT write_all(WSABUF* bufs, int bc);
-	virtual KGL_RESULT write_all(const char *buf, int len);
+	virtual KGL_RESULT write_all(const char* buf, int len);
 	virtual KGL_RESULT flush() {
 		return KGL_OK;
 	}
 	virtual KGL_RESULT write_end(KGL_RESULT result) {
 		return flush();
 	}
-	KGL_RESULT write_all(const char *buf);
-	inline KWStream & operator <<(const char *str)
-	{
-		if (KGL_OK!= write_all(str, (int)strlen(str))) {
+	virtual void release() {
+		delete this;
+	}
+	KGL_RESULT write_all(const char* buf);
+	inline KWStream& operator <<(const char* str) {
+		if (KGL_OK != write_all(str, (int)strlen(str))) {
 			fprintf(stderr, "cann't write to stream 1\n");
 		}
 		return *this;
 	}
-	inline bool add(const int c, const char *fmt) {
+	KGL_RESULT write_buf(kbuf* buf, int length = -1) {
+#define KGL_RQ_WRITE_BUF_COUNT 16
+		WSABUF bufs[KGL_RQ_WRITE_BUF_COUNT];
+		while (buf) {
+			int bc = 0;
+			while (bc < KGL_RQ_WRITE_BUF_COUNT && buf) {
+				if (length == 0) {
+					break;
+				}
+				if (length > 0) {
+					bufs[bc].iov_len = KGL_MIN(length, buf->used);
+					length -= bufs[bc].iov_len;
+				} else {
+					bufs[bc].iov_len = buf->used;
+				}
+				bufs[bc].iov_base = buf->data;
+				buf = buf->next;
+				bc++;
+			}
+			if (bc == 0) {
+				if (length > 0) {
+					return KGL_ENO_DATA;
+				}
+				assert(length == 0);
+				return KGL_OK;
+			}
+			KGL_RESULT result = write_all(bufs, bc);
+			if (result != KGL_OK) {
+				return result;
+			}
+		}
+		return KGL_OK;
+	}
+	inline bool add(const int c, const char* fmt) {
 		char buf[16];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -132,7 +168,7 @@ public:
 		}
 		return false;
 	}
-	inline bool add(const INT64 c,const char *fmt) {
+	inline bool add(const INT64 c, const char* fmt) {
 		char buf[INT2STRING_LEN];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -140,15 +176,15 @@ public:
 		}
 		return false;
 	}
-	inline KWStream & operator <<(const std::string str) {
+	inline KWStream& operator <<(const std::string str) {
 		write_all(str.c_str(), (int)str.size());
 		return *this;
 	}
-	inline KWStream & operator <<(const char c) {
+	inline KWStream& operator <<(const char c) {
 		write_all(&c, 1);
 		return *this;
 	}
-	inline KWStream & operator <<(const int value) {
+	inline KWStream& operator <<(const int value) {
 		char buf[16];
 		int len = snprintf(buf, 15, "%d", value);
 		if (len <= 0) {
@@ -159,22 +195,21 @@ public:
 		}
 		return *this;
 	}
-	inline KWStream & operator <<(const INT64 value) {
+	inline KWStream& operator <<(const INT64 value) {
 		char buf[INT2STRING_LEN];
-		int2string(value,buf,false);
+		int2string(value, buf, false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
 			fprintf(stderr, "cann't write to stream 3\n");
 		}
 		return *this;
 	}
-	inline bool add_as_hex(const int value)
-	{
+	inline bool add_as_hex(const int value) {
 		return add(value, "%x");
 	}
-	inline KWStream & operator <<(const unsigned value) {
+	inline KWStream& operator <<(const unsigned value) {
 		char buf[16];
-		const char *fmt = "%u";
-		int len = snprintf(buf, sizeof(buf)-1, fmt, value);
+		const char* fmt = "%u";
+		int len = snprintf(buf, sizeof(buf) - 1, fmt, value);
 		if (len <= 0) {
 			return *this;
 		}
@@ -185,16 +220,18 @@ public:
 	}
 	friend class KHttpStream;
 protected:
-	virtual int write(const char *buf, int len) {
+	virtual int write(const char* buf, int len) {
 		return -1;
 	}
 };
-class KConsole: public KWStream {
+class KConsole : public KWStream
+{
 public:
-	int write(const char *buf, int len);
+	int write(const char* buf, int len);
 	static KConsole out;
 };
-class KStream: public KRStream, public KWStream {
+class KStream : public KRStream, public KWStream
+{
 };
 
 #endif /* KSTREAM_H_ */

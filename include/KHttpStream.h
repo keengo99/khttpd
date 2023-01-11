@@ -37,12 +37,13 @@ public:
 		}
 		return flush(rq);
 	}
+#if 0
 	virtual KGL_RESULT write_direct(void* rq, char* buf, int len) {
 		KGL_RESULT result = write_all(rq, buf, len);
 		xfree(buf);
 		return result;
 	}
-
+#endif
 	//@deprecated
 	inline KWriteStream& operator <<(const char* str) {
 		if (KGL_OK != write_all(NULL, str, (int)strlen(str))) {
