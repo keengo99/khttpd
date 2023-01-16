@@ -91,6 +91,11 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("Upgrade"),_KS("upgrade"),_KS("\r\nUpgrade: ")},
 	{_KS("Expect"),_KS("expect"),_KS("\r\nExpect: ")},
 	{_KS("Status"),_KS("status"),_KS("\r\nStatus: ")},
+	{_KS("If-Range"),_KS("if-range"),_KS("\r\nIf-Range: ")},
+	{_KS("If-Modified-Since"),_KS("if-modified-since"),_KS("\r\nIf-Modified-Since: ")},
+	{_KS("If-None-Match"),_KS("if-none-match"),_KS("\r\nIf-None-Match: ")},
+	{_KS("If-Match"),_KS("if-match"),_KS("\r\nIf-Match: ")},
+	{_KS("If-Unmodified-Since"),_KS("if-unmodified-since"),_KS("\r\nIf-Unmodified-Since: ")},
 	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -1320,4 +1325,28 @@ u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...) {
 	va_end(args);
 
 	return p;
+}
+
+bool kgl_adjust_range(kgl_request_range* range, int64_t* len) 	{
+	if (range->from >= 0) {
+		if (range->from >= (*len)) {
+			return false;
+		}
+		(*len) -= range->from;
+		if (range->to >= 0) {
+			(*len) = KGL_MIN(range->to - range->from + 1, (*len));
+			if ((*len) <= 0) {
+				return false;
+			}
+			return true;
+		}
+	} else if (range->from < 0) {
+		range->from += *len;
+		if (range->from <= 0) {
+			return false;
+		}
+		(*len) -= range->from;
+	}
+	range->to = range->from + (*len) - 1;
+	return true;
 }

@@ -30,20 +30,6 @@
 #include "KStream.h"
 #include "kmalloc.h"
 KConsole KConsole::out;
-char *KRStream::read_line() {
-	std::stringstream s;
-	char buf[2];
-	for (;;) {
-		if (read(buf, 1) <= 0) {
-			return NULL;
-		}
-		if (*buf == '\n') {
-			break;
-		}
-		s << *buf;
-	}
-	return xstrdup(s.str().c_str());
-}
 bool KRStream::read_all(char *buf, int len) {
 	while (len > 0) {
 		int r = read(buf, len);

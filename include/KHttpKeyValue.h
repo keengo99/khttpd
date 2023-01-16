@@ -46,7 +46,9 @@
 #define METH_UNSUBSCRIBE 32
 #define METH_PRI        33
 #define MAX_METHOD      34
-
+inline bool kgl_is_safe_method(uint8_t meth) {
+	return meth == METH_GET || meth == METH_HEAD;
+}
 class KHttpKeyValue
 {
 public:

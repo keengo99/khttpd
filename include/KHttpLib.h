@@ -137,6 +137,7 @@ inline int kgl_parse_value_int(const char* val, int val_len, int* value) {
 	*value = (int)kgl_atol((u_char*)val, val_len);
 	return 0;
 }
+bool kgl_adjust_range(kgl_request_range* range, int64_t* len);
 extern int program_rand_value;
 extern int open_file_limit;
 #endif	/* !_LIB_H_INCLUDED_ */

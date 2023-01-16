@@ -11,11 +11,10 @@
 #include "KHttpKeyValue.h"
 #include "KHttpOpaque.h"
 
-#define STATE_UNKNOW   0
-#define STATE_IDLE     1
-#define STATE_SEND     2
-#define STATE_RECV     3
-#define STATE_QUEUE    4
+#define STATE_IDLE     0
+#define STATE_SEND     1
+#define STATE_RECV     2
+#define STATE_WAIT     3
 
 extern volatile uint64_t kgl_total_requests;
 extern volatile uint64_t kgl_total_accepts;
@@ -32,14 +31,11 @@ public:
 		int64_t left_read;
 		//post数据长度
 		int64_t content_length;
-		time_t if_modified_since;
 		time_t min_obj_verified;
-		int64_t range_from;
-		int64_t range_to;
+		kgl_request_range* range;
+		kgl_precondition* precondition;
 		int64_t begin_time_msec;
 		int64_t first_response_time_msec;
-		//这个内存由KSink的pool自动管理
-		kgl_str_t* if_none_match;
 		uint32_t flags;
 		uint16_t status_code;
 		uint16_t self_port;

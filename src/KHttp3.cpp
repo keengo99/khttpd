@@ -626,6 +626,7 @@ bool KHttp3Server::start() {
 	KBIT_SET(flags, KGL_SERVER_START);
 	for (int i = 0; i < engine_count; i++) {
 		auto selector = get_selector_by_index(i);
+		assert(selector->sid == i);
 		addRef();
 		kfiber_create2(selector, h3_start_server_engine, this, i, 0, NULL);
 	}

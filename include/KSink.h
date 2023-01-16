@@ -8,12 +8,19 @@
 #include "kstring.h"
 #include "KRequest.h"
 #include "kfiber.h"
-
+#define KGL_FLAG_PRECONDITION_MASK  7
 class KSink
 {
 public:
 	KSink(kgl_pool_t* pool);
 	virtual ~KSink();
+
+	template<typename T>
+	T* alloc() {
+		T* t = (T*)kgl_pnalloc(pool, sizeof(T));
+		memset(t, 0, sizeof(T));
+		return t;
+	}
 	void push_flow_info(KFlowInfo* fi)
 	{
 		KFlowInfoHelper* helper = new KFlowInfoHelper(fi);
@@ -192,16 +199,9 @@ public:
 	bool begin_request();
 	virtual int end_request() = 0;
 	virtual bool is_locked() = 0;
-	void set_if_none_match(const char* etag, int len)
-	{
-		data.if_none_match = (kgl_str_t*)kgl_pnalloc(pool, sizeof(kgl_str_t));
-		data.if_none_match->data = (char*)kgl_pnalloc(pool, len + 1);
-		data.if_none_match->len = len;
-		kgl_memcpy(data.if_none_match->data, etag, len + 1);
-	}
-	void clean_if_none_match()
-	{
-		data.if_none_match = NULL;
+	kgl_precondition* get_precondition(kgl_precondition_flag* flag) {
+		*flag = (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);
+		return data.precondition;
 	}
 	virtual kgl_proxy_protocol* get_proxy_info()
 	{
@@ -218,6 +218,14 @@ public:
 		return -1;
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
+	kgl_str_t* alloc_entity(const char* entity_value, int len) {
+		kgl_str_t* entity = alloc<kgl_str_t>();
+		entity->data = (char*)kgl_pnalloc(pool, len + 1);
+		entity->len = len;
+		kgl_memcpy(entity->data, entity_value, len);
+		entity->data[len] = '\0';
+		return entity;
+	}
 	kgl_list queue;
 	kgl_pool_t* pool;
 	KRequestData data;
@@ -233,6 +241,23 @@ protected:
 	virtual int internal_start_response_body(int64_t body_size, bool is_100_continue) = 0;
 private:
 	bool response_100_continue();
+
+	kgl_request_range* alloc_request_range() {
+		if (data.range) {
+			return data.range;
+		}
+		data.range = (kgl_request_range*)kgl_pnalloc(pool, sizeof(kgl_request_range));
+		*data.range = { 0 };
+		return data.range;
+	}
+	kgl_precondition* alloc_precondition() {
+		if (data.precondition) {
+			return data.precondition;
+		}
+		data.precondition = (kgl_precondition *)kgl_pnalloc(pool, sizeof(kgl_precondition));
+		*data.precondition = { 0 };
+		return data.precondition;
+	}
 };
 bool kgl_init_sink_queue();
 typedef bool (*kgl_sink_iterator)(void* ctx, KSink* sink);

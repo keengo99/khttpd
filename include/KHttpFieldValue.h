@@ -12,6 +12,9 @@ class KHttpFieldValue
 {
 public:
 	KHttpFieldValue(const char* val, const char* end) {
+		while (val > end && isspace((unsigned char)*val)) {
+			val++;
+		}
 		this->val = val;
 		this->end = end;
 	}
@@ -22,6 +25,9 @@ public:
 			}
 		} while (next());
 		return false;
+	}
+	bool is(const char* param, size_t param_len, const char* field_end) {
+
 	}
 	bool get_double_param(const char* param, size_t param_len, const char* field_end, size_t point, int64_t* value) {
 		const char* hot = val;
@@ -80,16 +86,17 @@ public:
 			return false;
 		}
 		val = prev_field_end;
+		assert(*val == ',');
+		val++;
+		while (val < end && isspace((unsigned char)*val)) {
+			val++;
+		}
 		return true;
 	}
 	const char* get_field_end() {
 		const char* field_end = (const char*)memchr(val, ',', end - val);
 		if (field_end == NULL) {
 			return end;
-		}
-		field_end++;
-		while (field_end < end && isspace((unsigned char)*field_end)) {
-			field_end++;
 		}
 		return field_end;
 	}

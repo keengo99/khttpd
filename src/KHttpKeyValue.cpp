@@ -12,7 +12,7 @@
 #include "kmalloc.h"
 #include "KHttpLib.h"
 static kgl_str_t http_methods[MAX_METHOD] = {
-	kgl_string("UNSET"),
+	    kgl_string("UNSET"),
 		kgl_string("GET"),
 		kgl_string("HEAD"),
 		kgl_string("POST"),

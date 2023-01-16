@@ -53,7 +53,7 @@ void kgl_iterator_sink(kgl_sink_iterator it, void* ctx) {
 	for (int i = 0; i < selector_count; i++) {
 		kselector* selector = get_selector_by_index(i);
 		kgl_selector_module.next(selector, NULL, ksink_iterator, &param, 0);
-		param.cond->f->wait(param.cond);
+		param.cond->f->wait(param.cond,NULL);
 	}
 	param.cond->f->release(param.cond);
 }
@@ -67,7 +67,6 @@ KSink::~KSink() {
 	if (pool) {
 		kgl_destroy_pool(pool);
 	}
-	set_state(STATE_UNKNOW);
 	klist_remove(&queue);
 }
 bool KSink::response_100_continue() {
@@ -240,26 +239,22 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Range"))) {
 		time_t try_time = kgl_parse_http_time((u_char*)val, val_len);
 		if (try_time == -1) {
-			data.flags |= RQ_IF_RANGE_ETAG;
-			if (data.if_none_match == NULL) {
-				set_if_none_match(val, val_len);
-			}
+			alloc_request_range()->if_range_entity = alloc_entity(val, val_len);
+			KBIT_CLR(data.flags, RQ_IF_RANGE_DATE);
 		} else {
-			data.if_modified_since = try_time;
-			data.flags |= RQ_IF_RANGE_DATE;
+			alloc_request_range()->if_range_date = try_time;
+			KBIT_SET(data.flags, RQ_IF_RANGE_DATE);
 		}
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
-		data.if_modified_since = kgl_parse_http_time((u_char*)val, val_len);
-		data.flags |= RQ_HAS_IF_MOD_SINCE;
+		alloc_precondition()->time = kgl_parse_http_time((u_char*)val, val_len);
+		KBIT_CLR(data.flags, RQ_HAS_IF_UNMODIFIED);
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
-		data.flags |= RQ_HAS_IF_NONE_MATCH;
-		if (data.if_none_match == NULL) {
-			set_if_none_match(val, val_len);
-		}
+		alloc_precondition()->entity = alloc_entity(val, val_len);
+		KBIT_CLR(data.flags, RQ_HAS_IF_MATCH);
 		return true;
 	}
 
@@ -313,26 +308,33 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		return data.add_header(kgl_header_cache_control, val, val_len);
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Range"))) {
-		data.flags |= RQ_HAVE_RANGE;
 		if (val_len > 6 && !strncasecmp(val, kgl_expand_string("bytes="))) {
 			u_char* end = (u_char*)val + val_len;
 			u_char* hot = (u_char*)val + 6;
-			data.range_from = -1;
-			data.range_to = -1;
-			if (*hot != '-') {
-				data.range_from = kgl_atol(hot, end - hot);
+			kgl_request_range* range = alloc_request_range();
+			if (*hot == '-') {
+				/* last range model */
+				range->from = - kgl_atol(hot + 1, end - hot - 1);
+				return true;
 			}
+			range->from = kgl_atol(hot, end - hot);			
 			hot = (u_char*)memchr(hot, '-', end - hot);
 			if (hot && hot < end - 1) {
 				hot++;
-				data.range_to = kgl_atol(hot, end - hot);
+				range->to = kgl_atol(hot, end - hot);
+			} else {
+				/* to end */
+				range->to = -1;
 			}
+			/*
 			u_char* next_range = (u_char*)memchr(hot, ',', end - hot);
 			if (next_range) {
 				//we do not support multi range
 				end = next_range;
 				return data.add_header(kgl_header_range, val, (int)(end - (u_char*)val), true);
 			}
+			*/
+			return true;
 		}
 		return data.add_header(kgl_header_range, val, val_len);
 	}
@@ -361,8 +363,8 @@ const char* KSink::get_state() {
 		return "send";
 	case STATE_RECV:
 		return "recv";
-	case STATE_QUEUE:
-		return "queue";
+	case STATE_WAIT:
+		return "wait";
 	}
 	return "unknow";
 }
@@ -401,29 +403,8 @@ void KSink::set_state(uint8_t state) {
 #endif
 }
 bool KSink::adjust_range(int64_t* len) {
-	if (data.range_from >= 0) {
-		if (data.range_from >= (*len)) {
-			//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
-			return false;
-		}
-		(*len) -= data.range_from;
-		if (data.range_to >= 0) {
-			(*len) = KGL_MIN(data.range_to - data.range_from + 1, (*len));
-			if ((*len) <= 0) {
-				//klog(KLOG_ERR, "[%s] request [%s%s] range error,request range_from=" INT64_FORMAT ",range_to=" INT64_FORMAT ",len=" INT64_FORMAT "\n", rq->getClientIp(), rq->sink->data.raw_url->host, rq->sink->data.raw_url->path, rq->sink->data.range_from, rq->sink->data.range_to, len);
-				return false;
-			}
-		}
-	} else if (data.range_from < 0) {
-		data.range_from += *len;
-		if (data.range_from < 0) {
-			data.range_from = 0;
-		}
-		(*len) -= data.range_from;
-	}
-	data.range_to = data.range_from + (*len) - 1;
-	//printf("after from=%lld,to=%lld,len=%lld\n",rq->sink->data.range_from,rq->sink->data.range_to,len);
-	return true;
+	assert(data.range);
+	return kgl_adjust_range(data.range, len);
 }
 void KSink::start_parse() {
 	data.start_parse();

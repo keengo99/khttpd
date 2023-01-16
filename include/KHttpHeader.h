@@ -4,6 +4,7 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "khttp.h"
+#include "ksapi.h"
 
 char* make_http_time(time_t time, char* buf, int size);
 KBEGIN_DECLS

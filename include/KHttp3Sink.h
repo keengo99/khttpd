@@ -90,7 +90,9 @@ public:
 			return -1;
 		}
 		KBIT_SET(st_flags, STF_WRITE);
-		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd);
+		int got;
+		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd,&got);
+		assert(got == ev[OP_WRITE].result);
 		return ev[OP_WRITE].result;
 	}
 	bool is_locked() override {
@@ -121,8 +123,10 @@ public:
 			}
 		}
 		KBIT_SET(st_flags, STF_READ);
-		ev[OP_READ].cd->f->wait(ev[OP_READ].cd);
+		int got;
+		ev[OP_READ].cd->f->wait(ev[OP_READ].cd,&got);
 		assert(!KBIT_TEST(st_flags, STF_READ));
+		assert(got == ev[OP_READ].result);
 		printf("http3 read result=[%d]\n", ev[OP_READ].result);
 		return ev[OP_READ].result;
 	}
@@ -138,8 +142,10 @@ public:
 			return -1;
 		}
 		KBIT_SET(st_flags, STF_WRITE);
-		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd);
+		int got;
+		ev[OP_WRITE].cd->f->wait(ev[OP_WRITE].cd, &got);
 		assert(!KBIT_TEST(st_flags, STF_WRITE));
+		assert(got == ev[OP_WRITE].result);
 		if (content_left > 0) {
 			content_left -= ev[OP_WRITE].result;
 		}

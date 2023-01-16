@@ -12,23 +12,8 @@
 #include "katom.h"
 
 
-#define KGL_URL_SSL       1   //根据端口判断是否是ssl
-#define KGL_URL_IPV6      2
-//#define KGL_URL_VARIED    4
-#define KGL_URL_REWRITED  8
-#define KGL_URL_RANGED    0x10
-#define KGL_URL_ENCODE    0x20
-#define KGL_URL_ORIG_SSL  0x40  //源建议的ssl
-//#define KGL_URL_BAD       0x80
 
-#define KGL_ENCODING_DEFLATE  1
-#define KGL_ENCODING_COMPRESS (1<<1)
-#define KGL_ENCODING_GZIP     (1<<2)
-#define KGL_ENCODING_BR       (1<<3)
-#define KGL_ENCODING_UNKNOW   (1<<6)
-//#define KGL_ENCODING_YES      (1<<7)
-
-class KUrl {
+class KUrl : public kgl_url{
 
 public:
 	KUrl() {
@@ -224,22 +209,7 @@ public:
 		}
 		return true;
 	}
-	char *host;
-	char *path;
-	char *param;
-	volatile uint16_t refs_count;
-	uint16_t port;
-	union {
-		uint32_t flag_encoding;
-		struct {
-			u_char flags;
-			u_char accept_encoding;
-			u_char encoding;
-			u_char reserv;
-		};
-	};
 private:
-
 	~KUrl() {
 		IF_FREE(host);
 		IF_FREE(path);

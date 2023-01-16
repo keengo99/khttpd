@@ -25,7 +25,7 @@ void KHttp3Sink::on_read(lsquic_stream_t* st) {
 	assert(KBIT_TEST(st_flags, STF_READ));
 	ev[OP_READ].result = (int)lsquic_stream_readv(st, ev[OP_READ].buf, ev[OP_READ].bc);
 	KBIT_CLR(st_flags, STF_RREADY | STF_READ);
-	ev[OP_READ].cd->f->notice(ev[OP_READ].cd, 0);
+	ev[OP_READ].cd->f->notice(ev[OP_READ].cd, ev[OP_READ].result);
 }
 void KHttp3Sink::on_write(lsquic_stream_t* st) {
 	lsquic_stream_wantwrite(st, 0);
@@ -46,6 +46,6 @@ void KHttp3Sink::on_write(lsquic_stream_t* st) {
 		ev[OP_WRITE].result = (int)lsquic_stream_writev(st, ev[OP_WRITE].buf, ev[OP_WRITE].bc);
 	}
 	//printf("write result=[%d],st=[%p]\n", ev[OP_WRITE].result,st);
-	ev[OP_WRITE].cd->f->notice(ev[OP_WRITE].cd, 0);
+	ev[OP_WRITE].cd->f->notice(ev[OP_WRITE].cd, ev[OP_WRITE].result);
 }
 #endif

@@ -91,8 +91,10 @@ public:
 	}
 	virtual int64_t get_left() = 0;
 	virtual int read(char* buf, int len) = 0;
+	virtual void release() {
+		delete this;
+	}
 	bool read_all(char* buf, int len);
-	char* read_line();
 };
 class KWStream
 {
@@ -126,39 +128,6 @@ public:
 			fprintf(stderr, "cann't write to stream 1\n");
 		}
 		return *this;
-	}
-	KGL_RESULT write_buf(kbuf* buf, int length = -1) {
-#define KGL_RQ_WRITE_BUF_COUNT 16
-		WSABUF bufs[KGL_RQ_WRITE_BUF_COUNT];
-		while (buf) {
-			int bc = 0;
-			while (bc < KGL_RQ_WRITE_BUF_COUNT && buf) {
-				if (length == 0) {
-					break;
-				}
-				if (length > 0) {
-					bufs[bc].iov_len = KGL_MIN(length, buf->used);
-					length -= bufs[bc].iov_len;
-				} else {
-					bufs[bc].iov_len = buf->used;
-				}
-				bufs[bc].iov_base = buf->data;
-				buf = buf->next;
-				bc++;
-			}
-			if (bc == 0) {
-				if (length > 0) {
-					return KGL_ENO_DATA;
-				}
-				assert(length == 0);
-				return KGL_OK;
-			}
-			KGL_RESULT result = write_all(bufs, bc);
-			if (result != KGL_OK) {
-				return result;
-			}
-		}
-		return KGL_OK;
 	}
 	inline bool add(const int c, const char* fmt) {
 		char buf[16];
