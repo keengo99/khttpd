@@ -604,7 +604,7 @@ bool KHttp2::on_header_success(KHttp2Context* stream) {
 		return true;
 	}
 	if (!KBIT_TEST(stream->sink->data.flags, RQ_HAS_CONTENT_LEN) && !stream->in_closed) {
-		stream->sink->data.content_length = -1;
+		stream->sink->data.left_read = -1;
 	}
 	//server模式，调用了parsed_header，就要调用handleStartRequest
 	//否则会早成stream泄漏

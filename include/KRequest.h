@@ -29,8 +29,6 @@ public:
 		int64_t send_size;
 		//post数据还剩多少数据没处理
 		int64_t left_read;
-		//post数据长度
-		int64_t content_length;
 		time_t min_obj_verified;
 		kgl_request_range* range;
 		kgl_precondition* precondition;

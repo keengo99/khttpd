@@ -156,7 +156,7 @@ public:
 	kev_result read_header() override;
 	int end_request() override {
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (st && (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE)) || content_left > 0)) {
+		if (st && content_left > 0) {
 			//printf("stream reset [%p]\n", st);
 			lsquic_stream_maybe_reset(st, 0, 0);
 		}
@@ -213,6 +213,9 @@ public:
 	}
 	KOPAQUE get_server_opaque() override {
 		return cn->engine->server->get_data();
+	}
+	int64_t get_response_left() override {
+		return content_left;
 	}
 private:
 	void build_header(lsxpack_header* header, const char* name, int name_len, const char* val, int val_len) {

@@ -3,10 +3,10 @@
 #include "kfeature.h"
 #cmakedefine HTTP_PROXY
 #cmakedefine ENABLE_HTTP2
+
 #ifdef KSOCKET_SSL
 #define ENABLE_UPSTREAM_SSL   1
-#define ENABLE_HTTP2          1
-//#define ENABLE_HTTP3          1
+#cmakedefine ENABLE_HTTP3
 #endif
 
 #ifdef ENABLE_HTTP2
@@ -59,10 +59,8 @@
 #define RQ_HAS_IF_MATCH        (1<<1)
 #define RQ_IF_RANGE_DATE       (1<<2)
 
-//#define RQ_HAS_IF_MOD_SINCE    (1<<3) /* deprecated */
-//#define RQ_HAS_IF_NONE_MATCH   (1<<4) /* deprecated */
 #define RQ_HAS_NO_CACHE        (1<<5)
-#define RQ_BODY_NOT_COMPLETE   (1<<6)
+
 #define RQ_CACHE_HIT           (1<<7)
 #define RQ_INPUT_CHUNKED       (1<<8)
 #define RQ_NEXT_CALLED         (1<<9)
@@ -73,10 +71,10 @@
 #define RQ_CONNECTION_UPGRADE  (1<<14)
 #define RQ_HAS_CONNECTION_UPGRADE  (1<<15)
 
-//#define RQ_IF_RANGE_ETAG       (1<<16) /* deprecated */
+
 #define RQ_HAS_CONTENT_LEN     (1<<17)
 #define RQ_OBJ_VERIFIED        (1<<18) /* deprecated */
-//#define RQ_HAVE_RANGE          (1<<19) /* deprecated */
+
 #define RQ_TE_CHUNKED          (1<<20)
 #define RQ_TE_COMPRESS         (1<<21)
 #define RQ_HAS_SEND_HEADER     (1<<22)

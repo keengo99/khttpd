@@ -20,6 +20,9 @@ public:
 	{
 		return false;
 	}
+	int64_t get_response_left() override {
+		return ctx->content_left;
+	}
 	bool support_sendfile() override {
 		return selectable_support_sendfile(&http2->c->st);
 	}
@@ -86,7 +89,7 @@ public:
 	int end_request() override
 	{
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (unlikely(KBIT_TEST(data.flags, RQ_BODY_NOT_COMPLETE))) {
+		if (unlikely(ctx->content_left>0)) {
 			http2->shutdown(ctx);
 		} else {
 			http2->write_end(ctx);

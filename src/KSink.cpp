@@ -112,11 +112,13 @@ bool KSink::begin_request() {
 		data.url->path = xstrdup(data.raw_url->path);
 		url_decode(data.url->path, 0, data.url, false);
 	}
+#if 0
 	if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
 		data.left_read = -1;
 	} else {
 		data.left_read = data.content_length;
 	}
+#endif
 	return true;
 }
 bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first) {
@@ -259,15 +261,14 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 	}
 
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
-		data.content_length = string2int(val);
-		data.left_read = data.content_length;
+		data.left_read = string2int(val);
 		data.flags |= RQ_HAS_CONTENT_LEN;
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Transfer-Encoding"))) {
 		if (kgl_mem_case_same(val, val_len, kgl_expand_string("chunked"))) {
 			KBIT_SET(data.flags, RQ_INPUT_CHUNKED);
-			data.content_length = -1;
+			data.left_read = -1;
 		}
 		return true;
 	}

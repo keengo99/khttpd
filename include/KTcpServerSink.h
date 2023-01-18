@@ -116,6 +116,21 @@ public:
 		}
 		return got;
 	}
+	int64_t get_response_left() override {
+		return response_left;
+	}
 	kconnection* cn;
+protected:
+	int on_success_response(int len) {
+		if (len > 0 && response_left >= 0) {
+			assert(response_left >= len);
+			response_left -= len;
+			if (response_left < 0) {
+				response_left = 0;
+			}
+		}
+		return len;
+	}
+	int64_t response_left = -1;
 };
 #endif

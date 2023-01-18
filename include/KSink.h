@@ -94,6 +94,9 @@ public:
 	}
 	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) = 0;
 	virtual sockaddr_i* get_peer_addr() = 0;
+	virtual int64_t get_response_left() {
+		return -1;
+	}
 	bool get_peer_ip(char* ips, int ips_len)
 	{
 		sockaddr_i* addr = get_peer_addr();

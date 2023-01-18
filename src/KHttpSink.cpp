@@ -209,6 +209,7 @@ int KHttpSink::internal_start_response_body(int64_t body_size, bool is_100_conti
 	if (rc == NULL) {
 		return 0;
 	}
+	this->response_left = body_size;
 	send_alt_svc_header();
 	rc->head_append_const(_KS("\r\n\r\n"));
 	rc->ab.SwitchRead();
@@ -264,6 +265,7 @@ int KHttpSink::sendfile(kfiber_file* fp, int len) {
 	if (!kfiber_net_write_full(cn, "\r\n", &size)) {
 		return -1;
 	}
+	on_success_response(len);
 	add_down_flow(len);
 	return len;
 }
@@ -286,16 +288,19 @@ int KHttpSink::internal_write(WSABUF* buf, int bc) {
 		if (!kfiber_net_writev_full(cn, new_bufs, &bc)) {
 			return -1;
 		}
+		on_success_response(size);
 		return size;
 	}
-	return kfiber_net_writev(cn, buf, bc);
+	return on_success_response(kfiber_net_writev(cn, buf, bc));
 }
 int KHttpSink::end_request() {
 	if (rc) {
 		delete rc;
 		rc = NULL;
 		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-	} else if (KBIT_TEST(data.flags, RQ_TE_CHUNKED | RQ_BODY_NOT_COMPLETE) == RQ_TE_CHUNKED) {
+	} else if (response_left > 0) {
+		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+	} else if (KBIT_TEST(data.flags, RQ_TE_CHUNKED) && response_left == -1) {
 		//has chunked but body is complete successful.
 		WSABUF bufs;
 		int bc = 1;
