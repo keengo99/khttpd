@@ -4,7 +4,9 @@
 #include "kmalloc.h"
 #include "kfiber.h"
 #include "ksapi.h"
+#include "klist.h"
 
+#if 0
 class KWriteStream
 {
 public:
@@ -127,6 +129,7 @@ protected:
 	}
 };
 
+
 class KBridgeStream : public KWStream
 {
 public:
@@ -225,70 +228,52 @@ protected:
 	KWStream* st;
 	bool autoDelete;
 };
+#endif
 /*
  支持串级的流
  */
-class KHttpStream : public KWriteStream
+class KHttpStream : public KWStream
 {
 public:
-	KHttpStream() {
-		st = nullptr;
-		autoDelete = false;
-	}
-	KHttpStream(KWriteStream* st) {
+	KHttpStream(KWStream* st) {
 		this->st = st;
-		autoDelete = true;
-	}
-	KHttpStream(KWriteStream* st, bool autoDelete) {
-		this->st = st;
-		this->autoDelete = autoDelete;
-	}
-	virtual int32_t get_feature() {
-		return KGL_FILTER_NOT_CACHE;
-	}
-	virtual void connect(KWriteStream* st, bool autoDelete) {
-		if (this->st && this->autoDelete) {
-			delete this->st;
-		}
-		this->st = st;
-		this->autoDelete = autoDelete;
 	}
 	virtual ~KHttpStream() {
-		if (st && autoDelete) {
+		if (st) {
+			st->release();
 			delete st;
 		}
 	}
-	bool forward_support_sendfile(void* arg) {
+	bool forward_support_sendfile() {
 		if (st) {
-			return st->support_sendfile(arg);
+			return st->support_sendfile();
 		}
 		return false;
 	}
-	virtual KGL_RESULT sendfile(void* rq, kfiber_file* fp, int64_t* len) override {
+	virtual KGL_RESULT sendfile(KASYNC_FILE fp, int64_t* len) override {
 		if (st) {
-			return st->sendfile(rq, fp, len);
+			return st->sendfile(fp, len);
 		}
 		return KGL_ENOT_SUPPORT;
 	}
-	virtual KGL_RESULT flush(void* rq) override {
+	virtual KGL_RESULT flush() override {
 		if (st) {
-			return st->flush(rq);
+			return st->flush();
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_all(void* rq, const char* buf, int len) override {
+	virtual KGL_RESULT write_all(const char* buf, int len) override {
 		if (st) {
-			return st->write_all(rq, buf, len);
+			return st->write_all( buf, len);
 		}
 		return STREAM_WRITE_FAILED;
 	}
-	virtual KGL_RESULT write_end(void* rq, KGL_RESULT result) override {
+	virtual KGL_RESULT write_end( KGL_RESULT result) override {
 		if (st) {
-			return st->write_end(rq, result);
+			return st->write_end(result);
 		}
 		return result;
 	}
-	KWriteStream* st;
-	bool autoDelete;
+	KWStream* st;
 };
 #endif

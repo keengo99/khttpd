@@ -110,7 +110,7 @@ public:
 		return selectable_support_sendfile(&cn->st);
 	}
 	virtual int sendfile(kfiber_file* fp, int len) override {
-		int got = kfiber_sendfile(cn, fp, len);
+		int got = on_success_response(kfiber_sendfile(cn, fp, len));
 		if (got > 0) {
 			add_down_flow(got);
 		}

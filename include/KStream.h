@@ -187,7 +187,6 @@ public:
 		}
 		return *this;
 	}
-	friend class KHttpStream;
 protected:
 	virtual int write(const char* buf, int len) {
 		return -1;
