@@ -204,7 +204,10 @@ public:
 	virtual bool is_locked() = 0;
 	kgl_precondition* get_precondition(kgl_precondition_flag* flag) {
 		*flag = (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);
-		return data.precondition;
+		if (data.precondition.entity) {
+			return &data.precondition;
+		}
+		return NULL;
 	}
 	virtual kgl_proxy_protocol* get_proxy_info()
 	{
@@ -221,9 +224,8 @@ public:
 		return -1;
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
-	kgl_str_t* alloc_entity(const char* entity_value, int len) {
-		kgl_str_t* entity = alloc<kgl_str_t>();
-		entity->data = (char*)kgl_pnalloc(pool, len + 1);
+	kgl_len_str_t* alloc_entity(const char* entity_value, int len) {
+		kgl_len_str_t* entity = (kgl_len_str_t*)kgl_pnalloc(pool, sizeof(kgl_len_str_t) + len + 1);
 		entity->len = len;
 		kgl_memcpy(entity->data, entity_value, len);
 		entity->data[len] = '\0';
@@ -252,14 +254,6 @@ private:
 		data.range = (kgl_request_range*)kgl_pnalloc(pool, sizeof(kgl_request_range));
 		*data.range = { 0 };
 		return data.range;
-	}
-	kgl_precondition* alloc_precondition() {
-		if (data.precondition) {
-			return data.precondition;
-		}
-		data.precondition = (kgl_precondition *)kgl_pnalloc(pool, sizeof(kgl_precondition));
-		*data.precondition = { 0 };
-		return data.precondition;
 	}
 };
 bool kgl_init_sink_queue();

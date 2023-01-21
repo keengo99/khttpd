@@ -55,8 +55,8 @@
 /**
 * rq->flags
 */
-#define RQ_HAS_IF_UNMODIFIED   1
-#define RQ_HAS_IF_MATCH        (1<<1)
+#define RQ_IF_MATCH_UNMODIFIED  1
+#define RQ_IF_TIME             (1<<1)
 #define RQ_IF_RANGE_DATE       (1<<2)
 
 #define RQ_HAS_NO_CACHE        (1<<5)

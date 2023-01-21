@@ -31,7 +31,7 @@ public:
 		int64_t left_read;
 		time_t min_obj_verified;
 		kgl_request_range* range;
-		kgl_precondition* precondition;
+		kgl_precondition precondition;
 		int64_t begin_time_msec;
 		int64_t first_response_time_msec;
 		uint32_t flags;

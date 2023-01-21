@@ -250,16 +250,17 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-Modified-Since"))) {
-		alloc_precondition()->time = kgl_parse_http_time((u_char*)val, val_len);
-		KBIT_CLR(data.flags, RQ_HAS_IF_UNMODIFIED);
+		if (data.precondition.time == 0) {
+			data.precondition.time = kgl_parse_http_time((u_char*)val, val_len);
+			KBIT_SET(data.flags, RQ_IF_TIME);
+		}
 		return true;
 	}
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("If-None-Match"))) {
-		alloc_precondition()->entity = alloc_entity(val, val_len);
-		KBIT_CLR(data.flags, RQ_HAS_IF_MATCH);
+		data.precondition.entity = alloc_entity(val, val_len);
+		KBIT_CLR(data.flags, RQ_IF_TIME|RQ_IF_MATCH_UNMODIFIED);
 		return true;
 	}
-
 	if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("Content-length"))) {
 		data.left_read = string2int(val);
 		data.flags |= RQ_HAS_CONTENT_LEN;
