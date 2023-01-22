@@ -230,7 +230,7 @@ protected:
 };
 #endif
 /*
- Ö§³Ö´®¼¶µÄÁ÷
+ Ö§ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 class KHttpStream : public KWStream
 {
@@ -250,7 +250,7 @@ public:
 		}
 		return false;
 	}
-	virtual KGL_RESULT sendfile(KASYNC_FILE fp, int64_t* len) override {
+	virtual KGL_RESULT sendfile(kasync_file *fp, int64_t* len) override {
 		if (st) {
 			return st->sendfile(fp, len);
 		}

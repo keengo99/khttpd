@@ -26,9 +26,6 @@ public:
 		} while (next());
 		return false;
 	}
-	bool is(const char* param, size_t param_len, const char* field_end) {
-
-	}
 	bool get_double_param(const char* param, size_t param_len, const char* field_end, size_t point, int64_t* value) {
 		const char* hot = val;
 		while (hot < field_end) {

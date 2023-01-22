@@ -42,7 +42,7 @@ bool KRStream::read_all(char *buf, int len) {
 }
 KGL_RESULT KWStream::write_all(WSABUF* bufs, int bc) {
 	for (int i = 0; i < bc; i++) {
-		KGL_RESULT result = write_all(bufs[i].iov_base, bufs[i].iov_len);
+		KGL_RESULT result = write_all((char *)bufs[i].iov_base, bufs[i].iov_len);
 		if (result != KGL_OK) {
 			return result;
 		}
