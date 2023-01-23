@@ -32,7 +32,6 @@
 #include "kstring.h"
 #include "khttp.h"
 #include "kbuf.h"
-#include "kasync_file.h"
 
 #define KBuffedWStream KWStream
 #define WSTR(x) write_all(x,sizeof(x)-1)
@@ -104,12 +103,6 @@ public:
 	}
 	KWStream() {
 
-	}
-	virtual bool support_sendfile() {
-		return false;
-	}
-	virtual KGL_RESULT sendfile(kasync_file *fp, int64_t* len) {
-		return KGL_ENOT_SUPPORT;
 	}
 	virtual KGL_RESULT write_all(WSABUF* bufs, int bc);
 	virtual KGL_RESULT write_all(const char* buf, int len);
