@@ -165,7 +165,6 @@ typedef enum _kgl_header_type
 	kgl_header_content_range,
 	kgl_header_content_type,
 	kgl_header_set_cookie,
-	kgl_header_set_cookie2,
 	kgl_header_pragma,
 	kgl_header_cache_control,
 	kgl_header_vary,
