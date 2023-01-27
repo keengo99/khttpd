@@ -24,12 +24,7 @@ bool KHttpUpstream::send_header(const char* attr, hlen_t attr_len, const char* v
 	if (this->ctx.send_header_buffer == NULL) {
 		return false;
 	}
-#if 0
-	fwrite(attr, 1, attr_len, stdout);
-	fwrite(": ", 1, 2, stdout);
-	fwrite(val, 1, val_len, stdout);
-	fwrite("\n", 1, 1, stdout);
-#endif
+	//printf("%.*s: %.*s\n", attr_len, attr, val_len, val);
 	krw_write_str(ctx.send_header_buffer, attr, attr_len);
 	krw_write_str(ctx.send_header_buffer, kgl_expand_string(": "));
 	krw_write_str(ctx.send_header_buffer, val, val_len);

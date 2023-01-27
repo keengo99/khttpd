@@ -122,7 +122,7 @@ bool KSink::begin_request() {
 	return true;
 }
 bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first) {
-	//printf("%p attr=[%s],val=[%s]\n",this, attr,val);
+	//printf("%.*s%s%.*s\n",attr_len, attr, (is_first?" ":": "),val_len, val);
 	if (is_first) {
 		start_parse();
 	}

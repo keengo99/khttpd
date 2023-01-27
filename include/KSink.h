@@ -202,8 +202,11 @@ public:
 	bool begin_request();
 	virtual int end_request() = 0;
 	virtual bool is_locked() = 0;
+	kgl_precondition_flag get_precondition_flag() {
+		return (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);
+	}
 	kgl_precondition* get_precondition(kgl_precondition_flag* flag) {
-		*flag = (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);
+		*flag = get_precondition_flag();
 		if (data.precondition.entity) {
 			return &data.precondition;
 		}
