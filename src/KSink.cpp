@@ -112,13 +112,6 @@ bool KSink::begin_request() {
 		data.url->path = xstrdup(data.raw_url->path);
 		url_decode(data.url->path, 0, data.url, false);
 	}
-#if 0
-	if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
-		data.left_read = -1;
-	} else {
-		data.left_read = data.content_length;
-	}
-#endif
 	return true;
 }
 bool KSink::parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first) {

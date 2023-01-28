@@ -643,7 +643,7 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 		return false;
 	}
 	size_t p_len, host_len;
-	if (*src == '/') {
+	if (*src == '/' || *src=='*') {
 		path = src;
 		goto only_path;
 	}
