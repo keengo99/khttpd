@@ -1,104 +1,186 @@
 #ifndef KXMLDOCUMENT_H
 #define KXMLDOCUMENT_H
+#include <assert.h>
 #include <list>
+#include <stack>
 #include "KXmlEvent.h"
 #include "KAtomCountable.h"
+#include "KMap.h"
+#include "kstring.h"
+#include "KHttpLib.h"
+
+class KXmlKey
+{
+public:
+	KXmlKey(const char* tag, size_t size) {
+		const char* p = (char*)memchr(tag, '@', size);
+		if (!p) {
+			this->tag = kstring_from2(tag, size);
+			this->vary = nullptr;
+			return;
+		}
+		this->tag = kstring_from2(tag, p - tag);
+		this->vary = kstring_from2(p + 1, size - this->tag->len - 1);
+	}
+	KXmlKey(kgl_refs_string* tag, kgl_refs_string* vary) {
+		this->tag = kstring_refs(tag);
+		this->vary = kstring_refs(vary);
+	}
+	KXmlKey() {
+		tag = nullptr;
+		vary = nullptr;
+	}
+	void set_tag(std::string& tag) {
+		assert(this->tag == nullptr);
+		this->tag = kstring_from2(tag.c_str(), tag.size());
+	}
+	~KXmlKey() {
+		kstring_release(tag);
+		kstring_release(vary);
+	}
+	int cmp(KXmlKey* a) {
+		int ret = kgl_string_cmp(tag, a->tag);
+		if (ret < 0) {
+			return -1;
+		} else if (ret > 0) {
+			return 1;
+		}
+		return kgl_string_cmp(vary, a->vary);
+	}
+	kgl_ref_str_t* tag;
+	kgl_ref_str_t* vary;
+};
 class KXmlNode
 {
 public:
-	KXmlNode() {
+	KXmlNode(KXmlNode* parent) {
+		this->parent = parent;
 		next = NULL;
+		ref = 1;
 	}
-	KXmlNode* getChild(std::string tag)
-	{
-		std::map<std::string, KXmlNode*>::iterator it;
-		int pos = (int)tag.find('/');
+	int cmp(KXmlKey* a) {
+		return key.cmp(a);
+	}
+	KXmlNode* find_child(KXmlKey* a) {
+		auto it = childs.find(&key);
+		if (!it) {
+			return nullptr;
+		}
+		return it->value();
+	}
+	KXmlNode* getChild(std::string tag) {
+		size_t pos = tag.find('/');
 		std::string childtag;
-		if (pos != -1) {
+		if (pos != std::string::npos) {
 			childtag = tag.substr(0, pos);
 		} else {
 			childtag = tag;
 		}
-		it = childs.find(childtag);
-		if (it == childs.end()) {
-			return NULL;
+		KXmlKey key(childtag.c_str(), childtag.size());
+		auto it = childs.find(&key);
+		if (!it) {
+			return nullptr;
 		}
-		if (pos != -1) {
-			return (*it).second->getChild(tag.substr(pos + 1));
+		if (pos != std::string::npos) {
+			return it->value()->getChild(tag.substr(pos + 1));
 		}
-		return (*it).second;
+		return it->value();
 	}
-	KXmlNode* getNext()
-	{
+	KXmlNode* getNext() {
 		return next;
 	}
-	std::string getNameSpace()
-	{
-		return ns;
+	KXmlNode* add_ref() {
+		katom_inc((void*)&ref);
+		return this;
 	}
-	void addChild(KXmlNode* node)
-	{
+	void release() {
+		if (katom_dec((void*)&ref) == 0) {
+			delete this;
+		}
+	}
+	bool is_same(KXmlNode* node) {
+		if (kgl_string_cmp(character, node->character) != 0) {
+			return false;
+		}
+		return attributes == node->attributes;
+	}
+	void addChild(KXmlNode* node) {
 		//printf("add child[%s] to [%s]\n",node->getTag().c_str(),getTag().c_str());
-		KXmlNode* child_node = getChild(node->getTag());
-		if (child_node == NULL) {
-			childs.insert(std::pair<std::string, KXmlNode*>(node->getTag(), node));
+		assert(node->parent == this);
+		int new_flag;
+		auto it = childs.insert(&node->key, &new_flag);
+		if (new_flag) {
+			it->value(node);
 		} else {
-			for (;;) {
-				KXmlNode* n = child_node->getNext();
-				if (n == NULL) {
-					child_node->next = node;
-					break;
-				}
-				child_node = n;
-			}
+			node->next = it->value();
+			it->value()->next = node;
 		}
+	}
 
+	std::string getTag() {
+		return key.tag->data;
 	}
-	std::string getTag()
-	{
-		return tag;
+
+	std::string getCharacter() {
+		return character ? character->data : "";
 	}
-	std::string getAttribute(std::string name)
-	{
-		return attributes[name];
-	}
-	std::string getCharacter()
-	{
-		return character;
-	}
-	friend class KXmlDocument;
-	std::map<std::string, KXmlNode*> childs;
-private:
-	~KXmlNode()
-	{
-		std::map<std::string, KXmlNode*>::iterator it;
-		for (it = childs.begin(); it != childs.end(); it++) {
-			delete (*it).second;
-		}
-		if (next) {
-			delete next;
-		}
-	}
+	KXmlKey key;
+	KMap<KXmlKey, KXmlNode> childs;
+	KXmlAttribute attributes;
 	KXmlNode* next;
-	std::string ns;
-	std::string tag;
-	std::string character;
-	std::map<std::string, std::string> attributes;
+	KXmlNode* parent;
+	kgl_refs_string* character = nullptr;
+private:
+	volatile uint32_t ref;
+	~KXmlNode() {
+		childs.iterator([](void* data, void* arg) {
+			KXmlNode* node = (KXmlNode*)data;
+			while (node) {
+				node->parent = NULL;
+				node = node->next;
+			}
+			((KXmlNode*)data)->release();
+			return iterator_remove_continue;
+			}, NULL);
+#if 0
+		for (auto it = childs.begin(); it != childs.end(); it++) {
+			auto child = (*it).second;
+			while (child) {
+				assert(child->parent == this);
+				child->parent = NULL;
+				child = child->next;
+			}
+			(*it).second->release();
+		}
+#endif
+		if (next) {
+			next->release();
+		}
+		assert(parent == NULL);
+		kstring_release(character);
+	}
 };
 class KXmlDocument :
 	public KXmlEvent
 {
 public:
-	KXmlDocument(void);
+	KXmlDocument(bool skip_ns = true);
 	~KXmlDocument(void);
+	void set_vary(std::map<std::string, std::string>* vary) {
+		this->vary = vary;
+	}
 	KXmlNode* parse(char* str);
 	KXmlNode* getRootNode();
 	KXmlNode* getNode(std::string name);
-	bool startElement(KXmlContext* context, std::map<std::string, std::string>& attribute);
-	bool startCharacter(KXmlContext* context, char* character, int len);
-	bool endElement(KXmlContext* context);
+	bool startElement(KXmlContext* context) override;
+	bool startCharacter(KXmlContext* context, char* character, int len) override;
+	bool endElement(KXmlContext* context) override;
 private:
-	KXmlNode* curNode;
-	std::list<KXmlNode*> nodeStack;
+	bool skip_ns;
+	KXmlNode* cur_node = nullptr;
+	KXmlNode* root = nullptr;
+	KXmlNode* cur_child_brother = nullptr;
+	std::stack<KXmlNode*> brothers;
+	std::map<std::string, std::string>* vary = nullptr;
 };
 #endif

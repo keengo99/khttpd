@@ -20,6 +20,7 @@
 #include <string>
 #include <map>
 #include "KXmlContext.h"
+
 /*
  * xml解析事件接听器
  */
@@ -35,31 +36,17 @@ public:
 	/*
 	 * 开始一个标签
 	 * context 标签上下文
-	 * qName 标签名字
 	 * attribute 标签属性
 	 */
-	virtual bool startElement(std::string &context, std::string &qName,
-			std::map<std::string, std::string> &attribute) {
+	virtual bool startElement(KXmlContext* context) {
 		return false;
 	}
-
-	virtual bool startElement(KXmlContext *context, std::map<std::string,
-			std::string> &attribute) {
-		return false;
-	}
-
 	/*
 	 * 开始一个标签文本
 	 * context 标签上下文
-	 * qName 标签名字
 	 * character 文本
 	 * len 文本长度
 	 */
-	virtual bool startCharacter(std::string &context, std::string &qName,
-			char *character, int len) {
-		return false;
-	}
-
 	virtual bool startCharacter(KXmlContext *context, char *character, int len) {
 		return false;
 	}
@@ -67,12 +54,7 @@ public:
 	/*
 	 * 结束一个标签
 	 * context 标签上下文
-	 * qName 标签名字
 	 */
-	virtual bool endElement(std::string &context, std::string &qName) {
-		return false;
-	}
-
 	virtual bool endElement(KXmlContext *context) {
 		return false;
 	}

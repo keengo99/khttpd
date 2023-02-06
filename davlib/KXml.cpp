@@ -30,8 +30,8 @@
 #include "KXml.h"
 #include "klog.h"
 #include "kforwin32.h"
-//#include "kfiber.h"
-//#include "KFileName.h"
+ //#include "kfiber.h"
+ //#include "KFileName.h"
 #include "kmalloc.h"
 using namespace std;
 kxml_fopen KXml::fopen = NULL;
@@ -126,12 +126,10 @@ KXml::KXml() {
 	hot = NULL;
 	data = NULL;
 }
-KXml::~KXml()
-{
+KXml::~KXml() {
 	clear();
 }
-void KXml::clear()
-{
+void KXml::clear() {
 	std::list<KXmlContext*>::iterator it;
 	for (it = contexts.begin(); it != contexts.end(); it++) {
 		delete (*it);
@@ -146,8 +144,7 @@ void KXml::setEvent(KXmlEvent* event) {
 void KXml::addEvent(KXmlEvent* event) {
 	events.push_back(event);
 }
-char* KXml::htmlEncode(const char* str, int& len, char* buf)
-{
+char* KXml::htmlEncode(const char* str, int& len, char* buf) {
 	if (buf == NULL) {
 		buf = (char*)malloc(5 * len + 1);
 	}
@@ -197,8 +194,7 @@ char* KXml::htmlEncode(const char* str, int& len, char* buf)
 	len = (int)(dst - buf);
 	return buf;
 }
-char* KXml::htmlDecode(char* str, int& len)
-{
+char* KXml::htmlDecode(char* str, int& len) {
 	char* dst = str;
 	char* src = str;
 	while (*src) {
@@ -243,8 +239,7 @@ char* KXml::htmlDecode(char* str, int& len)
 	len = (int)(dst - str);
 	return str;
 }
-std::string KXml::param(const char* str)
-{
+std::string KXml::param(const char* str) {
 	return encode(str);
 }
 std::string KXml::encode(std::string str) {
@@ -296,7 +291,7 @@ int KXml::getLine() {
 bool KXml::startParse(char* buf) {
 	origBuf = buf;
 	line = 1;
-	if (events.size() == 0) {
+	if (events.empty()) {
 		fprintf(stderr, "not set event\n");
 		return false;
 	}
@@ -324,7 +319,8 @@ bool KXml::startParse(char* buf) {
 	try {
 		startXml(encoding);
 		result = internelParseString(buf);
-	} catch (KXmlException& e) {
+	}
+	catch (KXmlException& e) {
 		endXml(result);
 		throw e;
 	}
@@ -338,7 +334,8 @@ bool KXml::parseString(const char* buf) {
 	bool result = false;
 	try {
 		result = startParse(str);
-	} catch (KXmlException& e) {
+	}
+	catch (KXmlException& e) {
 		free(str);
 		throw e;
 	}
@@ -434,15 +431,12 @@ bool KXml::internelParseString(char* buf) {
 			}
 			try {
 				for (it = events.begin(); it != events.end(); it++) {
-					(*it)->startElement(curContext, curContext->attribute);
-					(*it)->startElement(curContext->path, curContext->qName,
-						curContext->attribute);
+					(*it)->startElement(curContext);
 				}
 				hot = end;
 				if (single) {
 					for (it = events.begin(); it != events.end(); it++) {
 						(*it)->endElement(curContext);
-						(*it)->endElement(curContext->path, curContext->qName);
 					}
 					delete curContext;
 					curContext = NULL;
@@ -453,7 +447,8 @@ bool KXml::internelParseString(char* buf) {
 					continue;
 				}
 				contexts.push_back(curContext);
-			} catch (KXmlException& e2) {
+			}
+			catch (KXmlException& e2) {
 				delete curContext;
 				throw e2;
 			}
@@ -491,8 +486,6 @@ bool KXml::internelParseString(char* buf) {
 				}
 				for (it = events.begin(); it != events.end(); it++) {
 					(*it)->startCharacter(curContext, charBuf, char_len);
-					(*it)->startCharacter(curContext->path, curContext->qName,
-						charBuf, char_len);
 				}
 				free(charBuf);
 			}
@@ -536,7 +529,6 @@ bool KXml::internelParseString(char* buf) {
 			//getContext(context);
 			for (it = events.begin(); it != events.end(); it++) {
 				(*it)->endElement(curContext);
-				(*it)->endElement(curContext->path, curContext->qName);
 			}
 			delete curContext;
 			curContext = NULL;
@@ -575,7 +567,8 @@ bool KXml::parseFile(std::string file) {
 	}
 	try {
 		result = startParse(content);
-	} catch (KXmlException& e2) {
+	}
+	catch (KXmlException& e2) {
 		fprintf(stderr, "Error happen in %s:%d\n", file.c_str(), getLine());
 		free(content);
 		throw e2;
@@ -604,7 +597,7 @@ KXmlContext* KXml::newContext(std::string qName) {
 	return context;
 }
 char* KXml::getContent(const std::string& file) {
-	void *fp = KXml::fopen(file.c_str(), fileRead, 0);
+	void* fp = KXml::fopen(file.c_str(), fileRead, 0);
 	if (fp == NULL) {
 		return NULL;
 	}

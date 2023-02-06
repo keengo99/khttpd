@@ -30,6 +30,7 @@ INLINE int64_t string2int(const char* buf) {
 	return kgl_atol((u_char *)buf, strlen(buf));
 }
 #define kgl_memcmp memcmp
+
 int kgl_casecmp(const char* s1, const char* s2, size_t attr_len);
 const char* kgl_memstr(const char* haystack, size_t haystacklen,const char* needle, size_t needlen);
 void kgl_strlow(u_char* dst, u_char* src, size_t n);
@@ -50,6 +51,7 @@ inline bool kgl_mem_case_same(const char* s1, size_t attr_len, const char* s2, s
 }
 int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2);
 int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2);
+int kgl_cmp(const char* s1, size_t n1, const char* s2, size_t n2);
 /**
  * @kgl_mempbrk
  * @brief Finds a character within a specified input buffer.
@@ -138,6 +140,19 @@ inline int kgl_parse_value_int(const char* val, int val_len, int* value) {
 	return 0;
 }
 bool kgl_adjust_range(kgl_request_range* range, int64_t* len);
+inline int kgl_string_cmp(kgl_refs_string* a, kgl_refs_string* b) {
+	if (!a) {
+		if (!b) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if (!b) {
+		return -1;
+	}
+	return kgl_cmp(a->data, a->len, b->data, b->len);
+}
 extern int program_rand_value;
 extern int open_file_limit;
 #endif	/* !_LIB_H_INCLUDED_ */
