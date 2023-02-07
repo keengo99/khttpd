@@ -8,7 +8,6 @@
 #include "KMap.h"
 #include "kstring.h"
 #include "KHttpLib.h"
-
 class KXmlKey
 {
 public:
@@ -37,6 +36,9 @@ public:
 	~KXmlKey() {
 		kstring_release(tag);
 		kstring_release(vary);
+	}
+	bool is_wide() {
+		return *(tag->data) == '*';
 	}
 	int cmp(KXmlKey* a) {
 		int ret = kgl_string_cmp(tag, a->tag);
