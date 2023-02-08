@@ -40,12 +40,13 @@ public:
 	bool is_wide() {
 		return *(tag->data) == '*';
 	}
+	int cmp(kgl_ref_str_t* key) {
+		return kgl_cmp(tag->data, tag->len, key->data, key->len);
+	}
 	int cmp(KXmlKey* a) {
-		int ret = kgl_string_cmp(tag, a->tag);
-		if (ret < 0) {
-			return -1;
-		} else if (ret > 0) {
-			return 1;
+		int ret = cmp(a->tag);
+		if (ret != 0) {
+			return ret;
 		}
 		return kgl_string_cmp(vary, a->vary);
 	}
@@ -131,7 +132,7 @@ public:
 	KXmlAttribute attributes;
 	KXmlNode* next;
 	KXmlNode* parent;
-	kgl_refs_string* character = nullptr;
+	kgl_ref_str_t* character = nullptr;
 private:
 	volatile uint32_t ref;
 	~KXmlNode() {
@@ -168,7 +169,7 @@ class KXmlDocument :
 public:
 	KXmlDocument(bool skip_ns = true);
 	~KXmlDocument(void);
-	void set_vary(std::map<std::string, std::string>* vary) {
+	void set_vary(KMap<kgl_ref_str_t, KXmlKey>* vary) {
 		this->vary = vary;
 	}
 	KXmlNode* parse(char* str);
@@ -183,6 +184,6 @@ private:
 	KXmlNode* root = nullptr;
 	KXmlNode* cur_child_brother = nullptr;
 	std::stack<KXmlNode*> brothers;
-	std::map<std::string, std::string>* vary = nullptr;
+	KMap<kgl_ref_str_t, KXmlKey>* vary = nullptr;
 };
 #endif

@@ -46,6 +46,20 @@ public:
 	inline KMapNode<Value>* insert(Key* key, int* new_flag) {
 		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func);
 	}
+	inline Value *insert(Key* key, Value* value) {
+		int new_flag;
+		auto it = insert(key, &new_flag);
+		if (!new_flag) {
+			auto ret = it->value();
+			it->value(value);
+			return ret;
+		}
+		it->value(value);
+		return nullptr;
+	}
+	inline KMapNode<Value>* last() {
+		return (KMapNode<Value> *)rb_last(&tree.root);
+	}
 	inline KMapNode<Value>* first() {
 		return (KMapNode<Value> *)rb_first(&tree.root);
 	}

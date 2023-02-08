@@ -88,9 +88,9 @@ bool KXmlDocument::startElement(KXmlContext* context) {
 		}
 	}
 	if (vary) {
-		auto it = vary->find(cur_node->key.tag->data);
-		if (it != vary->end()) {
-			auto it2 = cur_node->attributes.find((*it).second);
+		auto it = vary->find(cur_node->key.tag);
+		if (it) {
+			auto it2 = cur_node->attributes.find(it->value()->vary->data);
 			if (it2 != cur_node->attributes.end()) {
 				cur_node->key.vary = kstring_from2((*it2).second.c_str(), (*it2).second.size());
 				//cur_node->key.vary = kstring_refs(cur_node->attributes.find((*it).second.c_str(), (*it).second.size()));
