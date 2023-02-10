@@ -56,8 +56,7 @@ public:
 class KXmlNode
 {
 public:
-	KXmlNode(KXmlNode* parent) {
-		this->parent = parent;
+	KXmlNode() {
 		next = NULL;
 		ref = 1;
 	}
@@ -108,8 +107,6 @@ public:
 		return attributes == node->attributes;
 	}
 	void addChild(KXmlNode* node) {
-		//printf("add child[%s] to [%s]\n",node->getTag().c_str(),getTag().c_str());
-		assert(node->parent == this);
 		int new_flag;
 		auto it = childs.insert(&node->key, &new_flag);
 		if (new_flag) {
@@ -131,35 +128,18 @@ public:
 	KMap<KXmlKey, KXmlNode> childs;
 	KXmlAttribute attributes;
 	KXmlNode* next;
-	KXmlNode* parent;
 	kgl_ref_str_t* character = nullptr;
 private:
 	volatile uint32_t ref;
 	~KXmlNode() {
 		childs.iterator([](void* data, void* arg) {
 			KXmlNode* node = (KXmlNode*)data;
-			while (node) {
-				node->parent = NULL;
-				node = node->next;
-			}
 			((KXmlNode*)data)->release();
 			return iterator_remove_continue;
 			}, NULL);
-#if 0
-		for (auto it = childs.begin(); it != childs.end(); it++) {
-			auto child = (*it).second;
-			while (child) {
-				assert(child->parent == this);
-				child->parent = NULL;
-				child = child->next;
-			}
-			(*it).second->release();
-		}
-#endif
 		if (next) {
 			next->release();
 		}
-		assert(parent == NULL);
 		kstring_release(character);
 	}
 };
@@ -184,6 +164,7 @@ private:
 	KXmlNode* root = nullptr;
 	KXmlNode* cur_child_brother = nullptr;
 	std::stack<KXmlNode*> brothers;
+	std::stack<KXmlNode*> parents;
 	KMap<kgl_ref_str_t, KXmlKey>* vary = nullptr;
 };
 #endif

@@ -9,18 +9,11 @@ KXmlDocument::KXmlDocument(bool skip_ns) {
 }
 KXmlDocument::~KXmlDocument(void) {
 	if (cur_node) {
-		cur_node->parent = NULL;
 		cur_node->release();
 	}
 	if (root) {
 		root->release();
 	}
-#if 0
-	std::list<KXmlNode*>::iterator it;
-	for (it = nodeStack.begin(); it != nodeStack.end(); it++) {
-		(*it)->release();
-	}
-#endif
 }
 KXmlNode* KXmlDocument::getNode(std::string name) {
 	KXmlNode* rootNode = getRootNode();
@@ -60,21 +53,8 @@ KXmlNode* KXmlDocument::parse(char* str) {
 }
 bool KXmlDocument::startElement(KXmlContext* context) {
 	//printf("parse node=[%s]\n", context->qName.c_str());
-	assert(cur_child_brother == nullptr || cur_child_brother->parent == cur_node);
-	cur_node = new KXmlNode(cur_node);
-#if 0
-	for (auto it = context->attribute.begin(); it != context->attribute.end(); it++) {
-		kgl_str_t key;
-		key.data = (char*)(*it).first.c_str();
-		key.len = (*it).first.size();
-		int new_flag;
-		auto it2 = cur_node->attributes.m.insert(&key, &new_flag);
-		assert(new_flag);
-		if (new_flag) {
-			it2->value(new KXmlKeyValue(key.data, key.len, (*it).second.c_str(), (*it).second.size()));
-		}
-	}
-#endif
+	parents.push(cur_node);
+	cur_node = new KXmlNode();
 	cur_node->attributes.swap(context->attribute);
 	if (!skip_ns) {
 		cur_node->key.set_tag(context->qName);
@@ -122,7 +102,11 @@ bool KXmlDocument::endElement(KXmlContext* context) {
 		return false;
 	}
 	//printf("end node=[%s]\n", context->qName.c_str());
-	KXmlNode* parent = cur_node->parent;
+	KXmlNode* parent = nullptr;
+	if (!parents.empty()) {
+		parent = parents.top();
+		parents.pop();
+	}
 	if (!parent) {
 		assert(root == nullptr);
 		root = cur_node;
@@ -131,7 +115,6 @@ bool KXmlDocument::endElement(KXmlContext* context) {
 	auto brother = brothers.top();
 	brothers.pop();
 	if (brother) {
-		assert(brother->parent == cur_node->parent);
 		assert(kgl_string_cmp(brother->key.tag, cur_node->key.tag) == 0);
 		brother->next = cur_node;
 	} else {
