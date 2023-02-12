@@ -68,6 +68,10 @@ public:
 		ref = 1;
 	}
 	int cmp(KXmlKey* a) {
+		int result = (int)a->tag->id - (int)key.tag->id;
+		if (result != 0) {
+			return result;
+		}
 		return key.cmp(a);
 	}
 	KXmlNode* find_child(KXmlKey* a) {

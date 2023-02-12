@@ -70,11 +70,15 @@ bool KXmlDocument::startElement(KXmlContext* context) {
 	if (vary) {
 		auto it = vary->find(cur_node->key.tag);
 		if (it) {
-			auto it2 = cur_node->attributes.find(it->value()->vary->data);
-			if (it2 != cur_node->attributes.end()) {
-				cur_node->key.vary = kstring_from2((*it2).second.c_str(), (*it2).second.size());
-			} else {
-				cur_node->key.vary = kstring_from2(_KS(""));
+			auto key_vary = it->value();
+			cur_node->key.tag->id = key_vary->tag->id;
+			if (key_vary->vary) {
+				auto it2 = cur_node->attributes.find(it->value()->vary->data);
+				if (it2 != cur_node->attributes.end()) {
+					cur_node->key.vary = kstring_from2((*it2).second.c_str(), (*it2).second.size());
+				} else {
+					cur_node->key.vary = kstring_from2(_KS(""));
+				}
 			}
 		}
 	}
