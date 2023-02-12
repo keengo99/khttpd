@@ -73,7 +73,8 @@ bool KXmlDocument::startElement(KXmlContext* context) {
 			auto it2 = cur_node->attributes.find(it->value()->vary->data);
 			if (it2 != cur_node->attributes.end()) {
 				cur_node->key.vary = kstring_from2((*it2).second.c_str(), (*it2).second.size());
-				//cur_node->key.vary = kstring_refs(cur_node->attributes.find((*it).second.c_str(), (*it).second.size()));
+			} else {
+				cur_node->key.vary = kstring_from2(_KS(""));
 			}
 		}
 	}
@@ -119,7 +120,7 @@ bool KXmlDocument::endElement(KXmlContext* context) {
 		brother->next = cur_node;
 	} else {
 		if (parent) {
-			parent->addChild(cur_node);
+			parent->append(cur_node);
 		}
 	}
 	cur_child_brother = cur_node;

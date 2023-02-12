@@ -8,6 +8,9 @@
 #include "KMap.h"
 #include "kstring.h"
 #include "KHttpLib.h"
+#include "KStream.h"
+#include "klog.h"
+
 class KXmlKey
 {
 public:
@@ -60,11 +63,15 @@ public:
 		next = NULL;
 		ref = 1;
 	}
+	KXmlNode(KXmlKey* name) :key(name->tag, name->vary) {
+		next = NULL;
+		ref = 1;
+	}
 	int cmp(KXmlKey* a) {
 		return key.cmp(a);
 	}
 	KXmlNode* find_child(KXmlKey* a) {
-		auto it = childs.find(&key);
+		auto it = childs.find(a);
 		if (!it) {
 			return nullptr;
 		}
@@ -91,6 +98,19 @@ public:
 	KXmlNode* getNext() {
 		return next;
 	}
+	KXmlNode* clone() {
+		KXmlNode* node = new KXmlNode(&key);
+		node->attributes = attributes;
+		node->character = kstring_refs(character);
+		if (next) {
+			node->next = next->clone();
+		}
+		for (auto it = childs.first(); it; it = it->next()) {
+			node->append(it->value()->clone());
+		}
+		return node;
+	}
+
 	KXmlNode* add_ref() {
 		katom_inc((void*)&ref);
 		return this;
@@ -100,21 +120,151 @@ public:
 			delete this;
 		}
 	}
+	KGL_RESULT write(KWStream* out) {
+		out->write_all(_KS("<"));
+		out->write_all(key.tag->data, key.tag->len);
+		for (auto it = attributes.begin(); it != attributes.end(); it++) {
+			out->write_all(_KS(" "));
+			out->write_all((*it).first.c_str(), (int)(*it).first.size());
+			out->write_all(_KS("="));
+
+			if ((*it).second.find('\'') == std::string::npos) {
+				out->write_all(_KS("'"));
+				out->write_all((*it).second.c_str(), (int)(*it).second.size());
+				out->write_all(_KS("'"));
+			} else if ((*it).second.find('"') == std::string::npos) {
+				out->write_all(_KS("\""));
+				out->write_all((*it).second.c_str(), (int)(*it).second.size());
+				out->write_all(_KS("\""));
+			} else {
+				klog(KLOG_ERR, "cann't write xml attribute [%s %s] value also has ['\"]\n", key.tag->data, (*it).first.c_str());
+				out->write_all(_KS("''"));
+			}
+		}
+		//write attribute
+		out->write_all(_KS(">"));
+		//write child
+		for (auto it = childs.first(); it; it = it->next()) {
+			out->write_all(_KS("\n"));
+			auto result = it->value()->write(out);
+			if (result != KGL_OK) {
+				return result;
+			}
+		}
+		if (character) {
+			if (memchr(character->data, '<', character->len)) {
+				out->write_all(_KS(CDATA_START));
+				out->write_all(character->data, character->len);
+				out->write_all(_KS(CDATA_END));
+			} else {
+				out->write_all(character->data, character->len);
+			}
+		}
+		out->write_all(_KS("</"));
+		out->write_all(key.tag->data, key.tag->len);
+		auto result = out->write_all(_KS(">\n"));
+		if (result != KGL_OK) {
+			return result;
+		}
+		if (next) {
+			return next->write(out);
+		}
+		return result;
+	}
 	bool is_same(KXmlNode* node) {
 		if (kgl_string_cmp(character, node->character) != 0) {
 			return false;
 		}
 		return attributes == node->attributes;
 	}
-	void addChild(KXmlNode* node) {
+	bool update(KXmlKey* key, int index, KXmlNode* xml) {
+		auto it = childs.find(key);
+		if (!it) {
+			return false;
+		}
+		KXmlNode* last = nullptr;
+		while (index > 0) {
+			index--;
+			if (last) {
+				last = last->next;
+			} else {
+				last = it->value();
+			}
+			if (!last) {
+				return false;
+			}
+		}
+		if (!last) {
+			auto node = it->value();
+			if (xml) {
+				it->value(xml->add_ref());
+			} else {
+				if (node->next) {
+					it->value(node->next);
+				} else {
+					childs.erase(it);
+				}
+			}
+			node->release();
+			return true;
+		}
+		if (!last->next) {
+			return false;
+		}
+		auto node = last->next;
+		if (xml) {
+			xml->next = node->next;
+			last->next = xml->add_ref();
+		} else {
+			last->next = node->next;
+		}
+		node->release();
+		return true;
+	}
+	void append(KXmlNode* node) {
 		int new_flag;
 		auto it = childs.insert(&node->key, &new_flag);
 		if (new_flag) {
 			it->value(node);
+			return;
+		}
+		auto last = it->value();
+		while (last->next) {
+			last = last->next;
+		}
+		last->next = node;
+	}
+	/* insert before index node */
+	void insert(KXmlNode* node, int index) {
+		if (index == -1) {
+			return append(node);
+		}
+		int new_flag;
+		auto it = childs.insert(&node->key, &new_flag);
+		if (new_flag) {
+			it->value(node);
+			return;
+		}
+		KXmlNode* last = nullptr;
+		while (index > 0) {
+			index--;
+			if (last) {
+				if (!last->next) {
+					break;
+				}
+				last = last->next;
+			} else {
+				last = it->value();
+			}
+		}
+		if (last) {
+			node->next = last->next;
+			last->next = node;
 		} else {
 			node->next = it->value();
-			it->value()->next = node;
+			it->value(node);
 		}
+
 	}
 
 	std::string getTag() {

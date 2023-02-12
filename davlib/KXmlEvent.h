@@ -20,7 +20,8 @@
 #include <string>
 #include <map>
 #include "KXmlContext.h"
-
+#define CDATA_START	"<![CDATA["
+#define CDATA_END	"]]>"
 /*
  * xml解析事件接听器
  */

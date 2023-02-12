@@ -537,6 +537,22 @@ int kgl_cmp(const char* s1, size_t n1, const char* s2, size_t n2) 	{
 	}
 	return z;
 }
+int kgl_icmp(const char* s1, size_t n1, const char* s2, size_t n2) 	{
+	size_t     n;
+	int  m, z;
+	if (n1 <= n2) {
+		n = n1;
+		z = -1;
+	} else {
+		n = n2;
+		z = 1;
+	}
+	m = kgl_casecmp(s1, s2, n);
+	if (m || n1 == n2) {
+		return m;
+	}
+	return z;
+}
 int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2) {
 	size_t     n;
 	int  m, z;

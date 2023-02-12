@@ -1,6 +1,7 @@
 #ifndef KMAP_H_INCLUDED
 #define KMAP_H_INCLUDED
 #include "krbtree.h"
+
 template <typename Value>
 class KMapNode : public krb_node
 {

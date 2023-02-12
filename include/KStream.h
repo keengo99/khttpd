@@ -138,7 +138,7 @@ public:
 		}
 		return false;
 	}
-	inline KWStream& operator <<(const std::string str) {
+	inline KWStream& operator <<(const std::string &str) {
 		write_all(str.c_str(), (int)str.size());
 		return *this;
 	}
@@ -164,6 +164,9 @@ public:
 			fprintf(stderr, "cann't write to stream 3\n");
 		}
 		return *this;
+	}
+	inline bool add_as_hex64(const int64_t value) {
+		return add(value, INT64_FORMAT_HEX);
 	}
 	inline bool add_as_hex(const int value) {
 		return add(value, "%x");

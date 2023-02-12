@@ -53,6 +53,14 @@ inline bool kgl_mem_case_same(const char* s1, size_t attr_len, const char* s2, s
 int kgl_ncasecmp(const char* s1, size_t n1, const char* s2, size_t n2);
 int kgl_ncmp(const char* s1, size_t n1, const char* s2, size_t n2);
 int kgl_cmp(const char* s1, size_t n1, const char* s2, size_t n2);
+int kgl_icmp(const char* s1, size_t n1, const char* s2, size_t n2);
+
+#ifdef _WIN32
+#define kgl_file_cmp kgl_icmp
+#else
+#define kgl_file_cmp kgl_cmp
+#endif
+
 /**
  * @kgl_mempbrk
  * @brief Finds a character within a specified input buffer.

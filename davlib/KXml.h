@@ -33,8 +33,7 @@
 #include "kmalloc.h"
 #include "kforwin32.h"
 
-#define CDATA_START	"<![CDATA["
-#define CDATA_END	"]]>"
+
 
 #define		PARSE_ERROR			-1
 #define		PARSE_CONTINUE		0
