@@ -56,24 +56,27 @@ bool KXmlDocument::startElement(KXmlContext* context) {
 	parents.push(cur_node);
 	cur_node = new KXmlNode();
 	cur_node->attributes.swap(context->attribute);
+	kgl_ref_str_t* tag;
 	if (!skip_ns) {
-		cur_node->key.set_tag(context->qName);
+		tag = kstring_from2(context->qName.c_str(), context->qName.size());
 	} else {
-		string::size_type pos = context->qName.find(':');
-		if (pos != string::npos) {
-			//curNode->ns = context->qName.substr(0, pos);
-			cur_node->key.set_tag(context->qName.substr(pos + 1));
+		auto pos = context->qName.find(':');
+		if (pos != std::string::npos) {
+			auto q_name = context->qName.substr(pos + 1);
+			tag = kstring_from2(q_name.c_str(), q_name.size());
 		} else {
-			cur_node->key.set_tag(context->qName);
+			tag = kstring_from2(context->qName.c_str(), context->qName.size());
 		}
 	}
-	if (vary) {
-		auto it = vary->find(cur_node->key.tag);
+
+	if (qname_config) {
+		auto it = qname_config->find(tag);
 		if (it) {
 			auto key_vary = it->value();
-			cur_node->key.tag->id = key_vary->tag->id;
+			kstring_release(tag);
+			tag = kstring_refs(key_vary->tag);
 			if (key_vary->vary) {
-				auto it2 = cur_node->attributes.find(it->value()->vary->data);
+				auto it2 = cur_node->attributes.find(key_vary->vary->data);
 				if (it2 != cur_node->attributes.end()) {
 					cur_node->key.vary = kstring_from2((*it2).second.c_str(), (*it2).second.size());
 				} else {
@@ -82,6 +85,7 @@ bool KXmlDocument::startElement(KXmlContext* context) {
 			}
 		}
 	}
+	cur_node->key.tag = tag;
 	//printf("new xml node=[%p] tag=[%s]\n", cur_node, cur_node->tag.c_str());
 	if (cur_child_brother && cur_child_brother->cmp(&cur_node->key) == 0) {
 		brothers.push(cur_child_brother);

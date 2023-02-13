@@ -72,6 +72,10 @@ public:
 		if (result != 0) {
 			return result;
 		}
+		if (key.tag->id != 0) {
+			//know id
+			return result;
+		}
 		return key.cmp(a);
 	}
 	KXmlNode* find_child(KXmlKey* a) {
@@ -303,8 +307,8 @@ class KXmlDocument :
 public:
 	KXmlDocument(bool skip_ns = true);
 	~KXmlDocument(void);
-	void set_vary(KMap<kgl_ref_str_t, KXmlKey>* vary) {
-		this->vary = vary;
+	void set_qname_config(KMap<kgl_ref_str_t, KXmlKey>* qname_config) {
+		this->qname_config = qname_config;
 	}
 	KXmlNode* parse(char* str);
 	KXmlNode* getRootNode();
@@ -319,6 +323,6 @@ private:
 	KXmlNode* cur_child_brother = nullptr;
 	std::stack<KXmlNode*> brothers;
 	std::stack<KXmlNode*> parents;
-	KMap<kgl_ref_str_t, KXmlKey>* vary = nullptr;
+	KMap<kgl_ref_str_t, KXmlKey>* qname_config = nullptr;
 };
 #endif

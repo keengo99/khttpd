@@ -47,7 +47,7 @@ public:
 	inline KMapNode<Value>* insert(Key* key, int* new_flag) {
 		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func);
 	}
-	inline Value *insert(Key* key, Value* value) {
+	inline Value *add(Key* key, Value* value) {
 		int new_flag;
 		auto it = insert(key, &new_flag);
 		if (!new_flag) {
