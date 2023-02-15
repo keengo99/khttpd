@@ -92,39 +92,6 @@
 
 
 
-///////////////////////////////////////////////
-//rq->filter_flag
-///////////////////////////////////////////////
-#define  RF_TPROXY_UPSTREAM  (1)
-#ifdef ENABLE_TPROXY
-#define  RF_TPROXY_TRUST_DNS (1<<1)
-#endif
-#define  RF_PROXY_RAW_URL    (1<<2) /*raw_url */
-#define  RF_DOUBLE_CACHE_EXPIRE (1<<3)
-#define  RF_UPSTREAM_NOKA    (1<<4)
-#define  RF_ALWAYS_ONLINE    (1<<5)
-#define  RF_GUEST            (1<<6)
-#define  RQ_NO_EXTEND        (1<<7)
-#define  RF_X_REAL_IP        (1<<8)
-#define  RF_NO_X_FORWARDED_FOR  (1<<9)
-#define  RF_LOG_DRILL        (1<<10)
-#define  RF_NO_CACHE         (1<<12)
-#define  RF_VIA              (1<<13)
-#define  RF_X_CACHE          (1<<14)
-#define  RF_NO_BUFFER        (1<<15)
-#define  RF_NO_DISK_CACHE    (1<<16)
-#define  RF_UPSTREAM_NOSNI   (1<<17)
-#define  RQ_SEND_AUTH        (1<<18)
-#define  RF_PROXY_FULL_URL   (1<<19)
-#define  RF_FOLLOWLINK_ALL   (1<<21)
-#define  RF_FOLLOWLINK_OWN   (1<<22)
-#define  RF_NO_X_SENDFILE    (1<<23)
-#define  RQ_URL_QS           (1<<25)
-#define  RQ_FULL_PATH_INFO   (1<<26)
-#define  RF_AGE              (1<<27)
-#define  RQ_RESPONSE_DENY    (1<<29)
-#define  RQF_CC_PASS         (1<<30)
-#define  RQF_CC_HIT          (1<<31)
 
 #define WORK_MODEL_UNIX      KGL_SERVER_UNIX
 #define WORK_MODEL_MANAGE    (1<<1)
