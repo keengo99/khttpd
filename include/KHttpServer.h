@@ -10,13 +10,13 @@ typedef struct _khttp_server_config
 	int time_out;
 } khttp_server_config;
 
-typedef enum
-{
-	kgl_connection_success,
-	kgl_connection_too_many,
-	kgl_connection_per_limit,
-	kgl_connection_unknow
-} kgl_connection_result;
+typedef int kgl_connection_result;
+constexpr kgl_connection_result kgl_connection_unknow = 0;
+constexpr kgl_connection_result kgl_connection_too_many = 1;
+constexpr kgl_connection_result kgl_connection_per_limit = 2;
+constexpr kgl_connection_result kgl_connection_no_keep_alive = 4;
+constexpr kgl_connection_result kgl_connection_success = 8;
+
 class KSink;
 typedef kgl_connection_result(*kconnection_start_func)(kconnection* cn);
 typedef void (*krequest_start_func)(KSink* sink, int header_len);

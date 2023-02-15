@@ -78,6 +78,9 @@ public:
 		}
 		return key.cmp(a);
 	}
+	bool is_tag(const char* tag, size_t len) {
+		return kgl_cmp(key.tag->data, key.tag->len, tag, len) == 0;
+	}
 	KXmlNode* find_child(KXmlKey* a) {
 		auto it = childs.find(a);
 		if (!it) {
@@ -278,7 +281,9 @@ public:
 	std::string getTag() {
 		return key.tag->data;
 	}
-
+	const char* get_text() {
+		return character ? character->data : "";
+	}
 	std::string getCharacter() {
 		return character ? character->data : "";
 	}
