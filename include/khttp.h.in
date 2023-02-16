@@ -1,6 +1,7 @@
 ﻿#ifndef KHTTP_H_SADFLKJASDLFKJA455ss
 #define KHTTP_H_SADFLKJASDLFKJA455ss
 #include "kfeature.h"
+#include <time.h>
 #cmakedefine HTTP_PROXY
 #cmakedefine ENABLE_HTTP2
 
