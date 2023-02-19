@@ -169,7 +169,7 @@ public:
 	int size() const {
 		return (int)s.s.len;
 	}
-	[[nodiscard]] char* steal() {
+	char* steal() {
 		if (!s.guarantee(1)) {
 			return nullptr;
 		}
@@ -210,7 +210,7 @@ public:
 private:
 	kgl_str_t s;
 };
-inline kgl_str_t operator ""_CS(const char* str, size_t len) {
+inline kgl_str_t operator "" _CS(const char* str, size_t len) {
 	return kgl_str_t{ (char*)str, len };
 }
 #endif /* KSTRING_H_ */
