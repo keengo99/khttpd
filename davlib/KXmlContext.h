@@ -18,10 +18,10 @@
 #ifndef KXMLCONTEXT_H_
 #define KXMLCONTEXT_H_
 #include<string>
-#include<map>
 #include "kstring.h"
 #include "KMap.h"
 #include "KHttpLib.h"
+#include "KXmlAttribute.h"
 class KXmlEvent;
 class KXml;
 #if 0
@@ -104,17 +104,6 @@ public:
 };
 typedef std::map<std::string, std::string> KXmlAttribute;
 #endif
-class KXmlAttribute : public std::map<std::string, std::string>
-{
-public:
-	int get_int(const char* str, size_t len) {
-		auto it = find(str);
-		if (it == end()) {
-			return 0;
-		}
-		return atoi((*it).second.c_str());
-	}
-};
 class KXmlContext
 {
 public:

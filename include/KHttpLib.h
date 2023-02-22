@@ -162,6 +162,19 @@ inline int kgl_string_cmp(kgl_refs_string* a, kgl_refs_string* b) {
 	}
 	return kgl_cmp(a->data, a->len, b->data, b->len);
 }
+inline void* kgl_memrchr(const void* s, int c, size_t n) 	{
+	if (n == 0) {
+		return NULL;
+	}
+	const u_char* end = (const u_char*)s + n - 1;
+	while (end >= s) {
+		if (*end == c) {
+			return (void *)end;
+		}
+		end--;
+	}
+	return NULL;
+}
 extern int program_rand_value;
 extern int open_file_limit;
 #endif	/* !_LIB_H_INCLUDED_ */

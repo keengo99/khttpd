@@ -10,7 +10,7 @@
 #include "KHttpLib.h"
 #include "KStream.h"
 #include "klog.h"
-
+constexpr int kxml_no_brother = -2;
 class KXmlKey
 {
 public:
@@ -25,8 +25,8 @@ public:
 		this->vary = kstring_from2(p + 1, size - this->tag->len - 1);
 	}
 	KXmlKey(kgl_refs_string* tag, kgl_refs_string* vary) {
-		this->tag = kstring_refs(tag);
-		this->vary = kstring_refs(vary);
+		this->tag = tag;
+		this->vary = vary;
 	}
 	KXmlKey() {
 		tag = nullptr;
@@ -63,18 +63,22 @@ public:
 		next = NULL;
 		ref = 1;
 	}
-	KXmlNode(KXmlKey* name) :key(name->tag, name->vary) {
+	KXmlNode(kgl_ref_str_t* tag, kgl_ref_str_t* vary) : key(tag, vary) {
+		next = NULL;
+		ref = 1;
+	}
+	KXmlNode(KXmlKey* name) : key(kstring_refs(name->tag), kstring_refs(name->vary)) {
 		next = NULL;
 		ref = 1;
 	}
 	int cmp(KXmlKey* a) {
-		int result = (int)a->tag->id - (int)key.tag->id;
+		int result =  (int)key.tag->id - (int)a->tag->id;
 		if (result != 0) {
 			return result;
 		}
 		if (key.tag->id != 0) {
 			//know id
-			return result;
+			return kgl_string_cmp(key.vary, a->vary);
 		}
 		return key.cmp(a);
 	}
@@ -121,17 +125,25 @@ public:
 		}
 		return node;
 	}
-
+	void copy_child(KXmlNode* node) {
+		for (auto it = childs.first(); it; it = it->next()) {
+			node->append(it->value()->add_ref());
+		}
+	}
 	KXmlNode* add_ref() {
 		katom_inc((void*)&ref);
 		return this;
 	}
 	void release() {
+		assert(katom_get((void*)&ref) < 0xfffffff);
 		if (katom_dec((void*)&ref) == 0) {
 			delete this;
 		}
 	}
-	KGL_RESULT write(KWStream* out) {
+	KGL_RESULT write(KWStream* out, int level=0) {
+		for (int i = 0; i < level; i++) {
+			out->write_all(_KS("\t"));
+		}
 		out->write_all(_KS("<"));
 		out->write_all(key.tag->data, key.tag->len);
 		for (auto it = attributes.begin(); it != attributes.end(); it++) {
@@ -157,7 +169,7 @@ public:
 		//write child
 		for (auto it = childs.first(); it; it = it->next()) {
 			out->write_all(_KS("\n"));
-			auto result = it->value()->write(out);
+			auto result = it->value()->write(out, level+1);
 			if (result != KGL_OK) {
 				return result;
 			}
@@ -171,14 +183,21 @@ public:
 				out->write_all(character->data, character->len);
 			}
 		}
+		if (!childs.empty()) {
+			out->write_all(_KS("\n"));
+			for (int i = 0; i < level; i++) {
+				out->write_all(_KS("\t"));
+			}
+		}
 		out->write_all(_KS("</"));
 		out->write_all(key.tag->data, key.tag->len);
-		auto result = out->write_all(_KS(">\n"));
+		auto result = out->write_all(_KS(">"));
 		if (result != KGL_OK) {
 			return result;
 		}
 		if (next) {
-			return next->write(out);
+			out->write_all(_KS("\n"));
+			return next->write(out, level);
 		}
 		return result;
 	}
@@ -188,7 +207,7 @@ public:
 		}
 		return attributes == node->attributes;
 	}
-	bool update(KXmlKey* key, int index, KXmlNode* xml) {
+	bool update(KXmlKey* key, int index, KXmlNode* xml, bool copy_childs=true) {
 		auto it = childs.find(key);
 		if (!it) {
 			return false;
@@ -229,6 +248,9 @@ public:
 		} else {
 			last->next = node->next;
 		}
+		if (copy_childs) {
+			node->copy_child(xml);
+		}
 		node->release();
 		return true;
 	}
@@ -246,15 +268,19 @@ public:
 		last->next = node;
 	}
 	/* insert before index node */
-	void insert(KXmlNode* node, int index) {
+	bool insert(KXmlNode* node, int index) {
 		if (index == -1) {
-			return append(node);
+			append(node);
+			return true;
 		}
 		int new_flag;
 		auto it = childs.insert(&node->key, &new_flag);
 		if (new_flag) {
 			it->value(node);
-			return;
+			return true;
+		}
+		if (index == kxml_no_brother) {
+			return false;
 		}
 		KXmlNode* last = nullptr;
 		while (index > 0) {
@@ -275,7 +301,7 @@ public:
 			node->next = it->value();
 			it->value(node);
 		}
-
+		return true;
 	}
 
 	std::string getTag() {

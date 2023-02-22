@@ -196,6 +196,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 		if (!kconnection_ssl_connect(cn, ssl_ctx, sni_host)) {
 			klog(KLOG_ERR, "cann't bind_fd for ssl socket.\n");
 			kfiber_net_close(cn);
+			health(NULL, HealthStatus::Err);
 			return NULL;
 		}
 #ifdef ENABLE_UPSTREAM_HTTP2
@@ -334,9 +335,6 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* s) {
 		kstring_release(ssl_client_protocols);
 	}
 #endif
-	if (destChanged) {
-		//clean();
-	}
 #ifdef KSOCKET_UNIX
 	if (strncasecmp(this->host.c_str(), "unix:", 5) == 0) {
 		is_unix = 1;
@@ -352,6 +350,9 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* s) {
 		free(ssl_buf);
 	}
 #endif
+	if (destChanged) {
+		clean();
+	}
 	return true;
 }
 bool KSockPoolHelper::setHostPort(std::string host, const char* port) {
@@ -380,9 +381,9 @@ void KSockPoolHelper::enable() {
 	katom_set16((void*)&error_count, 0);
 }
 
-bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
-	setHostPort(attr["host"], attr["port"].c_str());
-	setLifeTime(atoi(attr["life_time"].c_str()));
+bool KSockPoolHelper::parse(const KXmlAttribute& attr) {
+	setHostPort(attr("host"), attr("port"));
+	setLifeTime(atoi(attr("life_time")));
 	SetParam(attr["param"].c_str());
 	lock.Lock();
 #ifdef HTTP_PROXY
@@ -390,6 +391,7 @@ bool KSockPoolHelper::parse(std::map<std::string, std::string>& attr) {
 	auth_passwd = attr["auth_passwd"];
 #endif
 	sign = (attr["sign"] == "1");
+	weight = atoi(attr["weight"].c_str());
 	lock.Unlock();
 	setIp(attr["self_ip"].c_str());	
 	return true;

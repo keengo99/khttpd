@@ -7,6 +7,7 @@
 #include "KAtomCountable.h"
 #include "KPoolableSocketContainer.h"
 #include "KTcpUpstream.h"
+#include "KXmlAttribute.h"
 
 #define KSOCKET_FLAGS_SKIP_POOL 1
 #define KSOCKET_FLAGS_WEBSOCKET (1<<1)
@@ -77,7 +78,7 @@ public:
 		lock.Unlock();
 	}
 	void shutdown() override;
-	bool parse(std::map<std::string, std::string>& attr);
+	bool parse(const KXmlAttribute& attr);
 	void build(std::map<std::string, std::string>& attr);
 	KUpstream* get_upstream(uint32_t flags, const char* sni_host = NULL);
 	std::string get_port();
