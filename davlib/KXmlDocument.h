@@ -10,7 +10,7 @@
 #include "KHttpLib.h"
 #include "KStream.h"
 #include "klog.h"
-constexpr int kxml_no_brother = -2;
+
 class KXmlKey
 {
 public:
@@ -56,23 +56,73 @@ public:
 	kgl_ref_str_t* tag;
 	kgl_ref_str_t* vary;
 };
+class KXmlNode;
+class KXmlNodeBody
+{
+public:
+	~KXmlNodeBody();
+	KGL_RESULT write(KWStream* out, int level);
+	KXmlNodeBody* clone();
+	bool is_same(KXmlNodeBody* node) {
+		if (kgl_string_cmp(character, node->character) != 0) {
+			return false;
+		}
+		return attributes == node->attributes;
+	}
+	const char* get_text(const char* default_text) {
+		return character ? character->data : default_text;
+	}
+	const std::string get_character() {
+		return get_text("");
+	}
+	KXmlNode* find_child(KXmlKey* a) {
+		auto it = childs.find(a);
+		if (!it) {
+			return nullptr;
+		}
+		return it->value();
+	}
+	void copy_child_from(KXmlNodeBody* node);
+	KXmlNode* find_child(const std::string& tag);
+	void add(KXmlNode* xml, uint32_t index);
+	bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs, bool create_flag);
+	KMap<KXmlKey, KXmlNode> childs;
+	KXmlAttribute attributes;
+	kgl_ref_str_t* character = nullptr;
+};
 class KXmlNode
 {
 public:
-	KXmlNode() {
-		next = NULL;
+	KXmlNode(KXmlNode* node = nullptr) {
 		ref = 1;
+		if (!node) {
+			count = 1;
+			body = new KXmlNodeBody;
+			return;
+		}
+		key.tag = kstring_refs(node->key.tag);
+		key.vary = kstring_refs(node->key.vary);
+		count = 0;
+		for (uint32_t index = 0;; index++) {
+			auto body = node->get_body(index);
+			if (!body) {
+				break;
+			}
+			insert_body(body->clone(), last_pos);
+		}
 	}
 	KXmlNode(kgl_ref_str_t* tag, kgl_ref_str_t* vary) : key(tag, vary) {
-		next = NULL;
 		ref = 1;
+		count = 1;
+		body = new KXmlNodeBody();
 	}
 	KXmlNode(KXmlKey* name) : key(kstring_refs(name->tag), kstring_refs(name->vary)) {
-		next = NULL;
 		ref = 1;
+		count = 1;
+		body = new KXmlNodeBody();
 	}
 	int cmp(KXmlKey* a) {
-		int result =  (int)key.tag->id - (int)a->tag->id;
+		int result = (int)key.tag->id - (int)a->tag->id;
 		if (result != 0) {
 			return result;
 		}
@@ -85,51 +135,17 @@ public:
 	bool is_tag(const char* tag, size_t len) {
 		return kgl_cmp(key.tag->data, key.tag->len, tag, len) == 0;
 	}
-	KXmlNode* find_child(KXmlKey* a) {
-		auto it = childs.find(a);
-		if (!it) {
+	KXmlNode* find_child(const std::string& tag) {
+		auto body = get_first();
+		if (!body) {
 			return nullptr;
 		}
-		return it->value();
-	}
-	KXmlNode* getChild(std::string tag) {
-		size_t pos = tag.find('/');
-		std::string childtag;
-		if (pos != std::string::npos) {
-			childtag = tag.substr(0, pos);
-		} else {
-			childtag = tag;
-		}
-		KXmlKey key(childtag.c_str(), childtag.size());
-		auto it = childs.find(&key);
-		if (!it) {
-			return nullptr;
-		}
-		if (pos != std::string::npos) {
-			return it->value()->getChild(tag.substr(pos + 1));
-		}
-		return it->value();
-	}
-	KXmlNode* getNext() {
-		return next;
+		return body->find_child(tag);
 	}
 	KXmlNode* clone() {
-		KXmlNode* node = new KXmlNode(&key);
-		node->attributes = attributes;
-		node->character = kstring_refs(character);
-		if (next) {
-			node->next = next->clone();
-		}
-		for (auto it = childs.first(); it; it = it->next()) {
-			node->append(it->value()->clone());
-		}
-		return node;
+		return new KXmlNode(this);
 	}
-	void copy_child(KXmlNode* node) {
-		for (auto it = childs.first(); it; it = it->next()) {
-			node->append(it->value()->add_ref());
-		}
-	}
+
 	KXmlNode* add_ref() {
 		katom_inc((void*)&ref);
 		return this;
@@ -140,198 +156,223 @@ public:
 			delete this;
 		}
 	}
-	KGL_RESULT write(KWStream* out, int level=0) {
-		for (int i = 0; i < level; i++) {
-			out->write_all(_KS("\t"));
-		}
-		out->write_all(_KS("<"));
-		out->write_all(key.tag->data, key.tag->len);
-		for (auto it = attributes.begin(); it != attributes.end(); it++) {
-			out->write_all(_KS(" "));
-			out->write_all((*it).first.c_str(), (int)(*it).first.size());
-			out->write_all(_KS("="));
-
-			if ((*it).second.find('\'') == std::string::npos) {
-				out->write_all(_KS("'"));
-				out->write_all((*it).second.c_str(), (int)(*it).second.size());
-				out->write_all(_KS("'"));
-			} else if ((*it).second.find('"') == std::string::npos) {
-				out->write_all(_KS("\""));
-				out->write_all((*it).second.c_str(), (int)(*it).second.size());
-				out->write_all(_KS("\""));
-			} else {
-				klog(KLOG_ERR, "cann't write xml attribute [%s %s] value also has ['\"]\n", key.tag->data, (*it).first.c_str());
-				out->write_all(_KS("''"));
+	KGL_RESULT write(KWStream* out, int level = 0) {
+		for (uint32_t index = 0;; index++) {
+			auto body = get_body(index);
+			if (!body) {
+				break;
 			}
-		}
-		//write attribute
-		out->write_all(_KS(">"));
-		//write child
-		for (auto it = childs.first(); it; it = it->next()) {
-			out->write_all(_KS("\n"));
-			auto result = it->value()->write(out, level+1);
+			for (int i = 0; i < level; i++) {
+				out->write_all(_KS("\t"));
+			}
+			out->write_all(_KS("<"));
+			out->write_all(key.tag->data, key.tag->len);
+			auto result = body->write(out, level);
+			if (result != KGL_OK) {
+				return result;
+			}
+			out->write_all(_KS("</"));
+			out->write_all(key.tag->data, key.tag->len);
+			result = out->write_all(_KS(">\n"));
 			if (result != KGL_OK) {
 				return result;
 			}
 		}
-		if (character) {
-			if (memchr(character->data, '<', character->len)) {
-				out->write_all(_KS(CDATA_START));
-				out->write_all(character->data, character->len);
-				out->write_all(_KS(CDATA_END));
-			} else {
-				out->write_all(character->data, character->len);
-			}
-		}
-		if (!childs.empty()) {
-			out->write_all(_KS("\n"));
-			for (int i = 0; i < level; i++) {
-				out->write_all(_KS("\t"));
-			}
-		}
-		out->write_all(_KS("</"));
-		out->write_all(key.tag->data, key.tag->len);
-		auto result = out->write_all(_KS(">"));
-		if (result != KGL_OK) {
-			return result;
-		}
-		if (next) {
-			out->write_all(_KS("\n"));
-			return next->write(out, level);
-		}
-		return result;
-	}
-	bool is_same(KXmlNode* node) {
-		if (kgl_string_cmp(character, node->character) != 0) {
-			return false;
-		}
-		return attributes == node->attributes;
-	}
-	bool update(KXmlKey* key, int index, KXmlNode* xml, bool copy_childs=true) {
-		auto it = childs.find(key);
-		if (!it) {
-			return false;
-		}
-		KXmlNode* last = nullptr;
-		while (index > 0) {
-			index--;
-			if (last) {
-				last = last->next;
-			} else {
-				last = it->value();
-			}
-			if (!last) {
-				return false;
-			}
-		}
-		if (!last) {
-			auto node = it->value();
-			if (xml) {
-				it->value(xml->add_ref());
-			} else {
-				if (node->next) {
-					it->value(node->next);
-				} else {
-					childs.erase(it);
-				}
-			}
-			node->release();
-			return true;
-		}
-		if (!last->next) {
-			return false;
-		}
-		auto node = last->next;
-		if (xml) {
-			xml->next = node->next;
-			last->next = xml->add_ref();
-		} else {
-			last->next = node->next;
-		}
-		if (copy_childs) {
-			node->copy_child(xml);
-		}
-		node->release();
-		return true;
-	}
-	void append(KXmlNode* node) {
-		int new_flag;
-		auto it = childs.insert(&node->key, &new_flag);
-		if (new_flag) {
-			it->value(node);
-			return;
-		}
-		auto last = it->value();
-		while (last->next) {
-			last = last->next;
-		}
-		last->next = node;
-	}
-	/* insert before index node */
-	bool insert(KXmlNode* node, int index) {
-		if (index == -1) {
-			append(node);
-			return true;
-		}
-		int new_flag;
-		auto it = childs.insert(&node->key, &new_flag);
-		if (new_flag) {
-			it->value(node);
-			return true;
-		}
-		if (index == kxml_no_brother) {
-			return false;
-		}
-		KXmlNode* last = nullptr;
-		while (index > 0) {
-			index--;
-			if (last) {
-				if (!last->next) {
-					break;
-				}
-				last = last->next;
-			} else {
-				last = it->value();
-			}
-		}
-		if (last) {
-			node->next = last->next;
-			last->next = node;
-		} else {
-			node->next = it->value();
-			it->value(node);
-		}
-		return true;
+		return KGL_OK;
 	}
 
-	std::string getTag() {
+	/* return false xml must call release. otherwise xml do not call release */
+	bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs = true, bool create_flag = false) {
+		auto body = get_first();
+		if (!body) {
+			return false;
+		}
+		return body->update(key, index, xml, copy_childs, create_flag);
+	}
+	void append(KXmlNode* xml) {
+		auto body = get_last();
+		assert(body);
+		if (!body) {
+			xml->release();
+			return;
+		}
+		body->add(xml, last_pos);
+	}
+	/* insert before index node */
+	void insert(KXmlNode* xml, uint32_t index) {
+		auto body = get_first();
+		assert(body);
+		if (!body) {
+			xml->release();
+			return;
+		}
+		body->add(xml, index);
+		return;
+	}
+	const std::string get_tag() {
 		return key.tag->data;
 	}
+	const std::string get_character() {
+		auto body = get_first();
+		if (!body) {
+			return "";
+		}
+		return body->get_character();
+	}
 	const char* get_text() {
-		return character ? character->data : "";
+		auto body = get_first();
+		if (!body || !body->character) {
+			return "";
+		}
+		return body->character->data;
 	}
-	std::string getCharacter() {
-		return character ? character->data : "";
+	KXmlAttribute& attributes() {
+		return get_first()->attributes;
 	}
+	KXmlNodeBody* remove_last() {
+		switch (count) {
+		case 0:
+			return nullptr;
+		case 1:
+		{
+			KXmlNodeBody* body = this->body;
+			this->body = nullptr;
+			count = 0;
+			return body;
+		}
+		case 2:
+		{
+			auto body = this->bodys[1];
+			auto saved_body = this->bodys[0];
+			xfree(bodys);
+			this->body = saved_body;
+			count = 1;
+			return body;
+		}
+		default:
+		{
+			auto body = this->bodys[count - 1];
+			count--;
+			return body;
+		}
+		}
+	}
+	KXmlNodeBody* remove_body(uint32_t index) {
+		if (index >= count) {
+			return nullptr;
+		}
+		if (count == 1) {
+			KXmlNodeBody* body = this->body;
+			this->body = nullptr;
+			count = 0;
+			return body;
+		}
+		if (count == 2) {
+			auto body = this->bodys[index];
+			auto saved_body = this->bodys[1 - index];
+			xfree(bodys);
+			this->body = saved_body;
+			count = 1;
+			return body;
+		}
+		auto body = this->bodys[index];
+		memmove(bodys + index, bodys + index + 1, sizeof(KXmlNodeBody*) * (count - index - 1));
+		count--;
+		return body;
+	}
+	bool insert_body(KXmlNodeBody* body, uint32_t index) {
+		if (count == 0) {
+			this->body = body;
+			count++;
+			return true;
+		}
+		if (count == 1) {
+			auto bodys = (KXmlNodeBody**)malloc(sizeof(KXmlNodeBody**) * 2);
+			if (!bodys) {
+				return false;
+			}
+			bodys[!!index] = body;
+			bodys[!index] = this->body;
+			this->bodys = bodys;
+			count++;
+			return true;
+		}
+		if (!kgl_realloc((void**)&this->bodys, sizeof(KXmlNodeBody**) * (count + 1))) {
+			return false;
+		}
+		if (index == last_pos) {
+			this->bodys[count] = body;
+			count++;
+			return true;
+		}
+		memmove(bodys + index + 1, bodys + index, sizeof(KXmlNodeBody*) * (count - index));
+		this->bodys[index] = body;
+		count++;
+		return true;
+	}
+	KXmlNodeBody* get_last() {
+		switch (count) {
+		case 0:
+			return nullptr;
+		case 1:
+			return body;
+		default:
+			return bodys[count - 1];
+		}
+	}
+	KXmlNodeBody* get_first() {
+		switch (count) {
+		case 0:
+			return nullptr;
+		case 1:
+			return body;
+		default:
+			return bodys[0];
+		}
+	}
+	KXmlNodeBody** get_body_address(uint32_t index) {
+		if (index >= count) {
+			return nullptr;
+		}
+		if (count == 1) {
+			return &body;
+		}
+		return &bodys[index];
+	}
+	KXmlNodeBody* get_body(uint32_t index) {
+		auto body = get_body_address(index);
+		if (!body) {
+			return nullptr;
+		}
+		return *body;
+	}
+	uint32_t get_body_count() {
+		return count;
+	}
+	static constexpr uint32_t last_pos{ static_cast<uint32_t>(-1) };
 	KXmlKey key;
-	KMap<KXmlKey, KXmlNode> childs;
-	KXmlAttribute attributes;
-	KXmlNode* next;
-	kgl_ref_str_t* character = nullptr;
 private:
 	volatile uint32_t ref;
+	uint32_t count;
+	union
+	{
+		KXmlNodeBody* body;
+		KXmlNodeBody** bodys;
+	};
 	~KXmlNode() {
-		childs.iterator([](void* data, void* arg) {
-			KXmlNode* node = (KXmlNode*)data;
-			((KXmlNode*)data)->release();
-			return iterator_remove_continue;
-			}, NULL);
-		if (next) {
-			next->release();
+		if (bodys) {
+			if (count == 1) {
+				delete body;
+			} else {
+				for (uint32_t i = 0; i < count; i++) {
+					delete bodys[i];
+				}
+				xfree(bodys);
+			}
 		}
-		kstring_release(character);
 	}
 };
+
 class KXmlDocument :
 	public KXmlEvent
 {
@@ -343,7 +384,7 @@ public:
 	}
 	KXmlNode* parse(char* str);
 	KXmlNode* getRootNode();
-	KXmlNode* getNode(std::string name);
+	KXmlNode* getNode(const std::string& name);
 	bool startElement(KXmlContext* context) override;
 	bool startCharacter(KXmlContext* context, char* character, int len) override;
 	bool endElement(KXmlContext* context) override;
@@ -351,8 +392,6 @@ private:
 	bool skip_ns;
 	KXmlNode* cur_node = nullptr;
 	KXmlNode* root = nullptr;
-	KXmlNode* cur_child_brother = nullptr;
-	std::stack<KXmlNode*> brothers;
 	std::stack<KXmlNode*> parents;
 	KMap<kgl_ref_str_t, KXmlKey>* qname_config = nullptr;
 };

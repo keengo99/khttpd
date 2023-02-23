@@ -2,31 +2,36 @@
 #define KHTTPD_KXMLATTRIBUTE_H_INCLUDED
 #include <map>
 #include <string>
+#include "KHttpLib.h"
 
 class KXmlAttribute : public std::map<std::string, std::string>
 {
 public:
-	int get_int(const char* str) const {
-		auto it = find(str);
-		if (it == end()) {
-			return 0;
+	int64_t get_int64(const char* key, int64_t default_value = 0) const {
+		auto it = find(key);
+		if (it == end() || (*it).second.empty()) {
+			return default_value;
+		}
+		return kgl_atol((u_char*)(*it).second.c_str(), (*it).second.size());
+	}
+	int get_int(const char* key, int default_value = 0) const {
+		auto it = find(key);
+		if (it == end() || (*it).second.empty()) {
+			return default_value;
 		}
 		return atoi((*it).second.c_str());
 	}
-	int get_int(const char* str, size_t len) const {
-		return get_int(str);
-	}
-	const char* get_string(const char* key) const {
+	const char* get_string(const char* key, const char* default_value = nullptr) const {
 		auto it = find(key);
 		if (it == end()) {
-			return nullptr;
+			return default_value;
 		}
 		return (*it).second.c_str();
 	}
-	const char* operator()(const char* key) const {
+	const char* operator()(const char* key, const char* default_value = "") const {
 		auto it = find(key);
 		if (it == end()) {
-			return "";
+			return default_value;
 		}
 		return (*it).second.c_str();
 	}
