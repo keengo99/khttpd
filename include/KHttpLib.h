@@ -7,7 +7,7 @@
 #include "KHttpHeader.h"
 #include "klib.h"
 typedef unsigned char* domain_t;
-int kgl_domain_cmp(domain_t s1, domain_t s2);
+int kgl_domain_cmp(const domain_t s1, const domain_t s2);
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);
 char *url_encode(const char *s, size_t len, size_t *new_length);

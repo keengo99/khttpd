@@ -1382,6 +1382,6 @@ bool kgl_adjust_range(kgl_request_range* range, int64_t* len) 	{
 	range->to = range->from + (*len) - 1;
 	return true;
 }
-int kgl_domain_cmp(domain_t s1, domain_t s2) {
-	return kgl_cmp((char*)(s1 + 1), *s1, (char*)(s2 + 1), *s2);
+int kgl_domain_cmp(const domain_t s1, const domain_t s2) {
+	return kgl_cmp((const char*)(s1 + 1), *s1, (const char*)(s2 + 1), *s2);
 }

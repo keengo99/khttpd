@@ -15,7 +15,7 @@ KXmlDocument::~KXmlDocument(void) {
 		root->release();
 	}
 }
-KXmlNode* KXmlDocument::getNode(const std::string& name) {
+KXmlNode* KXmlDocument::getNode(const std::string& name) const {
 	KXmlNode* rootNode = getRootNode();
 	if (rootNode == NULL) {
 		return NULL;
@@ -35,7 +35,7 @@ KXmlNode* KXmlDocument::getNode(const std::string& name) {
 	}
 	return rootNode->find_child(name.substr(pos + 1));
 }
-KXmlNode* KXmlDocument::getRootNode() {
+KXmlNode* KXmlDocument::getRootNode() const {
 	return root;
 }
 KXmlNode* KXmlDocument::parse(char* str) {
@@ -192,12 +192,12 @@ void KXmlNodeBody::add(KXmlNode* xml, uint32_t index) {
 	}
 	xml->release();
 }
-void KXmlNodeBody::copy_child_from(KXmlNodeBody* node) {
+void KXmlNodeBody::copy_child_from(const KXmlNodeBody* node) {
 	for (auto it = node->childs.first(); it; it = it->next()) {
 		add(it->value()->add_ref(), KXmlNode::last_pos);
 	}
 }
-KGL_RESULT KXmlNodeBody::write(KWStream* out, int level) {
+KGL_RESULT KXmlNodeBody::write(KWStream* out, int level) const {
 	for (auto it = attributes.begin(); it != attributes.end(); it++) {
 		out->write_all(_KS(" "));
 		out->write_all((*it).first.c_str(), (int)(*it).first.size());
@@ -247,7 +247,7 @@ KGL_RESULT KXmlNodeBody::write(KWStream* out, int level) {
 	}
 	return KGL_OK;
 }
-KXmlNodeBody* KXmlNodeBody::clone() {
+KXmlNodeBody* KXmlNodeBody::clone() const {
 	KXmlNodeBody* node = new KXmlNodeBody;
 	node->attributes = attributes;
 	node->character = kstring_refs(character);
@@ -256,7 +256,8 @@ KXmlNodeBody* KXmlNodeBody::clone() {
 	}
 	return node;
 }
-KXmlNode* KXmlNodeBody::find_child(const std::string& tag) {
+
+KXmlNode* KXmlNodeBody::find_child(const std::string& tag) const {
 	size_t pos = tag.find('/');
 	std::string child_tag;
 	if (pos != std::string::npos) {

@@ -6,16 +6,16 @@ template <typename Value>
 class KMapNode : public krb_node
 {
 public:
-	inline Value* value() {
+	inline Value* value() const {
 		return (Value*)data;
 	}
 	inline void value(Value* data) {
 		this->data = data;
 	}
-	inline KMapNode<Value>* next() {
+	inline KMapNode<Value>* next() const {
 		return (KMapNode<Value> *)rb_next(this);
 	}
-	inline KMapNode<Value>* prev() {
+	inline KMapNode<Value>* prev() const {
 		return (KMapNode<Value> *)rb_prev(this);
 	}
 };
@@ -30,10 +30,10 @@ public:
 		assert(rbtree_is_empty(&tree));
 		clear();
 	}
-	static int cmp_func(void* k1, void* k2) {
-		return ((Value*)k2)->cmp((Key*)k1);
+	static int cmp_func(const void* k1, const void* k2) {
+		return ((const Value*)k2)->cmp((const Key*)k1);
 	}
-	inline bool empty() {
+	inline bool empty() const {
 		return rbtree_is_empty(&tree);
 	}
 	void clear() {
@@ -41,7 +41,7 @@ public:
 			return iterator_remove_continue;
 			}, NULL);
 	}
-	inline KMapNode<Value>* find(Key* key) {
+	inline KMapNode<Value>* find(const Key* key) const {
 		return (KMapNode<Value> *)rbtree_find(&tree, key, cmp_func);
 	}
 	inline KMapNode<Value>* insert(Key* key, int* new_flag) {
@@ -58,10 +58,10 @@ public:
 		it->value(value);
 		return nullptr;
 	}
-	inline KMapNode<Value>* last() {
+	inline KMapNode<Value>* last() const {
 		return (KMapNode<Value> *)rb_last(&tree.root);
 	}
-	inline KMapNode<Value>* first() {
+	inline KMapNode<Value>* first() const {
 		return (KMapNode<Value> *)rb_first(&tree.root);
 	}
 	inline void iterator(iteratorbt bt, void* arg) {
