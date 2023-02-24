@@ -35,19 +35,21 @@ public:
 		}
 		return (*it).second.c_str();
 	}
-	std::string operator[](const char* key) const {
+	const std::string &operator[](const char* key) const {
 		auto it = find(key);
 		if (it == end()) {
-			return "";
+			return empty;
 		}
 		return (*it).second;
 	}
-	std::string operator[](const std::string& key) const {
+	const std::string &operator[](const std::string& key) const {
 		auto it = find(key);
 		if (it == end()) {
-			return "";
+			return empty;
 		}
 		return (*it).second;
 	}
+private:
+	static const std::string empty;
 };
 #endif

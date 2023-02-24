@@ -37,6 +37,7 @@
 #include "KUrl.h"
 #include "KHttpHeader.h"
 #include "klib.h"
+#include "KXmlAttribute.h"
 
  /*
 	kgl_header_host,
@@ -63,6 +64,8 @@
 	kgl_header_connection,
 	kgl_header_unknow,
  */
+const std::string KXmlAttribute::empty;
+
 kgl_header_string kgl_header_type_string[] = {
 	{ _KS("Host"),_KS("host"),_KS("\r\nHost: ")},
 	{ _KS("Accept-Encoding"),_KS("accept-encoding"),_KS("\r\nAccept-Encoding: ")},
