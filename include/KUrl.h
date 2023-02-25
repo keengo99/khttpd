@@ -88,15 +88,15 @@ public:
 		if (!GetUrl(s)) {
 			return NULL;
 		}
-		return s.stealString();
+		return s.steal();
 	}
 	char *getUrl2(int &len) {
 		KStringBuf s(128);
 		if (!GetUrl(s)) {
 			return NULL;
 		}
-		len = s.getSize();
-		return s.stealString();
+		len = s.size();
+		return s.steal();
 	}
 	void GetPath(KStringBuf &s, bool urlEncode = false) {
 		if (urlEncode) {

@@ -83,7 +83,7 @@ KGL_RESULT KWebDavClient::new_request(const char* method, const char* path, int6
 	}
 	KStringBuf host;
 	url->GetHost(host);
-	us->send_host(host.getBuf(), host.getSize());
+	us->send_host(host.buf(), host.size());
 	if (us->IsMultiStream()) {
 		us->send_header(kgl_expand_string(":scheme"), kgl_expand_string("https"));
 	}
@@ -157,7 +157,7 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 		body.write_all(kgl_expand_string("kwebdav_client"));
 	}
 	body.write_all(kgl_expand_string(LOCK_BODY2));
-	int64_t content_length = body.getSize();
+	int64_t content_length = body.size();
 	KWebDavRequest* rq = NULL;
 	auto result = new_request("LOCK", path, content_length, &rq);
 	if (rq == nullptr) {
@@ -166,7 +166,7 @@ KGL_RESULT KWebDavClient::lock(const char* path, const char* owner)
 	}
 	defer(rq->skip_body();delete rq);
 	rq->send_header_complete();
-	rq->write_all(body.getBuf(), body.getSize());
+	rq->write_all(body.buf(), body.size());
 	result = rq->read_header();
 	if (result != KGL_OK) {
 		return result;
@@ -251,7 +251,7 @@ KGL_RESULT KWebDavClient::copy_move(const char* method, const char* src, const c
 		break;
 	}
 	
-	rq->send_header(kgl_expand_string("Destination"), s.getBuf(), s.getSize());
+	rq->send_header(kgl_expand_string("Destination"), s.buf(), s.size());
 	if (!overwrite) {
 		rq->send_header(kgl_expand_string("Overwrite"), kgl_expand_string("F"));
 	}
@@ -371,7 +371,7 @@ KGL_RESULT KWebDavClient::get(const char* path, KRequestRange* range, KWebDavReq
 	if (range) {
 		KStringBuf s;
 		s << "bytes=" << range->from << "-" << range->to;
-		(*rq)->send_header(kgl_expand_string("Range"), s.getBuf(), s.getSize());
+		(*rq)->send_header(kgl_expand_string("Range"), s.buf(), s.size());
 		if (!range->if_range.empty()) {
 			(*rq)->send_header(kgl_expand_string("If-Range"), range->if_range.c_str(), (hlen_t)range->if_range.size());
 		}

@@ -25,8 +25,6 @@
 #include "KStringBuf.h"
 #include "kmalloc.h"
 #include "kforwin32.h"
-#define MAX_ADD_SIZE 8192
-
  /*
   * return the next string
   *
@@ -92,56 +90,3 @@ char* getString(char* str, char** nextstr, const char* ended_chars,
 	}
 	return NULL;
 }
-
-KStringBuf::KStringBuf(int size) {
-	buf = NULL;
-	init(size);
-}
-void KStringBuf::init(int size) {
-	if (size<=0) {
-		size=8;
-	}
-	if (buf) {
-		xfree(buf);
-	}
-	current_size = size;
-	buf = (char *) xmalloc(current_size);
-	hot = buf;
-}
-KStringBuf::KStringBuf() {
-	buf = NULL;
-	init(256);
-}
-KStringBuf::~KStringBuf() {
-	if (buf) {
-		xfree(buf);
-	}
-}
-
-StreamState KStringBuf::write_all(const char *str, int len) {
-	assert(buf);
-	int used = (int)(hot - buf);
-	assert(used>=0);
-	for (;;) {
-		if (used + len < current_size) {
-			break;
-		}
-		int add_size = current_size;
-		if (add_size>MAX_ADD_SIZE) {
-			add_size = MAX_ADD_SIZE;
-		}
-		char *nb = (char *) xmalloc(current_size + add_size);
-		if (!nb) {
-			return STREAM_WRITE_FAILED;
-		}
-		kgl_memcpy(nb, buf, current_size);
-		xfree(buf);
-		buf = nb;
-		hot = buf + used;
-		current_size += add_size;
-	}
-	kgl_memcpy(hot, str, len);
-	hot += len;
-	return STREAM_WRITE_SUCCESS;
-}
-

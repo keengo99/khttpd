@@ -61,13 +61,13 @@ bool KWebDavRequest::send_if_lock_token(KWebDavLockToken* token, bool send_resou
 		s << "> ";
 	}
 	s << "(<" << token->token << ">)";
-	return resp.us->send_header(kgl_expand_string("If"), s.getBuf(), s.getSize());
+	return resp.us->send_header(kgl_expand_string("If"), s.buf(), s.size());
 }
 bool KWebDavRequest::send_lock_token(KWebDavLockToken* token)
 {
 	KStringBuf s;
 	s << "<" << token->token << ">";
-	return resp.us->send_header(kgl_expand_string("Lock-Token"), s.getBuf(), s.getSize());
+	return resp.us->send_header(kgl_expand_string("Lock-Token"), s.buf(), s.size());
 }
 bool KWebDavRequest::send_http_auth(KWebDavAuth* auth)
 {
@@ -75,6 +75,6 @@ bool KWebDavRequest::send_http_auth(KWebDavAuth* auth)
 	s << "Basic ";
 	KStringBuf as;
 	as << auth->user.c_str() << ":" << auth->passwd.c_str();
-	s << b64encode((unsigned char*)as.getBuf(), as.getSize());
-	return resp.us->send_header(kgl_expand_string("Authorization"), s.getBuf(), s.getSize());
+	s << b64encode((unsigned char*)as.buf(), as.size());
+	return resp.us->send_header(kgl_expand_string("Authorization"), s.buf(), s.size());
 }

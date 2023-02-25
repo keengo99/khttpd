@@ -107,6 +107,9 @@ public:
 	{
 		if (pool == NULL) {
 			kbuf *buf = (kbuf *)xmalloc(sizeof(kbuf));
+			if (buf==nullptr) {
+				return nullptr;
+			}
 			buf->flags = 0;
 			buf->data = (char *)xmalloc(chunk_size);
 			buf->used = 0;

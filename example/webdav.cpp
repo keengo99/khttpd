@@ -40,49 +40,49 @@ static void test_move_copy_lock(KWebDavClient* client, KWebDavClient* client2)
 #define COPY_LOCKED_SRC DAV_PREFIX_DIR "/copy-locked-src.txt"
 	KStringBuf s;
 	s << DAV_PREFIX_DIR "/lock-" << (int64_t)time(NULL) << "_" << __LINE__ << ".txt";
-	test_assert(KGL_OK == client->lock(s.getString()));
+	test_assert(KGL_OK == client->lock(s.c_str()));
 	KFixString in(kgl_expand_string(LOCKED_FILE_CONTENT));
 	test_assert(KGL_OK == client2->put(COPY_LOCKED_SRC, &in));
 	assert_dav_file_content(client2, COPY_LOCKED_SRC, kgl_expand_string(LOCKED_FILE_CONTENT));
-	test_assert(KGL_OK != client2->copy(COPY_LOCKED_SRC, s.getString(), true));
+	test_assert(KGL_OK != client2->copy(COPY_LOCKED_SRC, s.c_str(), true));
 	client->unlock();
-	test_assert(KGL_OK == client2->copy(COPY_LOCKED_SRC, s.getString(), true));
+	test_assert(KGL_OK == client2->copy(COPY_LOCKED_SRC, s.c_str(), true));
 
-	test_assert(KGL_OK == client->lock(s.getString()));
-	test_assert(KGL_OK != client2->copy(COPY_LOCKED_SRC, s.getString(), true));
-	test_assert(KGL_OK == client->copy(COPY_LOCKED_SRC, s.getString(), true));
-	assert_dav_file_content(client, s.getString(), kgl_expand_string(LOCKED_FILE_CONTENT));
+	test_assert(KGL_OK == client->lock(s.c_str()));
+	test_assert(KGL_OK != client2->copy(COPY_LOCKED_SRC, s.c_str(), true));
+	test_assert(KGL_OK == client->copy(COPY_LOCKED_SRC, s.c_str(), true));
+	assert_dav_file_content(client, s.c_str(), kgl_expand_string(LOCKED_FILE_CONTENT));
 	client->unlock();
-	client->_delete(s.getString());
+	client->_delete(s.c_str());
 
 
-	test_assert(KGL_OK == client->lock(s.getString()));
-	test_assert(KGL_OK != client2->move(COPY_LOCKED_SRC, s.getString()));
-	test_assert(KGL_OK == client->move(COPY_LOCKED_SRC, s.getString()));
-	assert_dav_file_content(client, s.getString(), kgl_expand_string(LOCKED_FILE_CONTENT));
+	test_assert(KGL_OK == client->lock(s.c_str()));
+	test_assert(KGL_OK != client2->move(COPY_LOCKED_SRC, s.c_str()));
+	test_assert(KGL_OK == client->move(COPY_LOCKED_SRC, s.c_str()));
+	assert_dav_file_content(client, s.c_str(), kgl_expand_string(LOCKED_FILE_CONTENT));
 	client->unlock();
-	client->_delete(s.getString());
+	client->_delete(s.c_str());
 }
 static void test_lock(KWebDavClient* client, KWebDavClient* client2)
 {
 	printf("test_lock\n");
 	KStringBuf s;
 	s << DAV_PREFIX_DIR "/lock-" << (int64_t)time(NULL) << "_" << __LINE__ << ".txt";
-	test_assert(KGL_OK == client->lock(s.getString()));
+	test_assert(KGL_OK == client->lock(s.c_str()));
 	KFixString in(kgl_expand_string(LOCKED_FILE_CONTENT));
 	KFixString in2(kgl_expand_string(LOCKED_FILE_CONTENT));
-	test_assert(KGL_OK != client2->put(s.getString(), &in));
-	test_assert(KGL_OK == client->put(s.getString(), &in2));
-	assert_dav_file_content(client, s.getString(), kgl_expand_string(LOCKED_FILE_CONTENT));
-	assert_dav_file_content(client2, s.getString(), kgl_expand_string(LOCKED_FILE_CONTENT));
+	test_assert(KGL_OK != client2->put(s.c_str(), &in));
+	test_assert(KGL_OK == client->put(s.c_str(), &in2));
+	assert_dav_file_content(client, s.c_str(), kgl_expand_string(LOCKED_FILE_CONTENT));
+	assert_dav_file_content(client2, s.c_str(), kgl_expand_string(LOCKED_FILE_CONTENT));
 	test_assert(KGL_OK == client->flush_lock());
-	test_assert(KGL_OK != client2->_delete(s.getString()));
-	test_assert(KGL_OK != client->move(s.getString(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
-	test_assert(KGL_OK != client2->move(s.getString(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
-	test_assert(KGL_OK == client2->copy(s.getString(), DAV_PREFIX_DIR "/copy-locked.txt", true));
+	test_assert(KGL_OK != client2->_delete(s.c_str()));
+	test_assert(KGL_OK != client->move(s.c_str(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
+	test_assert(KGL_OK != client2->move(s.c_str(), DAV_PREFIX_DIR "/move-locked-failed.txt"));
+	test_assert(KGL_OK == client2->copy(s.c_str(), DAV_PREFIX_DIR "/copy-locked.txt", true));
 	assert_dav_file_content(client, DAV_PREFIX_DIR "/copy-locked.txt", kgl_expand_string(LOCKED_FILE_CONTENT));
 	test_assert(KGL_OK == client->unlock());
-	test_assert(KGL_OK == client->_delete(s.getString()));
+	test_assert(KGL_OK == client->_delete(s.c_str()));
 	test_assert(KGL_OK == client->_delete(DAV_PREFIX_DIR "/copy-locked.txt"));
 
 }
@@ -120,7 +120,7 @@ static void clean_all_child(KWebDavClient* client, const char* path)
 		if ((*it)->is_directory) {
 			s << "/";
 		}
-		client->_delete(url_encode(s.getString(),s.getSize()).c_str());
+		client->_delete(url_encode(s.c_str(),s.size()).c_str());
 	}
 }
 static void test_get_range(KWebDavClient* client)

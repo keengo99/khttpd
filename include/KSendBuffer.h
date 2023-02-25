@@ -62,8 +62,7 @@ public:
 			got -= this_len;
 			if (header->used == hot - header->data) {
 				kbuf *next = header->next;				
-				xfree(header->data);					
-				xfree(header);				
+				free_kbuf(header);
 				header = next;
 				if (header==NULL) {
 					assert(got==0);

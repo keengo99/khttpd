@@ -122,7 +122,7 @@ public:
 		}
 		return *this;
 	}
-	inline bool add(const int c, const char* fmt) {
+	inline bool add(int c, const char* fmt) {
 		char buf[16];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -130,7 +130,7 @@ public:
 		}
 		return false;
 	}
-	inline bool add(const INT64 c, const char* fmt) {
+	inline bool add(INT64 c, const char* fmt) {
 		char buf[INT2STRING_LEN];
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, c);
 		if (len > 0) {
@@ -138,15 +138,19 @@ public:
 		}
 		return false;
 	}
-	inline KWStream& operator <<(const std::string &str) {
+	inline KWStream& operator <<(const std::string& str) {
 		write_all(str.c_str(), (int)str.size());
 		return *this;
 	}
-	inline KWStream& operator <<(const char c) {
+	inline KWStream& operator <<(const kgl_str_t& str) {
+		write_all(str.data, (int)str.len);
+		return *this;
+	}
+	inline KWStream& operator <<(char c) {
 		write_all(&c, 1);
 		return *this;
 	}
-	inline KWStream& operator <<(const int value) {
+	inline KWStream& operator <<(int value) {
 		char buf[16];
 		int len = snprintf(buf, 15, "%d", value);
 		if (len <= 0) {
@@ -157,7 +161,7 @@ public:
 		}
 		return *this;
 	}
-	inline KWStream& operator <<(const INT64 value) {
+	inline KWStream& operator <<(INT64 value) {
 		char buf[INT2STRING_LEN];
 		int2string(value, buf, false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
@@ -165,13 +169,13 @@ public:
 		}
 		return *this;
 	}
-	inline bool add_as_hex64(const int64_t value) {
+	inline bool add_as_hex64(int64_t value) {
 		return add(value, INT64_FORMAT_HEX);
 	}
-	inline bool add_as_hex(const int value) {
+	inline bool add_as_hex(int value) {
 		return add(value, "%x");
 	}
-	inline KWStream& operator <<(const unsigned value) {
+	inline KWStream& operator <<(unsigned value) {
 		char buf[16];
 		const char* fmt = "%u";
 		int len = snprintf(buf, sizeof(buf) - 1, fmt, value);
