@@ -117,6 +117,7 @@ namespace khttpd {
 			root = cur_node;
 		} else {
 			parent->append(cur_node);
+			cur_node->release();
 		}
 		cur_node = parent;
 		return true;
@@ -138,7 +139,7 @@ namespace khttpd {
 			int new_flag;
 			it = childs.insert(key, &new_flag);
 			if (new_flag) {
-				it->value(xml);
+				it->value(xml->add_ref());
 				return true;
 			}
 		} else {
@@ -169,7 +170,6 @@ namespace khttpd {
 		if (!xml_body) {
 			return false;
 		}
-		xml->release();
 		if (copy_childs) {
 			xml_body->copy_child_from(*body);
 		}
@@ -181,7 +181,7 @@ namespace khttpd {
 		int new_flag;
 		auto it = childs.insert(&xml->key, &new_flag);
 		if (new_flag) {
-			it->value(xml);
+			it->value(xml->add_ref());
 			return;
 		}
 		auto old_node = it->value();
@@ -190,7 +190,6 @@ namespace khttpd {
 				delete body;
 			}
 		}
-		xml->release();
 	}
 	void KXmlNodeBody::copy_child_from(const KXmlNodeBody* node) {
 		for (auto it = node->childs.first(); it; it = it->next()) {

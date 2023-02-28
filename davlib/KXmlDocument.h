@@ -194,25 +194,24 @@ namespace khttpd {
 			}
 			return body->update(key, index, xml, copy_childs, create_flag);
 		}
-		void append(KXmlNode* xml) {
+		bool append(KXmlNode* xml) {
 			auto body = get_last();
 			assert(body);
 			if (!body) {
-				xml->release();
-				return;
+				return false;
 			}
 			body->add(xml, khttpd::last_pos);
+			return true;
 		}
 		/* insert before index node */
-		void insert(KXmlNode* xml, uint32_t index) {
+		bool insert(KXmlNode* xml, uint32_t index) {
 			auto body = get_first();
 			assert(body);
 			if (!body) {
-				xml->release();
-				return;
+				return false;
 			}
 			body->add(xml, index);
-			return;
+			return true;
 		}
 		const std::string get_tag() const {
 			return key.tag->data;
