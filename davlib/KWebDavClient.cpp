@@ -402,7 +402,7 @@ KGL_RESULT KWebDavClient::list(const char* path, KWebDavFileList& file_list)
 	if (result != KGL_OK) {
 		return result;
 	}
-	KXmlDocument body;
+	khttpd::KXmlDocument body;
 	result = rq->read_body(body);
 	if (result != KGL_OK) {
 		return result;

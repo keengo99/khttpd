@@ -184,7 +184,7 @@ public:
 	}
 	KGL_RESULT skip_body();
 	ks_buffer *read_body(KGL_RESULT &result);
-	KGL_RESULT read_body(KXmlDocument &body);
+	KGL_RESULT read_body(khttpd::KXmlDocument &body);
 	KResponseData resp;
 private:
 	

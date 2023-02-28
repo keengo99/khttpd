@@ -49,7 +49,7 @@ public:
 		}
 		return (*it).second;
 	}
-private:
 	static const std::string empty;
+private:
 };
 #endif

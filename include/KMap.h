@@ -44,10 +44,10 @@ public:
 	inline KMapNode<Value>* find(const Key* key) const {
 		return (KMapNode<Value> *)rbtree_find(&tree, key, cmp_func);
 	}
-	inline KMapNode<Value>* insert(Key* key, int* new_flag) {
+	inline KMapNode<Value>* insert(const Key* key, int* new_flag) {
 		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func);
 	}
-	inline Value *add(Key* key, Value* value) {
+	inline Value *add(const Key* key, Value* value) {
 		int new_flag;
 		auto it = insert(key, &new_flag);
 		if (!new_flag) {
@@ -67,7 +67,7 @@ public:
 	inline void iterator(iteratorbt bt, void* arg) {
 		rbtree_iterator(&tree, bt, arg);
 	}
-	inline void erase(KMapNode<Value>* node) {
+	inline void erase(KMapNode<Value>* node) noexcept {
 		rbtree_remove(&tree, node);
 	}
 	void swap(KMap<Key, Value>* a) {

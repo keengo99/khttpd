@@ -128,7 +128,7 @@ public:
 		}
 		return ksocket_addr_port(&addr);
 	}
-	virtual kgl_refs_string* get_param();
+	virtual kgl_ref_str_t* get_param();
 	virtual void gc(int life_time) = 0;
 	friend class KPoolableSocketContainer;
 	union

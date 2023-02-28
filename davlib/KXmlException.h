@@ -19,20 +19,17 @@
 #define KXMLEXCEPTION_H_
 #include<exception>
 #include<string>
-/*
- * xml解析异常类
- */
+ /*
+  * xml解析异常类
+  */
 class KXmlException : public std::exception
 {
 public:
-	KXmlException();
-	virtual ~KXmlException() throw();
-	const char *what() const throw();
-	KXmlException & operator <<(const char *buf);
-	KXmlException & operator <<(std::string buf);
+	KXmlException(const char* msg) noexcept : std::exception(msg)  {
+		
+	}
+	virtual ~KXmlException() noexcept {
 
-	void setMsg(std::string msg);
-private:
-	std::string msg;
+	}
 };
 #endif /*KXMLEXCEPTION_H_*/

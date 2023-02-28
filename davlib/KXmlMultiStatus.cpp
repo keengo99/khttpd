@@ -4,9 +4,9 @@
 #include "KHttpLib.h"
 
 
-bool KWebDavFileList::parse(KXmlDocument& document,int strip_prefix)
+bool KWebDavFileList::parse(khttpd::KXmlDocument& document,int strip_prefix)
 {
-	KXmlNode* node = document.getRootNode();
+	khttpd::KXmlNode* node = document.getRootNode();
 	if (node==nullptr || node->get_tag() != "multistatus") {
 		return false;
 	}
@@ -19,7 +19,7 @@ bool KWebDavFileList::parse(KXmlDocument& document,int strip_prefix)
 		if (!body) {
 			break;
 		}
-		KXmlNode* href = body->find_child("href");
+		khttpd::KXmlNode* href = body->find_child("href");
 		if (href == nullptr) {
 			continue;
 		}

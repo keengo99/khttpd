@@ -23,22 +23,3 @@
  */
 #include "KXmlException.h"
 #include "kmalloc.h"
-KXmlException::KXmlException() {
-}
-
-KXmlException::~KXmlException() throw () {
-}
-const char *KXmlException::what() const throw () {
-	return msg.c_str();
-}
-void KXmlException::setMsg(std::string msg) {
-	this->msg.swap(msg);
-}
-KXmlException & KXmlException::operator <<(const char *buf) {
-	msg += buf;
-	return *this;
-}
-KXmlException & KXmlException::operator <<(std::string buf) {
-	msg += buf;
-	return *this;
-}

@@ -33,6 +33,7 @@
  //#include "kfiber.h"
  //#include "KFileName.h"
 #include "kmalloc.h"
+#include "KDefer.h"
 using namespace std;
 kxml_fopen KXml::fopen = NULL;
 kxml_fclose KXml::fclose = NULL;
@@ -58,17 +59,16 @@ void buildAttribute(char* buf, std::map<std::string, std::string>& attribute) {
 		}
 		*p = 0;
 		p++;
-		std::string name = buf;
+		const char* name = buf;
 		buf = p;
 		buf = getString(buf, &p, NULL, false, true);
 		if (buf == NULL) {
 			return;
 		}
 		int len;
-		std::string value = KXml::htmlDecode(buf, len);
+		//std::string value = KXml::htmlDecode(buf, len);
+		attribute.emplace(name, KXml::htmlDecode(buf, len));
 		buf = p;
-		//cout << "name=" << name << ",value=" << value << endl;
-		attribute.insert(pair<std::string, std::string>(name, value));
 	}
 }
 
@@ -94,9 +94,8 @@ std::string replace(const char* str, map<string, string>& replaceMap,
 			}
 			str += startLen;
 		}
-		map<string, string>::iterator it;
 		bool find = false;
-		for (it = replaceMap.begin(); it != replaceMap.end(); it++) {
+		for (auto it = replaceMap.begin(); it != replaceMap.end(); it++) {
 			if (strncmp(str, (*it).first.c_str(), (*it).first.size()) == 0) {
 				if (end) {
 					if (strncmp(str + (*it).first.size(), end, endLen) != 0) {
@@ -130,8 +129,7 @@ KXml::~KXml() {
 	clear();
 }
 void KXml::clear() {
-	std::list<KXmlContext*>::iterator it;
-	for (it = contexts.begin(); it != contexts.end(); it++) {
+	for (auto it = contexts.begin(); it != contexts.end(); it++) {
 		delete (*it);
 	}
 	contexts.clear();
@@ -242,7 +240,7 @@ char* KXml::htmlDecode(char* str, int& len) {
 std::string KXml::param(const char* str) {
 	return encode(str);
 }
-std::string KXml::encode(std::string str) {
+std::string KXml::encode(const std::string &str) {
 	map<string, string> transfer;
 	transfer["&"] = "&amp;";
 	transfer["'"] = "&#39;";
@@ -251,7 +249,7 @@ std::string KXml::encode(std::string str) {
 	transfer["<"] = "&lt;";
 	return replace(str.c_str(), transfer);
 }
-std::string KXml::decode(std::string str) {
+std::string KXml::decode(const std::string &str) {
 	map<string, string> transfer;
 	transfer["&#39;"] = "'";
 	transfer["&#34;"] = "\"";
@@ -259,19 +257,6 @@ std::string KXml::decode(std::string str) {
 	transfer["&gt;"] = ">";
 	transfer["&lt;"] = "<";
 	return replace(str.c_str(), transfer);
-}
-long KXml::getFileSize(FILE* fp) {
-	long begin, end, current;
-	assert(fp);
-	if (fp == NULL)
-		return -1;
-	current = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	begin = ftell(fp);
-	fseek(fp, 0, SEEK_END);
-	end = ftell(fp);
-	fseek(fp, current, SEEK_SET);
-	return end - begin;
 }
 int KXml::getLine() {
 	char* buf = origBuf;
@@ -292,14 +277,12 @@ bool KXml::startParse(char* buf) {
 	origBuf = buf;
 	line = 1;
 	if (events.empty()) {
-		fprintf(stderr, "not set event\n");
-		return false;
+		throw KXmlException("not set event");
 	}
 	bool result = false;
 	hot = strchr(buf, '<');
 	if (hot == NULL) {
-		fprintf(stderr, "file is not a xml format\n");
-		return false;
+		throw KXmlException("file is not a xml format");
 	}
 	if (hot[1] == '?') {
 		//first
@@ -307,8 +290,7 @@ bool KXml::startParse(char* buf) {
 		buf = hot + 2;
 		hot = strchr(buf, '?');
 		if (hot == NULL || hot[1] != '>') {
-			fprintf(stderr, "file is not a xml format\n");
-			return false;
+			throw KXmlException("file is not a xml format");
 		}
 		*hot = 0;
 		std::map<string, string> attribute;
@@ -319,8 +301,10 @@ bool KXml::startParse(char* buf) {
 	try {
 		startXml(encoding);
 		result = internelParseString(buf);
-	}
-	catch (KXmlException& e) {
+	} catch (KXmlException& e) {
+		endXml(result);
+		throw e;
+	} catch (std::exception& e) {
 		endXml(result);
 		throw e;
 	}
@@ -331,29 +315,20 @@ bool KXml::startParse(char* buf) {
 bool KXml::parseString(const char* buf) {
 
 	char* str = strdup(buf);
-	bool result = false;
-	try {
-		result = startParse(str);
+	if (!str) {
+		return false;
 	}
-	catch (KXmlException& e) {
-		free(str);
-		throw e;
-	}
-	free(str);
-	return result;
+	defer(free(str));
+	return startParse(str);
 }
-
 bool KXml::internelParseString(char* buf) {
-
 	//std::map<std::string, std::string> attibute;
 	std::list<KXmlEvent*>::iterator it;
 	bool single = false;
 	KXmlContext* curContext = NULL;
-	std::string name;
 	int state = 0;
 	hot = buf;
 	char* p;
-	KXmlException e;
 	clear();
 	//	hot=buf;
 	while (*hot) {
@@ -395,11 +370,7 @@ bool KXml::internelParseString(char* buf) {
 				hot++;
 			p = strchr(hot, '>');
 			if (!p) {
-				e << "Cann't get start element end,tag=" << name << "\n";
-				throw e;
-				//				printf("cann't get start element end,qName=%s,buf=%s\n",
-				//						name.c_str(), buf);
-				//				return false;
+				throw KXmlException("cann't get element end");
 			}
 			*p = 0;
 			char* end = p + 1;
@@ -421,47 +392,40 @@ bool KXml::internelParseString(char* buf) {
 
 			if (*p != 0) {
 				*p = 0;
-				name = hot;
-				curContext = newContext(name);
+				curContext = newContext(hot);
 				hot = p + 1;
 				buildAttribute(hot, curContext->attribute);
 			} else {
-				name = hot;
-				curContext = newContext(name);
+				curContext = newContext(hot);
 			}
 			try {
-				for (it = events.begin(); it != events.end(); it++) {
+				for (it = events.begin(); it != events.end(); ++it) {
 					(*it)->startElement(curContext);
 				}
 				hot = end;
 				if (single) {
-					for (it = events.begin(); it != events.end(); it++) {
+					for (it = events.begin(); it != events.end(); ++it) {
 						(*it)->endElement(curContext);
 					}
 					delete curContext;
 					curContext = NULL;
-					if (contexts.size() == 0) {
+					if (contexts.empty()) {
 						//printf("xml end\n");
 						break;
 					}
 					continue;
 				}
 				contexts.push_back(curContext);
-			}
-			catch (KXmlException& e2) {
+			} catch (const KXmlException& e2) {
 				delete curContext;
 				throw e2;
 			}
 		} else if (state == START_CHAR) {
-
 			int char_len;
 			if (cdata) {
 				p = strstr(hot, "]]>");
 				if (p == NULL) {
-					e << "Cann't read cdata end\n";
-					throw e;
-					//					printf("cann't read cdata end\n");
-					//					return false;
+					throw KXmlException("Cann't read cdata end");
 				}
 				char_len = (int)(p - hot);
 				p += 3;
@@ -469,16 +433,13 @@ bool KXml::internelParseString(char* buf) {
 				p = strchr(hot, '<');
 				if (p == NULL) {
 					return true;
-					//e << "cann't get charater end\n";
-					//throw e;
-					//					cout << "不能得到charater end" << endl;
-					//					return false;
 				}
 				char_len = (int)(p - hot);
 			}
 			if (curContext) {
 				//assert(char_len>0);
 				char* charBuf = (char*)malloc(char_len + 1);
+				defer(free(charBuf));
 				kgl_memcpy(charBuf, hot, char_len);
 				charBuf[char_len] = '\0';
 				if (!cdata) {
@@ -487,7 +448,6 @@ bool KXml::internelParseString(char* buf) {
 				for (it = events.begin(); it != events.end(); it++) {
 					(*it)->startCharacter(curContext, charBuf, char_len);
 				}
-				free(charBuf);
 			}
 			hot = p;
 		} else if (state == END_ELEMENT) {
@@ -495,10 +455,7 @@ bool KXml::internelParseString(char* buf) {
 				hot++;
 			p = strchr(hot, '>');
 			if (p == NULL) {
-				e << "cann't get charater end\n";
-				throw e;
-				//				cout << "不能得到charater end" << endl;
-				//				return false;
+				throw KXmlException("cann't get charater end");
 			}
 			*p = 0;
 			char* end = p + 1;
@@ -507,21 +464,14 @@ bool KXml::internelParseString(char* buf) {
 				p++;
 			*p = 0;
 			if (contexts.size() <= 0) {
-				e << "contexts not enoungh\n";
-				throw e;
+				throw KXmlException("contexts not enoungh");
 				//				printf("contexts 不够\n");
 				//				return false;
 			}
-			name = hot;
-			list<KXmlContext*>::iterator it2 = contexts.end();
-			it2--;
-			if (name != (*it2)->qName) {
-				e << "end tag [" << name << "] is not equal start tag ["
-					<< (*it2)->qName << "]\n";
-				throw e;
-				//				printf("end Element =[%s] 和 start Element[%s] 不对\n",
-				//						name.c_str(), (*it)->qName.c_str());
-				//				return false;
+			auto it2 = contexts.end();
+			--it2;
+			if ((*it2)->qName != hot) {
+				throw KXmlException("end tag not match start tag");
 			}
 			curContext = (*it2);
 			contexts.pop_back();
@@ -533,58 +483,42 @@ bool KXml::internelParseString(char* buf) {
 			delete curContext;
 			curContext = NULL;
 			hot = end;
-			if (contexts.size() == 0) {
+			if (contexts.empty()) {
 				//	printf("xml end\n");
 				//break;
 			}
 
 		}
 	}
-	/*
-	 if (contexts.size() > 0) {
-	 e << "xml not complete\n";
-	 throw e;
-	 }
-	 if (*hot) {
-	 goto retry;
-	 }
-	 */
 	return true;
 }
 bool KXml::parseFile(std::string file) {
-	KXmlException e;
 	stringstream s;
 	bool result;
 	this->file = file.c_str();
 	char* content = getContent(file);
 	if (content == NULL || *content == '\0') {
-		s << "cann't read file:[" << file << "]\n";
-		e.setMsg(s.str());
 		if (content) {
 			free(content);
+			return false;
 		}
-		throw e;
+		throw KXmlException("cann't read file");
 	}
+	defer(free(content));
 	try {
 		result = startParse(content);
-	}
-	catch (KXmlException& e2) {
+	} catch (KXmlException& e) {
 		fprintf(stderr, "Error happen in %s:%d\n", file.c_str(), getLine());
-		free(content);
-		throw e2;
+		throw e;
 	}
-	free(content);
 	return result;
 }
-KXmlContext* KXml::newContext(std::string qName) {
+KXmlContext* KXml::newContext(const char* qName) {
 	KXmlContext* context = new KXmlContext(this);
-	//context->file = file;
-	//context->line = getLine();
 	context->qName = qName;
 	stringstream s;
 	bool begin = true;
-	for (list<KXmlContext*>::iterator it = contexts.begin(); it
-		!= contexts.end(); it++) {
+	for (auto it = contexts.begin(); it != contexts.end(); ++it) {
 		if (!begin) {
 			s << "/";
 		}
@@ -603,7 +537,7 @@ char* KXml::getContent(const std::string& file) {
 	}
 	char* buf = NULL;
 	INT64 fileSize = KXml::fsize(fp);
-	if (fileSize > 1048576) {
+	if (fileSize > (INT64)max_file_size) {
 		goto clean;
 	}
 	buf = (char*)malloc((int)fileSize + 1);

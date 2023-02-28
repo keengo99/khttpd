@@ -62,7 +62,7 @@ public:
 		single = false;
 		state = 0;
 		last = 0;
-
+		len = 0;
 	}
 	~KXmlResult() {
 		destroy();
@@ -98,9 +98,9 @@ public:
 	* encode,decode,param这三个函数过时。
 	* 请用效率更高的htmlEncode和htmlDecode
 	*/
-	static std::string encode(std::string str);
+	static std::string encode(const std::string &str);
 	//@deprecated
-	static std::string decode(std::string str);
+	static std::string decode(const std::string &str);
 	//@deprecated
 	static std::string param(const char* str);
 
@@ -122,37 +122,28 @@ public:
 	KXml();
 	~KXml();
 	bool startParse(char* buf);
-	void setData(void* data)
-	{
+	void setData(void* data) {
 		this->data = data;
 	}
-	void* getData()
-	{
+	void* getData() {
 		return this->data;
 	}
 	static kxml_fopen fopen;
 	static kxml_fclose fclose;
 	static kxml_fsize fsize;
 	static kxml_fread fread;
+	static constexpr int max_file_size = 1048576;
 private:
-
-	long getFileSize(FILE* fp);
 	/*
 	 * 从一个文件中读到字符串
 	 */
 	int getLine();
 	char* getContent(const std::string& file);
 	/*
-	 * 解析标签属性
+	 * 得到标签上下文
 	 */
-	 //void
-	 //buildAttribute(char *buf, std::map<std::string, std::string> &attribute)
-	 //		throw (KXmlException);
-	 /*
-	  * 得到标签上下文
-	  */
-	  //	void getContext(std::string &context);
-	KXmlContext* newContext(std::string qName);
+	 //	void getContext(std::string &context);
+	KXmlContext* newContext(const char* qName);
 	/*
 	 * 标签上下文
 	 */

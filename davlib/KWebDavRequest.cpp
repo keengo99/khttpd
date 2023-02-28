@@ -38,7 +38,7 @@ ks_buffer *KWebDavRequest::read_body(KGL_RESULT &result)
 {
 	return resp.read_body(result, 4096578);
 }
-KGL_RESULT KWebDavRequest::read_body(KXmlDocument& body)
+KGL_RESULT KWebDavRequest::read_body(khttpd::KXmlDocument& body)
 {
 	KGL_RESULT result;
 	ks_buffer* buffer = read_body(result);

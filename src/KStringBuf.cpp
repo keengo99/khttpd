@@ -91,21 +91,10 @@ char* getString(char* str, char** nextstr, const char* ended_chars,
 	return NULL;
 }
 KString::KString(KStringBuf&& a) noexcept {
-	try {
+	try {		
 		if (a.s.s.len > 0) {
-			if (a.current_size < 32) {
-				if (!a.end_with_zero()) {
-					s = { 0 };
-					return;
-				}
-				s = a.s.s;
-				a.s.s = { 0 };
-				a.current_size = 0;
-				return;
-			}
-			s = { 0 };
-			assign(a.s.s.data, a.s.s.len);
-			a.clean();
+			s.len = a.s.s.len;
+			s.data = a.steal();			
 			return;
 		}
 	} catch (...) {

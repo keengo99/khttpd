@@ -34,7 +34,7 @@ public:
 		}
 		return nullptr;
 	}
-	bool parse(KXmlDocument& document,int strip_prefix);
+	bool parse(khttpd::KXmlDocument& document,int strip_prefix);
 	std::list<KWebDavFile*> files;
 };
 #endif

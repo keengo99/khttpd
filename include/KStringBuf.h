@@ -30,23 +30,27 @@
 #include <exception>
 #include "KStream.h"
 #include "kmalloc.h"
+#include "KHttpLib.h"
 class KStringBuf;
 class KString final
 {
 public:
-	KString(KString& a) {
-		if (a.s.len > 0) {
-			assign(a.s.data, a.s.len);
-			return;
-		}
-		s = { 0 };
+	KString(const KString& a) : KString(a.s) {
 	}
-	KString(KString&& s) noexcept {
-		this->s = s.s;
-		s.s = { 0 };
+	KString(KString&& a) noexcept {
+		this->s = a.s;
+		a.s = { 0 };
 	}
 	KString(KStringBuf&& a) noexcept;
 	KString() : s{ 0 } {
+	}
+	KString(const std::string& a) : s{ 0 } {
+		assign(a.c_str(), a.size());
+	}
+	KString(const kgl_str_t& a) : s{ 0 } {
+		if (a.len > 0) {
+			assign(a.data, a.len);
+		}
 	}
 	~KString() {
 		if (s.data) {
@@ -77,6 +81,25 @@ public:
 		a.s = { 0 };
 		return *this;
 	}
+	kgl_ref_str_t* ref_str() {
+		if (!s.data) {
+			return nullptr;
+		}
+		if (s.len > 65534) {
+			//too big;
+			return nullptr;
+		}
+		kgl_ref_str_t* ret = (kgl_ref_str_t*)malloc(sizeof(kgl_ref_str_t));
+		if (!ret) {
+			return nullptr;
+		}
+		ret->data = s.data;
+		ret->id = 0;
+		ret->ref = 1;
+		ret->len = (uint16_t)s.len;
+		s = { 0 };
+		return ret;
+	}
 	KString& operator = (const KString& a) {
 		if (this == &a) {
 			//×Ô¸³Öµ
@@ -85,7 +108,12 @@ public:
 		assign(a.s.data, a.s.len);
 		return *this;
 	}
-
+	bool operator< (const KString& a) const {
+		if (s.data && a.s.data) {
+			return kgl_cmp(s.data, s.len, a.s.data, a.s.len) < 0;
+		}
+		return s.data == nullptr;
+	}
 	friend class KStringBuf;
 private:
 	void assign(const char* str, size_t len) {
@@ -135,7 +163,8 @@ public:
 		s.s.data[s.s.len] = '\0';
 		return s.s.data;
 	}
-	const KString& str() const {
+	const KString& str() {
+		end_with_zero();
 		return s;
 	}
 	char* buf() {
@@ -143,6 +172,16 @@ public:
 	}
 	int size() const {
 		return (int)s.s.len;
+	}
+	kgl_ref_str_t* ref_str() {
+		if (!end_with_zero()) {
+			return nullptr;
+		}
+		auto ret = s.ref_str();
+		if (ret!=nullptr) {
+			current_size = 0;
+		}
+		return ret;
 	}
 	char* steal() {
 		if (!end_with_zero()) {
@@ -153,6 +192,7 @@ public:
 		current_size = 0;
 		return ret;
 	}
+
 	KStringBuf& operator = (const KStringBuf& s) = delete;
 	KGL_RESULT write_all(const char* str, int len) override {
 		if (!append(str, len)) {
@@ -163,7 +203,7 @@ public:
 	friend class KString;
 private:
 	bool end_with_zero() {
-		if (!guarantee(1)) {
+		if ((current_size > 16 || current_size == 0) && !realloc((int)s.s.len + 1)) {
 			return false;
 		}
 		s.s.data[s.s.len] = '\0';
@@ -183,13 +223,14 @@ private:
 		if (current_size >= size) {
 			return true;
 		}
-		int new_size = (int)s.s.len + size;
-		new_size = kgl_align(new_size, align_size);
+		return realloc((int)s.s.len + size);
+	}
+	bool realloc(int new_size) {
+		assert(new_size > s.s.len);
 		if (!kgl_realloc((void**)&s.s.data, new_size)) {
 			return false;
 		}
 		current_size = new_size - (int)s.s.len;
-		assert(current_size >= size);
 		return true;
 	}
 	int current_size;

@@ -13,9 +13,9 @@ krequest_start_func server_on_new_request = NULL;
 krequest_start_func http2https_error = NULL;
 khttp_server_config http_config;
 
-static kgl_refs_string* ca_path = nullptr;
-static kgl_refs_string* ssl_client_chiper = nullptr;
-static kgl_refs_string* ssl_client_protocols = nullptr;
+static kgl_ref_str_t* ca_path = nullptr;
+static kgl_ref_str_t* ssl_client_chiper = nullptr;
+static kgl_ref_str_t* ssl_client_protocols = nullptr;
 static kmutex ssl_config_lock;
 
 
@@ -29,7 +29,7 @@ void khttp_server_set_ssl_config(const char* ca_path, const char* ssl_client_chi
 	::ssl_client_protocols = kstring_from(ssl_client_protocols);
 	kmutex_unlock(&ssl_config_lock);
 }
-void khttp_server_refs_ssl_config(kgl_refs_string** ca_path, kgl_refs_string** ssl_client_chiper, kgl_refs_string** ssl_client_protocols) {
+void khttp_server_refs_ssl_config(kgl_ref_str_t** ca_path, kgl_ref_str_t** ssl_client_chiper, kgl_ref_str_t** ssl_client_protocols) {
 	kmutex_lock(&ssl_config_lock);
 	*ca_path = kstring_refs(::ca_path);
 	*ssl_client_chiper = kstring_refs(::ssl_client_chiper);
