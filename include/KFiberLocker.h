@@ -11,9 +11,17 @@ public:
 		}
 		this->mutex = mutex;
 	}
-	~KFiberLocker() {
-		kfiber_mutex_unlock(mutex);
+	KFiberLocker(const KFiberLocker& a) = delete;
+	KFiberLocker(KFiberLocker&& a) noexcept {
+		this->mutex = a.mutex;
+		a.mutex = nullptr;
 	}
+	~KFiberLocker() {
+		if (mutex != nullptr) {
+			kfiber_mutex_unlock(mutex);
+		}
+	}
+	KFiberLocker &operator=(const KFiberLocker& a) = delete;
 private:
 	kfiber_mutex* mutex;
 };
