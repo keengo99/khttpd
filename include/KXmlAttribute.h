@@ -21,7 +21,7 @@ public:
 		}
 		return atoi((*it).second.c_str());
 	}
-	const char* get_string(const char* key, const char* default_value = nullptr) const {
+	const char* get_string(const char* key, const char* default_value = "") const {
 		auto it = find(key);
 		if (it == end()) {
 			return default_value;
@@ -29,11 +29,7 @@ public:
 		return (*it).second.c_str();
 	}
 	const char* operator()(const char* key, const char* default_value = "") const {
-		auto it = find(key);
-		if (it == end()) {
-			return default_value;
-		}
-		return (*it).second.c_str();
+		return get_string(key, default_value);
 	}
 	const std::string &operator[](const char* key) const {
 		auto it = find(key);
