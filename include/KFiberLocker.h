@@ -7,7 +7,7 @@ class KFiberLocker
 public:
 	KFiberLocker(kfiber_mutex* mutex) {
 		if (kfiber_mutex_lock(mutex) != 0) {
-			throw std::exception("lock failed.");
+			throw std::exception();
 		}
 		this->mutex = mutex;
 	}

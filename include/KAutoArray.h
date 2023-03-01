@@ -6,7 +6,7 @@ namespace khttpd {
 	class KAutoArray
 	{
 	public:
-		KAutoArray(const KAutoArray& a) = delete;
+		//KAutoArray(const KAutoArray& a) = delete;
 		KAutoArray() {
 			ref = 1;
 			count = 0;

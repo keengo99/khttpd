@@ -25,11 +25,16 @@
 class KXmlException : public std::exception
 {
 public:
-	KXmlException(const char* msg) noexcept : std::exception(msg)  {
-		
+	KXmlException(const char* msg) noexcept {
+		this->msg = msg;	
 	}
 	virtual ~KXmlException() noexcept {
 
 	}
+	const char* what() const noexcept {
+		return msg;
+	}
+private:
+	const char *msg;
 };
 #endif /*KXMLEXCEPTION_H_*/
