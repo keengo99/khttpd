@@ -230,7 +230,7 @@ namespace khttpd {
 		}
 		friend class KXmlNode;
 	private:
-		constexpr Dy& get_deleter() {
+		const Dy& get_deleter() {
 			return *this;
 		}
 		union
