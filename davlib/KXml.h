@@ -176,7 +176,7 @@ private:
 	char* origBuf;
 	void* data;
 };
-void buildAttribute(char* buf, std::map<std::string, std::string>& attribute);
+void buildAttribute(char* buf, KXmlAttribute& attribute);
 char* getString(char* str, char** nextstr, const char* ended_chars = NULL, bool end_no_quota_value = false, bool skip_slash = false);
 std::string replace(const char* buf, std::map<std::string, std::string>& replaceMap, const char* start = NULL, const char* end = NULL);
 #endif

@@ -41,7 +41,7 @@ kxml_fsize KXml::fsize = NULL;
 kxml_fread KXml::fread = NULL;
 
 
-void buildAttribute(char* buf, std::map<std::string, std::string>& attribute) {
+void buildAttribute(char* buf, KXmlAttribute& attribute) {
 	attribute.clear();
 	//	printf("buf=[%s]\n",buf);
 	while (*buf) {
@@ -293,7 +293,7 @@ bool KXml::startParse(char* buf) {
 			throw KXmlException("file is not a xml format");
 		}
 		*hot = 0;
-		std::map<string, string> attribute;
+		KXmlAttribute attribute;
 		buildAttribute(buf, attribute);
 		encoding = attribute["encoding"];
 		buf = hot + 2;

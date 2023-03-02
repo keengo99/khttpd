@@ -45,6 +45,15 @@ public:
 		}
 		return (*it).second;
 	}
+	std::string remove(const std::string& key) {
+		auto it = find(key);
+		if (it == end()) {
+			return empty;
+		}
+		std::string ret(std::move((*it).second));
+		erase(it);
+		return ret;
+	}
 	static const std::string empty;
 private:
 };
