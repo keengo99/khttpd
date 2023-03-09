@@ -2,11 +2,20 @@
 #define _LIB_H_INCLUDED_
 #include "kforwin32.h"
 #include <string>
+#include <memory>
 #include <cstring>
 #include "khttp.h"
 #include "KHttpHeader.h"
 #include "klib.h"
 typedef unsigned char* domain_t;
+struct kgl_auto_cstr_free
+{
+	void operator()(char* t) const noexcept {
+		free(t);
+	}
+};
+using kgl_auto_cstr = std::unique_ptr<char, kgl_auto_cstr_free>;
+
 int kgl_domain_cmp(const domain_t s1, const domain_t s2);
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);

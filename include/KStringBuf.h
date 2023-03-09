@@ -32,15 +32,8 @@
 #include "kmalloc.h"
 #include "KHttpLib.h"
 class KStringBuf;
-#if 0
-struct cstr_free
-{
-	void operator()(char* t) const noexcept {
-		free(t);
-	}
-};
-using auto_char = std::unique_ptr<char, cstr_free>;
-#endif
+
+
 class KString final
 {
 public:
@@ -61,6 +54,12 @@ public:
 	}
 	KString(kgl_ref_str_t* a) {
 		s = a;
+	}
+	explicit operator bool() const noexcept {
+		if (s && s->data) {
+			return true;
+		}
+		return false;
 	}
 	KString(const kgl_ref_str_t& a) : s{ 0 } {
 		if (a.len > 0) {
@@ -183,7 +182,7 @@ public:
 	int size() const {
 		return (int)s->len;
 	}
-	KGL_NODISCARD char* steal() {
+	kgl_auto_cstr steal() {
 		if (!end_with_zero()) {
 			return nullptr;
 		}
@@ -191,7 +190,7 @@ public:
 		s->data = nullptr;
 		s->len = 0;
 		current_size = 0;
-		return ret;
+		return kgl_auto_cstr(ret);
 	}
 	KStringBuf& operator = (const KStringBuf& s) = delete;
 	KGL_RESULT write_all(const char* str, int len) override {

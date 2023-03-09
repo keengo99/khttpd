@@ -83,14 +83,14 @@ public:
 	bool IsBad() {
 		return host == NULL || path == NULL;
 	}
-	char *getUrl() {
+	kgl_auto_cstr getUrl() {
 		KStringBuf s(128);
 		if (!GetUrl(s)) {
 			return NULL;
 		}
 		return s.steal();
 	}
-	char *getUrl2(int &len) {
+	kgl_auto_cstr getUrl2(int &len) {
 		KStringBuf s(128);
 		if (!GetUrl(s)) {
 			return NULL;

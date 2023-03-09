@@ -91,6 +91,11 @@ char* getString(char* str, char** nextstr, const char* ended_chars,
 	return NULL;
 }
 KString::KString(KStringBuf&& s) noexcept {
+	try {
+		s.end_with_zero();
+	} catch (...) {
+
+	}
 	this->s = s.s;
 	s.s = nullptr;
 	s.current_size = 0;
