@@ -11,11 +11,16 @@
 #include "KStream.h"
 #include "klog.h"
 #include "KAutoArray.h"
+#include "klist.h"
+#include "KSharedObj.h"
+
 namespace khttpd {
 	class KXmlKey
 	{
 	public:
-		KXmlKey(const char* tag, size_t size) {
+		KXmlKey(const char* tag, size_t size, uint32_t tag_id = 0) {
+			ref = 1;
+			this->tag_id = tag_id;
 			const char* p = (char*)memchr(tag, '@', size);
 			if (!p) {
 				this->tag = kstring_from2(tag, size);
@@ -25,13 +30,17 @@ namespace khttpd {
 			this->tag = kstring_from2(tag, p - tag);
 			this->vary = kstring_from2(p + 1, size - this->tag->len - 1);
 		}
-		KXmlKey(kgl_ref_str_t* tag, kgl_ref_str_t* vary) {
+		KXmlKey(kgl_ref_str_t* tag, kgl_ref_str_t* vary, uint32_t tag_id = 0) {
 			this->tag = tag;
 			this->vary = vary;
+			this->tag_id = tag_id;
+			ref = 1;
 		}
 		KXmlKey() {
 			tag = nullptr;
 			vary = nullptr;
+			ref = 1;
+			tag_id = 0;
 		}
 		void set_tag(const std::string& tag) {
 			assert(this->tag == nullptr);
@@ -56,29 +65,42 @@ namespace khttpd {
 		}
 		kgl_ref_str_t* tag;
 		kgl_ref_str_t* vary;
+		uint32_t tag_id;
+		volatile uint32_t ref;
 	};
 	class KXmlNode;
+	using KSafeXmlNode = KSharedObj<KXmlNode>;
 	class KXmlNodeBody
 	{
 	public:
 		KXmlNodeBody() {
-
 		}
 		KXmlNodeBody(const KXmlNodeBody& a) = delete;
 		~KXmlNodeBody();
 		KXmlNodeBody* clone() const;
 		KGL_RESULT write(KWStream* out, int level) const;
 		bool is_same(KXmlNodeBody* node) const {
-			if (kgl_string_cmp(character, node->character) != 0) {
-				return false;
-			}
 			return attributes == node->attributes;
 		}
-		const char* get_text(const char* default_text) const {
-			return character ? character->data : default_text;
+		const char* get_text(const char* default_text = "") const {
+			auto it = attributes.find(text_as_attribute_name);
+			if (it == attributes.end()) {
+				return default_text;
+			}
+			return (*it).second.c_str();
 		}
 		const std::string get_character() const {
-			return get_text("");
+			auto it = attributes.find(text_as_attribute_name);
+			if (it == attributes.end()) {
+				return KXmlAttribute::empty;
+			}
+			return (*it).second;
+		}
+		void set_text(const std::string& value) {
+			auto result = attributes.emplace(text_as_attribute_name, value);
+			if (!result.second) {
+				(*(result.first)).second = value;
+			}
 		}
 		KXmlNode* find_child(KXmlKey* a) const {
 			auto it = childs.find(a);
@@ -87,13 +109,22 @@ namespace khttpd {
 			}
 			return it->value();
 		}
+		const KXmlAttribute& attr() const {
+			return attributes;
+		}
+		KXmlAttribute& attr() {
+			return attributes;
+		}
 		void copy_child_from(const KXmlNodeBody* node);
 		KXmlNode* find_child(const std::string& tag) const;
-		void add(KXmlNode* xml, uint32_t index);
+
 		bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs, bool create_flag);
 		KMap<KXmlKey, KXmlNode> childs;
 		KXmlAttribute attributes;
-		kgl_ref_str_t* character = nullptr;
+		friend class KXmlNode;
+		static const std::string text_as_attribute_name;
+	private:
+		void add(KXmlNode* xml, uint32_t index);
 	};
 	class KXmlNode
 	{
@@ -107,6 +138,8 @@ namespace khttpd {
 			}
 			key.tag = kstring_refs(node->key.tag);
 			key.vary = kstring_refs(node->key.vary);
+			key.tag_id = node->key.tag_id;
+
 			for (uint32_t index = 0;; index++) {
 				auto body = node->get_body(index);
 				if (!body) {
@@ -115,17 +148,16 @@ namespace khttpd {
 				insert_body(body->clone(), khttpd::last_pos);
 			}
 		}
-		KXmlNode(kgl_ref_str_t* tag, kgl_ref_str_t* vary) : key(tag, vary), body(new KXmlNodeBody) {
-
+		KXmlNode(kgl_ref_str_t* tag, kgl_ref_str_t* vary, uint32_t tag_id) : key(tag, vary, tag_id), body(new KXmlNodeBody) {
 		}
-		KXmlNode(KXmlKey* name) : key(kstring_refs(name->tag), kstring_refs(name->vary)), body(new KXmlNodeBody) {
+		KXmlNode(KXmlKey* name) : key(kstring_refs(name->tag), kstring_refs(name->vary), name->tag_id), body(new KXmlNodeBody) {
 		}
 		int cmp(const KXmlKey* a)  const {
-			int result = (int)key.tag->id - (int)a->tag->id;
+			int result = (int)a->tag_id - (int)key.tag_id;
 			if (result != 0) {
 				return result;
 			}
-			if (key.tag->id != 0) {
+			if (key.tag_id != 0) {
 				//know id
 				return kgl_string_cmp(key.vary, a->vary);
 			}
@@ -142,19 +174,19 @@ namespace khttpd {
 			}
 			return body->find_child(tag);
 		}
-		KXmlNode* clone() const {
-			return new KXmlNode(this);
+		KSafeXmlNode clone() const {
+			return KSafeXmlNode(new KXmlNode(this));
 		}
 		KXmlNodeBody* get_body(uint32_t index) const {
 			return body.get(index);
 		}
-		KXmlNode* add_ref() {
-			katom_inc((void*)&body.ref);
+		KGL_NODISCARD KXmlNode* add_ref() {
+			katom_inc((void*)&key.ref);
 			return this;
 		}
 		void release() {
-			assert(katom_get((void*)&body.ref) < 0xfffffff);
-			if (katom_dec((void*)&body.ref) == 0) {
+			assert(katom_get((void*)&key.ref) < 0xfffffff);
+			if (katom_dec((void*)&key.ref) == 0) {
 				delete this;
 			}
 		}
@@ -219,28 +251,31 @@ namespace khttpd {
 		const std::string get_character() const {
 			auto body = get_first();
 			if (!body) {
-				return "";
+				return KXmlAttribute::empty;
 			}
 			return body->get_character();
 		}
 		const char* get_text() const {
 			auto body = get_first();
-			if (!body || !body->character) {
+			if (!body) {
 				return "";
 			}
-			return body->character->data;
+			return body->get_text("");
 		}
 		KXmlAttribute& attributes() const {
 			return get_first()->attributes;
 		}
-		KXmlNodeBody* remove_last() {
+		KGL_NODISCARD KXmlNodeBody* remove_last() {
 			return body.remove_last();
 		}
 		KXmlNodeBody* remove_body(uint32_t index) {
 			return body.remove(index);
 		}
-		bool insert_body(KXmlNodeBody* body, uint32_t index) {
-			return this->body.insert(body, index);
+		void insert_body(KXmlNodeBody* body, uint32_t index) {
+			for (auto it = body->childs.first(); it; it = it->next()) {
+				it->value()->body.shrink_to_fit();
+			}
+			this->body.insert(body, index);
 		}
 		KXmlNodeBody* get_last() const {
 			return body.last();
@@ -251,19 +286,18 @@ namespace khttpd {
 		KXmlNodeBody** get_body_address(uint32_t index) {
 			return body.get_address(index);
 		}
-
 		uint32_t get_body_count() const {
 			return body.count;
 		}
 		KXmlKey key;
-	private:
 		khttpd::KAutoArray<KXmlNodeBody> body;
+		friend class KXmlNodeBody;
+	private:
 		~KXmlNode() {
 		}
 	};
 
-	class KXmlDocument :
-		public KXmlEvent
+	class KXmlDocument : public KXmlEvent
 	{
 	public:
 		KXmlDocument(bool skip_ns = true);
@@ -271,7 +305,7 @@ namespace khttpd {
 		void set_qname_config(KMap<kgl_ref_str_t, KXmlKey>* qname_config) {
 			this->qname_config = qname_config;
 		}
-		KXmlNode* parse(char* str);
+		KSafeXmlNode parse(char* str);
 		KXmlNode* getRootNode() const;
 		KXmlNode* getNode(const std::string& name) const;
 		bool startElement(KXmlContext* context) override;
@@ -279,10 +313,11 @@ namespace khttpd {
 		bool endElement(KXmlContext* context) override;
 	private:
 		bool skip_ns;
-		KXmlNode* cur_node = nullptr;
-		KXmlNode* root = nullptr;
-		std::stack<KXmlNode*> parents;
+		khttpd::KSafeXmlNode cur_node;
+		khttpd::KSafeXmlNode root;
+		std::stack<khttpd::KSafeXmlNode> parents;
 		KMap<kgl_ref_str_t, KXmlKey>* qname_config = nullptr;
 	};
+
 }
 #endif

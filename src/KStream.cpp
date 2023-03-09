@@ -29,6 +29,7 @@
 #include "kforwin32.h"
 #include "KStream.h"
 #include "kmalloc.h"
+#include "KStringBuf.h"
 KConsole KConsole::out;
 bool KRStream::read_all(char *buf, int len) {
 	while (len > 0) {
@@ -65,4 +66,12 @@ KGL_RESULT KWStream::write_all(const char *buf) {
 }
 int KConsole::write(const char *buf, int len) {
 	return (int)fwrite(buf, 1, len, stdout);
+}
+KWStream& KWStream::operator<< (const KStringBuf& a) {
+	write_all(a.buf(), a.size());
+	return *this;
+}
+KWStream& KWStream::operator<< (const KString& a) {
+	write_all(a.c_str(), (int)a.size());
+	return *this;
 }

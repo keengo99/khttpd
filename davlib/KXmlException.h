@@ -29,7 +29,6 @@ public:
 		this->msg = msg;	
 	}
 	virtual ~KXmlException() noexcept {
-
 	}
 	const char* what() const noexcept {
 		return msg;

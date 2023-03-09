@@ -1,19 +1,57 @@
 #ifndef KHTTPD_KAUTOARRAY_H
 #define KHTTPD_KAUTOARRAY_H
+#include <memory>
+#include <exception>
+#include <stdexcept>
 namespace khttpd {
 	constexpr uint32_t last_pos{ static_cast<uint32_t>(-1) };
-	template <typename T = char>
-	class KAutoArray
+
+	template <typename T, typename Dy>
+	class KAutoArray;
+
+	template <typename T, typename Dy>
+	class KAutoArrayIterator
 	{
 	public:
-		//KAutoArray(const KAutoArray& a) = delete;
+		KAutoArrayIterator(const KAutoArray<T, Dy>& ar, uint32_t index) : ar(ar) {
+			this->index = index;
+		}
+		KAutoArrayIterator(const KAutoArrayIterator<T, Dy>& it) :ar(it.ar) {
+			index = it.index;
+		}
+		KAutoArrayIterator<T, Dy>& operator++ () {
+			++index;
+			return *this;
+		}
+		T* operator *() const {
+			return ar.get(index);
+		}
+		bool operator==(const KAutoArrayIterator<T, Dy>& a) const {
+			return index == a.index;
+		}
+		bool operator!=(const KAutoArrayIterator<T, Dy>& a) const {
+			return index != a.index;
+		}
+		uint32_t get_index() {
+			return index;
+		}
+	private:
+		const KAutoArray<T, Dy>& ar;
+		uint32_t index;
+	};
+	template <typename T, typename Dy=std::default_delete<T>>
+	class KAutoArray : private Dy
+	{
+	public:
+		using iterator = KAutoArrayIterator<T, Dy>;
+		KAutoArray(const KAutoArray& a) = delete;
 		KAutoArray() {
-			ref = 1;
+			cap = 0;
 			count = 0;
 			body = nullptr;
 		}
 		KAutoArray(T* body) {
-			ref = 1;			
+			cap = 0;			
 			this->body = body;
 			count = !!body;
 		}
@@ -21,14 +59,20 @@ namespace khttpd {
 			if (bodys) {
 				assert(count > 0);
 				if (count == 1) {
-					delete body;
+					get_deleter()(body);
 				} else {
 					for (uint32_t i = 0; i < count; i++) {
-						delete bodys[i];
+						get_deleter()(bodys[i]);
 					}
 					xfree(bodys);
 				}
 			}
+		}
+		iterator begin() {
+			return iterator(*this, 0);
+		}
+		iterator end() {
+			return iterator(*this, this->size());
 		}
 		KAutoArray<T>& operator=(KAutoArray<T>& a) = delete;
 		T** get_address(uint32_t index) {
@@ -69,7 +113,16 @@ namespace khttpd {
 				return bodys[count - 1];
 			}
 		}
-		T* remove(uint32_t index) {
+		void shrink_to_fit() {
+			if (count<2 || count == cap) {
+				return;
+			}
+			if (!kgl_realloc((void**)&this->bodys, sizeof(T**) * (count))) {
+				return;
+			}
+			cap = count;
+		}
+		KGL_NODISCARD T* remove(uint32_t index) {
 			if (index >= count) {
 				return nullptr;
 			}
@@ -77,9 +130,11 @@ namespace khttpd {
 				T* body = this->body;
 				this->body = nullptr;
 				count = 0;
+				assert(cap == 0);
 				return body;
 			}
 			if (count == 2) {
+				assert(cap >= 2);
 				auto body = this->bodys[index];
 				auto saved_body = this->bodys[1 - index];
 				xfree(bodys);
@@ -92,7 +147,7 @@ namespace khttpd {
 			count--;
 			return body;
 		}
-		T* remove_last() {
+		KGL_NODISCARD T* remove_last() {
 			switch (count) {
 			case 0:
 				return nullptr;
@@ -101,6 +156,7 @@ namespace khttpd {
 				T* body = this->body;
 				this->body = nullptr;
 				count = 0;
+				assert(cap == 0);
 				return body;
 			}
 			case 2:
@@ -110,10 +166,13 @@ namespace khttpd {
 				xfree(bodys);
 				this->body = saved_body;
 				count = 1;
+				assert(cap >= 2);
+				cap = 0;
 				return body;
 			}
 			default:
 			{
+				assert(cap >= count);
 				auto body = this->bodys[count - 1];
 				count--;
 				return body;
@@ -123,48 +182,64 @@ namespace khttpd {
 		uint32_t size() {
 			return count;
 		}
-		bool insert(T* body, uint32_t index) {
+		void insert(T* body, uint32_t index) {
 			if (count == 0) {
 				this->body = body;
 				count++;
-				return true;
+				assert(cap == 0);
+				return;
 			}
 			if (count == 1) {
-				auto bodys = (T**)malloc(sizeof(T**) * 2);
+				assert(cap == 0);
+				cap = 2;
+				auto bodys = (T**)malloc(sizeof(T**) * cap);
 				if (!bodys) {
-					return false;
+					get_deleter()(body);
+					throw std::bad_alloc();
+					return;
 				}
 				bodys[!!index] = body;
 				bodys[!index] = this->body;
 				this->bodys = bodys;
 				count++;
-				return true;
+				return;
 			}
-			if (!kgl_realloc((void**)&this->bodys, sizeof(T**) * (count + 1))) {
-				return false;
+			assert(count <= cap);
+			if (count==cap) {
+				if (!kgl_realloc((void**)&this->bodys, sizeof(T**) * (cap*2))) {
+					get_deleter()(body);
+					throw std::bad_alloc();
+					return;
+				}
+				cap *= 2;
 			}
 			if (index == last_pos || index==count) {
 				this->bodys[count] = body;
 				count++;
-				return true;
+				return;
 			}
 			if (index > count) {
-				return false;
+				get_deleter()(body);
+				throw std::out_of_range("out of range");
+				return;
 			}
 			memmove(bodys + index + 1, bodys + index, sizeof(T*) * (count - index));
 			this->bodys[index] = body;
 			count++;
-			return true;
+			return;
 		}
 		friend class KXmlNode;
 	private:
+		constexpr Dy& get_deleter() {
+			return *this;
+		}
 		union
 		{
 			T* body;
 			T** bodys;
 		};
 		uint32_t count;
-		volatile uint32_t ref;
+		uint32_t cap;
 	};
 }
 #endif

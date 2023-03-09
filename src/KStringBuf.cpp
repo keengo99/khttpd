@@ -90,14 +90,8 @@ char* getString(char* str, char** nextstr, const char* ended_chars,
 	}
 	return NULL;
 }
-KString::KString(KStringBuf&& a) noexcept {
-	try {		
-		if (a.s.s.len > 0) {
-			s.len = a.s.s.len;
-			s.data = a.steal();			
-			return;
-		}
-	} catch (...) {
-	}
-	s = { 0 };
+KString::KString(KStringBuf&& s) noexcept {
+	this->s = s.s;
+	s.s = nullptr;
+	s.current_size = 0;
 }

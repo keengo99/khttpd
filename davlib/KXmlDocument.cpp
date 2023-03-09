@@ -5,16 +5,12 @@
 #include "KXmlDocument.h"
 using namespace std;
 namespace khttpd {
+	const std::string KXmlNodeBody::text_as_attribute_name("_");
+
 	KXmlDocument::KXmlDocument(bool skip_ns) {
 		this->skip_ns = skip_ns;
 	}
 	KXmlDocument::~KXmlDocument(void) {
-		if (cur_node) {
-			cur_node->release();
-		}
-		if (root) {
-			root->release();
-		}
 	}
 	KXmlNode* KXmlDocument::getNode(const std::string& name) const {
 		KXmlNode* rootNode = getRootNode();
@@ -37,9 +33,9 @@ namespace khttpd {
 		return rootNode->find_child(name.substr(pos + 1));
 	}
 	KXmlNode* KXmlDocument::getRootNode() const {
-		return root;
+		return root.get();
 	}
-	KXmlNode* KXmlDocument::parse(char* str) {
+	KSafeXmlNode KXmlDocument::parse(char* str) {
 		KXml xml;
 		xml.setEvent(this);
 		try {
@@ -53,8 +49,8 @@ namespace khttpd {
 	}
 	bool KXmlDocument::startElement(KXmlContext* context) {
 		//printf("parse node=[%s]\n", context->qName.c_str());
-		parents.push(cur_node);
-		cur_node = new KXmlNode();
+		parents.push(std::move(cur_node));
+		cur_node = khttpd::KSafeXmlNode(new KXmlNode());
 		auto body = cur_node->get_first();
 		body->attributes.swap(context->attribute);
 		kgl_ref_str_t* tag;
@@ -76,6 +72,7 @@ namespace khttpd {
 				auto key_vary = it->value();
 				kstring_release(tag);
 				tag = kstring_refs(key_vary->tag);
+				cur_node->key.tag_id = key_vary->tag_id;
 				if (key_vary->vary) {
 					auto it2 = body->attributes.find(key_vary->vary->data);
 					if (it2 != body->attributes.end()) {
@@ -98,8 +95,7 @@ namespace khttpd {
 		if (!body) {
 			return false;
 		}
-		assert(body->character == nullptr);
-		body->character = kstring_from2(character, len);
+		body->set_text(character);
 		return true;
 	}
 	bool KXmlDocument::endElement(KXmlContext* context) {
@@ -107,17 +103,16 @@ namespace khttpd {
 			return false;
 		}
 		//printf("end node=[%s]\n", context->qName.c_str());
-		KXmlNode* parent = nullptr;
+		khttpd::KSafeXmlNode parent = nullptr;
 		if (!parents.empty()) {
-			parent = parents.top();
+			parent = std::move(parents.top());
 			parents.pop();
 		}
 		if (!parent) {
 			assert(root == nullptr);
 			root = cur_node;
 		} else {
-			parent->append(cur_node);
-			cur_node->release();
+			parent->append(cur_node.get());
 		}
 		cur_node = parent;
 		return true;
@@ -128,7 +123,6 @@ namespace khttpd {
 			((KXmlNode*)data)->release();
 			return iterator_remove_continue;
 			}, NULL);
-		kstring_release(character);
 	}
 	bool KXmlNodeBody::update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs, bool create_flag) {
 		KMapNode<KXmlNode>* it;
@@ -155,8 +149,8 @@ namespace khttpd {
 			if (body) {
 				delete body;
 				if (node->get_body_count() == 0) {
-					node->release();
 					childs.erase(it);
+					node->release();
 				}
 				return true;
 			}
@@ -186,9 +180,7 @@ namespace khttpd {
 		}
 		auto old_node = it->value();
 		while (auto body = xml->remove_last()) {
-			if (!old_node->insert_body(body, index)) {
-				delete body;
-			}
+			old_node->insert_body(body, index);
 		}
 	}
 	void KXmlNodeBody::copy_child_from(const KXmlNodeBody* node) {
@@ -198,7 +190,12 @@ namespace khttpd {
 	}
 	KGL_RESULT KXmlNodeBody::write(KWStream* out, int level) const {
 		//write attribute
-		for (auto it = attributes.begin(); it != attributes.end(); it++) {
+		const std::string* text = nullptr;
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			if ((*it).first == text_as_attribute_name) {
+				text = &(*it).second;
+				continue;
+			}
 			out->write_all(_KS(" "));
 			out->write_all((*it).first.c_str(), (int)(*it).first.size());
 			out->write_all(_KS("="));
@@ -215,30 +212,30 @@ namespace khttpd {
 				//klog(KLOG_ERR, "cann't write xml attribute [%s] value also has ['\"]\n", (*it).first.c_str());
 				out->write_all(_KS("''"));
 			}
-		}	
-		
+		}
+
 		//write child
 		if (!childs.empty()) {
 			out->write_all(_KS(">\n"));
-		} else if (character == nullptr || character->len == 0) {
+		} else if (text == nullptr) {
 			out->write_all(_KS("/>\n"));
 			return KGL_END;
 		} else {
 			out->write_all(_KS(">"));
 		}
-		for (auto it = childs.first(); it; it = it->next()) {
-			auto result = it->value()->write(out, level + 1);
+		for (auto node : childs) {
+			auto result = node->write(out, level + 1);
 			if (result != KGL_OK) {
 				return result;
 			}
 		}
-		if (character) {
-			if (memchr(character->data, '<', character->len)) {
+		if (text) {
+			if (memchr(text->c_str(), '<', text->size())) {
 				out->write_all(_KS(CDATA_START));
-				out->write_all(character->data, character->len);
+				out->write_all(text->c_str(), (int)text->size());
 				out->write_all(_KS(CDATA_END));
 			} else {
-				out->write_all(character->data, character->len);
+				out->write_all(text->c_str(), (int)text->size());
 			}
 			if (!childs.empty()) {
 				out->write_all(_KS("\n"));
@@ -254,9 +251,8 @@ namespace khttpd {
 	KXmlNodeBody* KXmlNodeBody::clone() const {
 		KXmlNodeBody* node = new KXmlNodeBody;
 		node->attributes = attributes;
-		node->character = kstring_refs(character);
-		for (auto it = childs.first(); it; it = it->next()) {
-			node->add(it->value()->clone(), last_pos);
+		for (auto child : childs) {
+			node->add(child->clone().get(), last_pos);
 		}
 		return node;
 	}

@@ -307,5 +307,13 @@ typedef struct _kgl_url
 #define KGL_ALPN_HTTP2   1
 #define KGL_ALPN_HTTP3   2
 
+#ifdef  __cplusplus
+#ifdef _WIN32
+#define KGL_NODISCARD [[nodiscard]]
+#endif
+#endif
+#ifndef KGL_NODISCARD
+#define KGL_NODISCARD
+#endif
 KEND_DECLS
 #endif

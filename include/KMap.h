@@ -19,6 +19,68 @@ public:
 		return (KMapNode<Value> *)rb_prev(this);
 	}
 };
+template<typename T>
+class KMapIterator
+{
+public:
+	KMapIterator(KMapNode<T>* node) {
+		this->node = node;
+	}
+	KMapIterator(const KMapIterator<T>& a) {
+		this->node = a.node;
+	}
+	bool operator!=(const KMapIterator<T>& a) const {
+		return node != a.node;
+	}
+	bool operator==(const KMapIterator<T>& a) const {
+		return node == a.node;
+	}
+	KMapIterator<T>& operator++() {
+		node = node->next();
+		return *this;
+	}
+	T* operator *() const {
+		return node->value();
+	}
+	KMapIterator<T>& operator=(T* value) {
+		node->value(value);
+		return *this;
+	}
+private:
+	KMapNode<T>* node;
+};
+
+template<typename T>
+class KMapReversIterator
+{
+public:
+	KMapReversIterator(KMapNode<T>* node) {
+		this->node = node;
+	}
+	KMapReversIterator(const KMapReversIterator<T>& a) {
+		this->node = a.node;
+	}
+	bool operator!=(const KMapReversIterator<T>& a) const {
+		return node != a.node;
+	}
+	bool operator==(const KMapReversIterator<T>& a) const {
+		return node == a.node;
+	}
+	KMapReversIterator<T>& operator++() {
+		node = node->prev();
+		return *this;
+	}
+	T* operator *() const {
+		return node->value();
+	}
+	KMapReversIterator<T>& operator=(T* value) {
+		node->value(value);
+		return *this;
+	}
+private:
+	KMapNode<T>* node;
+};
+
 template <typename Key, typename Value>
 class KMap
 {
@@ -60,6 +122,18 @@ public:
 	}
 	inline KMapNode<Value>* last() const {
 		return (KMapNode<Value> *)rb_last(&tree.root);
+	}
+	KMapReversIterator<Value> rbegin() const {
+		return KMapReversIterator<Value>(last());
+	}
+	KMapReversIterator<Value> rend() const {
+		return KMapReversIterator<Value>(nullptr);
+	}
+	KMapIterator<Value> begin() const {
+		return KMapIterator<Value>(first());
+	}
+	KMapIterator<Value> end() const {
+		return KMapIterator<Value>(nullptr);
 	}
 	inline KMapNode<Value>* first() const {
 		return (KMapNode<Value> *)rb_first(&tree.root);

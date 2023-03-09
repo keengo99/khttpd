@@ -38,6 +38,8 @@
 #define WSTRING(x) write_all(NULL, x,sizeof(x)-1)
 
 #define INT2STRING_LEN	32
+class KStringBuf;
+class KString;
 inline int int2string2(int64_t value, char* buf, bool hex = false) {
 	const char* formatString = INT64_FORMAT;
 	if (hex) {
@@ -116,6 +118,8 @@ public:
 		delete this;
 	}
 	KGL_RESULT write_all(const char* buf);
+	KWStream& operator<< (const KString& a);
+	KWStream& operator<< (const KStringBuf& a);
 	inline KWStream& operator <<(const char* str) {
 		if (KGL_OK != write_all(str, (int)strlen(str))) {
 			fprintf(stderr, "cann't write to stream 1\n");
@@ -142,7 +146,7 @@ public:
 		write_all(str.c_str(), (int)str.size());
 		return *this;
 	}
-	inline KWStream& operator <<(const kgl_str_t& str) {
+	inline KWStream& operator <<(const kgl_ref_str_t& str) {
 		write_all(str.data, (int)str.len);
 		return *this;
 	}
