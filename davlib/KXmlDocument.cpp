@@ -171,17 +171,20 @@ namespace khttpd {
 		*body = xml_body;
 		return true;
 	}
-	void KXmlNodeBody::add(KXmlNode* xml, uint32_t index) {
+	KXmlNodeBody *KXmlNodeBody::add(KXmlNode* xml, uint32_t index) {
 		int new_flag;
 		auto it = childs.insert(&xml->key, &new_flag);
 		if (new_flag) {
 			it->value(xml->add_ref());
-			return;
+			return xml->get_first();
 		}
 		auto old_node = it->value();
-		while (auto body = xml->remove_last()) {
-			old_node->insert_body(body, index);
+		auto body = xml->remove_last();
+		if (!body) {
+			return NULL;
 		}
+		old_node->insert_body(body, index);
+		return body;
 	}
 	void KXmlNodeBody::copy_child_from(const KXmlNodeBody* node) {
 		for (auto it = node->childs.first(); it; it = it->next()) {

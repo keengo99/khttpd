@@ -117,15 +117,20 @@ namespace khttpd {
 		}
 		void copy_child_from(const KXmlNodeBody* node);
 		KXmlNode* find_child(const std::string& tag) const;
-
+		void clear() {
+			childs.clear();
+			attributes.clear();
+		}
 		bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs, bool create_flag);
 		KMap<KXmlKey, KXmlNode> childs;
 		KXmlAttribute attributes;
+		KXmlNodeBody* add(KXmlNode* xml, uint32_t index);
 		friend class KXmlNode;
 		static const std::string text_as_attribute_name;
 	private:
-		void add(KXmlNode* xml, uint32_t index);
+
 	};
+	using KSafeXmlNodeBody = std::unique_ptr<KXmlNodeBody>;
 	class KXmlNode
 	{
 	public:
