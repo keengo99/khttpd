@@ -52,7 +52,7 @@ KGL_RESULT KWebDavRequest::read_body(khttpd::KXmlDocument& body)
 }
 bool KWebDavRequest::send_if_lock_token(KWebDavLockToken* token, bool send_resource)
 {
-	KStringBuf s;
+	KStringStream s;
 	if (send_resource) {
 		s << "<";
 		client->url->GetSchema(s);

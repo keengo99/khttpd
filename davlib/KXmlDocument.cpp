@@ -5,7 +5,7 @@
 #include "KXmlDocument.h"
 using namespace std;
 namespace khttpd {
-	const std::string KXmlNodeBody::text_as_attribute_name("_");
+	const KString KXmlNodeBody::text_as_attribute_name("_");
 
 	KXmlDocument::KXmlDocument(bool skip_ns) {
 		this->skip_ns = skip_ns;
@@ -193,7 +193,7 @@ namespace khttpd {
 	}
 	KGL_RESULT KXmlNodeBody::write(KWStream* out, int level) const {
 		//write attribute
-		const std::string* text = nullptr;
+		const KString* text = nullptr;
 		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
 			if ((*it).first == text_as_attribute_name) {
 				text = &(*it).second;

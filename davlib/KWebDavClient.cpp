@@ -81,7 +81,7 @@ KGL_RESULT KWebDavClient::new_request(const char* method, const char* path, int6
 		*rq = nullptr;
 		return KGL_ESOCKET_BROKEN;
 	}
-	KStringBuf host;
+	KStringStream host;
 	url->GetHost(host);
 	us->send_host(host.buf(), host.size());
 	if (us->IsMultiStream()) {
@@ -234,7 +234,7 @@ KGL_RESULT KWebDavClient::copy_move(const char* method, const char* src, const c
 	if (current_lock_token && current_lock_token->path == dst) {
 		rq->send_if_lock_token(current_lock_token, true);
 	}
-	KStringBuf s;
+	KStringStream s;
 	if (!url->GetSchema(s)) {
 		return KGL_ENOT_PREPARE;
 	}

@@ -228,7 +228,7 @@ public:
 	}
 	virtual bool get_self_addr(sockaddr_i* addr) = 0;
 	kgl_len_str_t* alloc_entity(const char* entity_value, int len) {
-		kgl_len_str_t* entity = (kgl_len_str_t*)kgl_pnalloc(pool, sizeof(kgl_len_str_t) + len + 1);
+		kgl_len_str_t* entity = (kgl_len_str_t*)kgl_pnalloc(pool, kgl_len_str_size(len));
 		entity->len = len;
 		kgl_memcpy(entity->data, entity_value, len);
 		entity->data[len] = '\0';

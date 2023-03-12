@@ -89,14 +89,14 @@ namespace khttpd {
 			}
 			return (*it).second.c_str();
 		}
-		const std::string get_character() const {
+		const KString get_character() const {
 			auto it = attributes.find(text_as_attribute_name);
 			if (it == attributes.end()) {
 				return KXmlAttribute::empty;
 			}
 			return (*it).second;
 		}
-		void set_text(const std::string& value) {
+		void set_text(const KString& value) {
 			auto result = attributes.emplace(text_as_attribute_name, value);
 			if (!result.second) {
 				(*(result.first)).second = value;
@@ -126,7 +126,7 @@ namespace khttpd {
 		KXmlAttribute attributes;
 		KXmlNodeBody* add(KXmlNode* xml, uint32_t index);
 		friend class KXmlNode;
-		static const std::string text_as_attribute_name;
+		static const KString text_as_attribute_name;
 	private:
 
 	};
@@ -250,10 +250,10 @@ namespace khttpd {
 			body->add(xml, index);
 			return true;
 		}
-		const std::string get_tag() const {
+		const KString get_tag() const {
 			return key.tag->data;
 		}
-		const std::string get_character() const {
+		const KString get_character() const {
 			auto body = get_first();
 			if (!body) {
 				return KXmlAttribute::empty;

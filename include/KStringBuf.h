@@ -27,6 +27,7 @@
 #include <string>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdexcept>
 #include <exception>
 #include "KStream.h"
 #include "kmalloc.h"
@@ -49,25 +50,80 @@ public:
 	KString(const char* str) {
 		s = kstring_from(str);
 	}
+	KString(const char* str,size_t len) {
+		s = kstring_from2(str, len);
+	}
 	KString(const std::string& a) : s{ 0 } {
 		assign(a.c_str(), a.size());
 	}
-	KString(kgl_ref_str_t* a) {
+	KString(const char a) {
+		s = kstring_from2(&a, 1);
+	}
+	KString(kgl_ref_str_t* a) noexcept {
 		s = a;
 	}
+	KString(const kgl_str_t& a) : s{ 0 } {
+		assign(a.data, a.len);
+	}
+	~KString() noexcept {
+		kstring_release(s);
+	}
+	void clear() {
+		kstring_release(s);
+		s = nullptr;
+	}
+	void swap(KString& a) noexcept {
+		auto address = a.s;
+		a.s = s;
+		s = address;
+	}
+	size_t find(const char* data, size_t len) const {
+		if (!s) {
+			return npos;
+		}
+		auto pos = kgl_memstr(s->data, s->len, data, len);
+		if (pos == nullptr) {
+			return npos;
+		}
+		return pos - s->data;
+	}
+	size_t find_last_of(char c) const {
+		if (!s) {
+			return npos;
+		}
+		auto pos = (char*)kgl_memrchr(s->data, c, s->len);
+		if (pos == nullptr) {
+			return npos;
+		}
+		return pos - s->data;
+	}
+	size_t find(char c) const {
+		if (!s) {
+			return npos;
+		}
+		auto pos = (char *)memchr(s->data, c, s->len);
+		if (pos == nullptr) {
+			return npos;
+		}
+		return pos - s->data;
+	}
 	explicit operator bool() const noexcept {
-		if (s && s->data) {
+		if (s) {
 			return true;
 		}
 		return false;
 	}
-	KString(const kgl_ref_str_t& a) : s{ 0 } {
-		if (a.len > 0) {
-			assign(a.data, a.len);
+	KString substr(size_t pos = 0, size_t count = npos) const {
+		if (!s) {
+			return KString();
 		}
-	}
-	~KString() {
-		kstring_release(s);
+		if (pos > s->len) {
+			throw std::out_of_range("pos is wrong");
+		}
+		if (count==npos || pos + count > s->len) {
+			return KString(s->data + pos);
+		}
+		return KString(s->data + pos, count);
 	}
 	bool empty() const {
 		return size() == 0;
@@ -88,6 +144,9 @@ public:
 		return *s;
 	}
 	kgl_ref_str_t* data() {
+		return s;
+	}
+	const kgl_ref_str_t* data() const {
 		return s;
 	}
 	KString& operator = (KString&& a) noexcept {
@@ -112,6 +171,26 @@ public:
 		assign(a, (uint32_t)strlen(a));
 		return *this;
 	}
+	KString operator + (const KString& a) const;
+	KString& operator += (const KString& a);
+	bool operator !=(const KString& a) const {
+		return !this->operator==(a);
+	}
+	bool operator==(const KString& a) const {
+		if (s == a.s) {
+			return true;
+		}
+		if (s && a.s) {
+			return kgl_cmp(s->data, s->len, a.s->data, a.s->len) == 0;
+		}
+		return false;
+	}
+	char operator[](size_t pos) const {
+		if (!s) {
+			return 0;
+		}
+		return s->data[pos];
+	}
 	bool operator< (const KString& a) const {
 		if (s && a.s) {
 			return kgl_cmp(s->data, s->len, a.s->data, a.s->len) < 0;
@@ -119,6 +198,7 @@ public:
 		return s == nullptr;
 	}
 	friend class KStringBuf;
+	static constexpr size_t npos = std::string::npos;
 private:
 	void assign(const char* str, size_t len) {
 		kstring_release(s);
@@ -131,11 +211,7 @@ class KStringBuf final : public KWStream
 {
 public:
 	KStringBuf(KStringBuf& s) = delete;
-	KStringBuf(uint32_t size) {
-		s = convert_refs_string(nullptr, 0);
-		if (!s) {
-			throw std::bad_alloc();
-		}
+	KStringBuf(uint32_t size) : s{ nullptr } {
 		assert((size & (size - 1)) == 0);
 		align_size = size;
 		if (align_size <= 0) {
@@ -148,12 +224,13 @@ public:
 	}
 	KStringBuf() : KStringBuf(32) {
 	}
-	~KStringBuf() {
+	~KStringBuf() noexcept {
 		kstring_release(s);
 	}
-	void clean() {
-		current_size += s->len;
-		s->len = 0;
+	void clear() {
+		kstring_release(s);
+		s = nullptr;
+		current_size = 0;
 	}
 	const char* c_str() {
 		if (!end_with_zero()) {
@@ -161,26 +238,36 @@ public:
 		}
 		return s->data;
 	}
+	/**
+	* return KString share memory with KStringBuf.
+	*  DO NOT use KStringBuf write data again. it will be change the data then affected the KString
+	*/
 	KString str() {
 		end_with_zero();
 		return KString(kstring_refs(s));
 	}
 	KString reset() {
-		end_with_zero();
-		auto ns = convert_refs_string(NULL, 0);
-		if (!ns) {
-			return KString();
-		}
-		auto s = this->s;
-		this->s = ns;
-		current_size = 0;
-		return KString(s);
+		auto s = str();
+		clear();
+		return s;
 	}
 	char* buf() const {
+		if (!s) {
+			return nullptr;
+		}
 		return s->data;
 	}
 	int size() const {
+		if (!s) {
+			return 0;
+		}
 		return (int)s->len;
+	}
+	bool empty() const override {
+		if (!s) {
+			return true;
+		}
+		return s->len == 0;
 	}
 	kgl_auto_cstr steal() {
 		if (!end_with_zero()) {
@@ -201,8 +288,14 @@ public:
 	}
 	friend class KString;
 	bool end_with_zero() {
-		if ((current_size > 16 || current_size == 0) && !realloc(s->len + 1)) {
-			return false;
+		if ((current_size > 16 || current_size == 0)) {
+			if (s) {
+				if (!realloc(s->len + 1)) {
+					return false;
+				}
+			} else if (!realloc(1)) {
+				return false;
+			}
 		}
 		s->data[s->len] = '\0';
 		return true;
@@ -210,7 +303,7 @@ public:
 private:
 	static constexpr int max_align_size = 2048;
 	bool append(const char* str, size_t len) {
-		if (!guarantee((uint32_t)len + 1)) {
+		if (!guarantee((uint32_t)len+1)) {
 			return false;
 		}
 		kgl_memcpy(s->data + s->len, str, len);
@@ -222,9 +315,23 @@ private:
 		if (current_size >= size) {
 			return true;
 		}
-		return realloc(s->len + size);
+		uint32_t new_size = size;
+		if (s!=nullptr) {
+			new_size += s->len;
+		}
+		new_size = kgl_align(new_size, align_size);
+		return realloc(new_size);
 	}
 	bool realloc(uint32_t new_size) {
+		if (!s) {
+			s = (kgl_ref_str_t*)malloc(sizeof(kgl_ref_str_t));
+			if (!s) {
+				return false;
+			}
+			s->ref = 1;
+			s->len = 0;
+			s->data = nullptr;
+		}
 		assert(new_size > s->len);
 		assert(s);
 		if (!kgl_realloc((void**)&s->data, new_size)) {
@@ -237,6 +344,7 @@ private:
 	uint32_t align_size;
 	kgl_ref_str_t* s;
 };
+using KStringStream = KStringBuf;
 class KFixString final : public KRStream
 {
 public:
@@ -259,6 +367,6 @@ private:
 	kgl_str_t s;
 };
 inline kgl_ref_str_t operator "" _CS(const char* str, size_t len) {
-	return kgl_ref_str_t{ (char*)str, (uint32_t)len, 1 };
+	return kgl_ref_str_t{ (char*)str, (uint32_t)len,1};
 }
 #endif /* KSTRING_H_ */

@@ -17,9 +17,9 @@
  */
 #ifndef KXmlEvent_h_1l2kj312312
 #define KXmlEvent_h_1l2kj312312
-#include <string>
 #include <map>
 #include "KXmlContext.h"
+#include "KStringBuf.h"
 #define CDATA_START	"<![CDATA["
 #define CDATA_END	"]]>"
 /*
@@ -29,7 +29,7 @@ class KXmlEvent {
 public:
 	virtual ~KXmlEvent() {
 	}
-	virtual void startXml(const std::string &encoding) {
+	virtual void startXml(const KString &encoding) {
 	}
 	virtual void endXml(bool success) {
 	}

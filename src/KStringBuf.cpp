@@ -100,3 +100,15 @@ KString::KString(KStringBuf&& s) noexcept {
 	s.s = nullptr;
 	s.current_size = 0;
 }
+KString& KString::operator += (const KString& a) {
+	KStringBuf t;
+	t << *this;
+	t << a;
+	return this->operator=(t.reset());
+}
+KString KString::operator + (const KString& a) const {
+	KStringBuf t;
+	t << *this;
+	t << a;
+	return t.str();
+}

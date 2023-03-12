@@ -23,15 +23,15 @@ bool KWebDavFileList::parse(khttpd::KXmlDocument& document,int strip_prefix)
 		if (href == nullptr) {
 			continue;
 		}
-		std::string path = href->get_text();
-		if (path.size() <= strip_prefix) {
+		KString path = href->get_text();
+		if ((int)path.size() <= strip_prefix) {
 			continue;
 		}
 		KWebDavFile* file = new KWebDavFile;
 		file->path = path.substr(strip_prefix);
 		size_t pos = file->path.size();
 		if (pos > 1) {
-			std::string tail = file->path.substr(pos - 1);
+			auto tail = file->path.substr(pos - 1);
 			if (tail == "/") {
 				//cut last char /
 				file->path = file->path.substr(0, pos - 1);
@@ -47,7 +47,7 @@ bool KWebDavFileList::parse(khttpd::KXmlDocument& document,int strip_prefix)
 			continue;
 		}
 		auto status = propstat->find_child("status");
-		if (status==nullptr || status->get_character().find_first_of(kgl_expand_string("200")) == std::string::npos) {
+		if (status==nullptr || status->get_character().find(_KS("200")) == std::string::npos) {
 			delete file;
 			continue;
 		}

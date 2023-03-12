@@ -64,7 +64,7 @@
 	kgl_header_connection,
 	kgl_header_unknow,
  */
-const std::string KXmlAttribute::empty;
+const KString KXmlAttribute::empty;
 
 kgl_header_string kgl_header_type_string[] = {
 	{ _KS("Host"),_KS("host"),_KS("\r\nHost: ")},

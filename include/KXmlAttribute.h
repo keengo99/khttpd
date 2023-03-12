@@ -3,8 +3,9 @@
 #include <map>
 #include <string>
 #include "KHttpLib.h"
+#include "KStringBuf.h"
 
-class KXmlAttribute : public std::map<std::string, std::string>
+class KXmlAttribute : public std::map<KString, KString>
 {
 public:
 	int64_t get_int64(const char* key, int64_t default_value = 0) const {
@@ -31,30 +32,30 @@ public:
 	const char* operator()(const char* key, const char* default_value = "") const {
 		return get_string(key, default_value);
 	}
-	const std::string &operator[](const char* key) const {
+	const KString &operator[](const char* key) const {
 		auto it = find(key);
 		if (it == end()) {
 			return empty;
 		}
 		return (*it).second;
 	}
-	const std::string &operator[](const std::string& key) const {
+	const KString &operator[](const KString& key) const {
 		auto it = find(key);
 		if (it == end()) {
 			return empty;
 		}
 		return (*it).second;
 	}
-	std::string remove(const std::string& key) {
+	KString remove(const KString& key) {
 		auto it = find(key);
 		if (it == end()) {
 			return empty;
 		}
-		std::string ret(std::move((*it).second));
+		KString ret(std::move((*it).second));
 		erase(it);
 		return ret;
 	}
-	static const std::string empty;
+	static const KString empty;
 private:
 };
 #endif

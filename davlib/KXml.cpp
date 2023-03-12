@@ -66,15 +66,15 @@ void buildAttribute(char* buf, KXmlAttribute& attribute) {
 			return;
 		}
 		int len;
-		//std::string value = KXml::htmlDecode(buf, len);
+		//KString value = KXml::htmlDecode(buf, len);
 		attribute.emplace(name, KXml::htmlDecode(buf, len));
 		buf = p;
 	}
 }
 
-std::string replace(const char* str, map<string, string>& replaceMap,
+KString replace(const char* str, map<KString, KString>& replaceMap,
 	const char* start, const char* end) {
-	stringstream s;
+	KStringBuf s;
 	if (str == NULL)
 		return "";
 	int startLen = 0;
@@ -237,11 +237,11 @@ char* KXml::htmlDecode(char* str, int& len) {
 	len = (int)(dst - str);
 	return str;
 }
-std::string KXml::param(const char* str) {
+KString KXml::param(const char* str) {
 	return encode(str);
 }
-std::string KXml::encode(const std::string &str) {
-	map<string, string> transfer;
+KString KXml::encode(const KString &str) {
+	map<KString, KString> transfer;
 	transfer["&"] = "&amp;";
 	transfer["'"] = "&#39;";
 	transfer["\""] = "&#34;";
@@ -249,8 +249,8 @@ std::string KXml::encode(const std::string &str) {
 	transfer["<"] = "&lt;";
 	return replace(str.c_str(), transfer);
 }
-std::string KXml::decode(const std::string &str) {
-	map<string, string> transfer;
+KString KXml::decode(const KString &str) {
+	map<KString, KString> transfer;
 	transfer["&#39;"] = "'";
 	transfer["&#34;"] = "\"";
 	transfer["&amp;"] = "&";
@@ -295,7 +295,7 @@ bool KXml::startParse(char* buf) {
 		*hot = 0;
 		KXmlAttribute attribute;
 		buildAttribute(buf, attribute);
-		encoding = attribute["encoding"];
+		encoding = attribute("encoding");
 		buf = hot + 2;
 	}
 	try {
@@ -322,7 +322,7 @@ bool KXml::parseString(const char* buf) {
 	return startParse(str);
 }
 bool KXml::internelParseString(char* buf) {
-	//std::map<std::string, std::string> attibute;
+	//std::map<KString, KString> attibute;
 	std::list<KXmlEvent*>::iterator it;
 	bool single = false;
 	KXmlContext* curContext = NULL;
@@ -492,7 +492,7 @@ bool KXml::internelParseString(char* buf) {
 	}
 	return true;
 }
-bool KXml::parseFile(std::string file) {
+bool KXml::parseFile(KString file) {
 	stringstream s;
 	bool result;
 	this->file = file.c_str();
@@ -530,7 +530,7 @@ KXmlContext* KXml::newContext(const char* qName) {
 	s.str().swap(context->path);
 	return context;
 }
-char* KXml::getContent(const std::string& file) {
+char* KXml::getContent(const KString& file) {
 	void* fp = KXml::fopen(file.c_str(), fileRead, 0);
 	if (fp == NULL) {
 		return NULL;

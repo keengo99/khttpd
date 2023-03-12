@@ -6,8 +6,8 @@
 class KWebDavFile
 {
 public:
-	std::string path;
-	std::string etag;
+	KString path;
+	KString etag;
 	bool is_directory;
 	int64_t content_length;
 };

@@ -84,21 +84,21 @@ public:
 		return host == NULL || path == NULL;
 	}
 	kgl_auto_cstr getUrl() {
-		KStringBuf s(128);
+		KStringStream s(128);
 		if (!GetUrl(s)) {
 			return NULL;
 		}
 		return s.steal();
 	}
 	kgl_auto_cstr getUrl2(int &len) {
-		KStringBuf s(128);
+		KStringStream s(128);
 		if (!GetUrl(s)) {
 			return NULL;
 		}
 		len = s.size();
 		return s.steal();
 	}
-	void GetPath(KStringBuf &s, bool urlEncode = false) {
+	void GetPath(KWStream&s, bool urlEncode = false) {
 		if (urlEncode) {
 			size_t len = strlen(path);
 			char *newPath = url_encode(path, len, &len);
@@ -124,7 +124,7 @@ public:
 			}
 		}
 	}
-	void GetHost(KStringBuf &s, uint16_t default_port)
+	void GetHost(KWStream&s, uint16_t default_port)
 	{
 		if (unlikely(KBIT_TEST(flags, KGL_URL_IPV6))) {
 			s << "[" << host << "]";
@@ -135,7 +135,7 @@ public:
 			s << ":" << port;
 		}
 	}
-	bool GetSchema(KStringBuf& s)
+	bool GetSchema(KWStream& s)
 	{
 		if (unlikely(host == NULL || path == NULL)) {
 			return false;
@@ -147,7 +147,7 @@ public:
 		}
 		return true;
 	}
-	bool GetUrl(KStringBuf &s,bool urlEncode=false) {
+	bool GetUrl(KWStream&s,bool urlEncode=false) {
 		if (!GetSchema(s)) {
 			return false;
 		}
@@ -155,7 +155,7 @@ public:
 		GetPath(s, urlEncode);
 		return true;
 	}
-	void GetHost(KStringBuf& s)
+	void GetHost(KWStream& s)
 	{
 		int default_port = 80;
 		if (KBIT_TEST(flags, KGL_URL_SSL)) {

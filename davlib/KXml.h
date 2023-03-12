@@ -68,7 +68,7 @@ public:
 		destroy();
 	}
 	KXmlContext* context;
-	std::map<std::string, std::string> attibute;
+	std::map<KString, KString> attibute;
 	char* character;
 	int len;
 	bool single;
@@ -98,11 +98,11 @@ public:
 	* encode,decode,param这三个函数过时。
 	* 请用效率更高的htmlEncode和htmlDecode
 	*/
-	static std::string encode(const std::string &str);
+	static KString encode(const KString &str);
 	//@deprecated
-	static std::string decode(const std::string &str);
+	static KString decode(const KString &str);
 	//@deprecated
-	static std::string param(const char* str);
+	static KString param(const char* str);
 
 	static char* htmlEncode(const char* str, int& len, char* buf);
 	static char* htmlDecode(char* str, int& len);
@@ -114,7 +114,7 @@ public:
 	/*
 	 * 开始解析文件
 	 */
-	bool parseFile(std::string file);
+	bool parseFile(KString file);
 	/*
 	 * 开始解析一个字符串
 	 */
@@ -138,11 +138,11 @@ private:
 	 * 从一个文件中读到字符串
 	 */
 	int getLine();
-	char* getContent(const std::string& file);
+	char* getContent(const KString& file);
 	/*
 	 * 得到标签上下文
 	 */
-	 //	void getContext(std::string &context);
+	 //	void getContext(KString &context);
 	KXmlContext* newContext(const char* qName);
 	/*
 	 * 标签上下文
@@ -156,7 +156,7 @@ private:
 	friend class KXmlContext;
 	bool internelParseString(char* buf);
 	void clear();
-	void startXml(const std::string& encoding) {
+	void startXml(const KString& encoding) {
 		std::list<KXmlEvent*>::iterator it;
 		for (it = events.begin(); it != events.end(); it++) {
 			(*it)->startXml(encoding);
@@ -169,7 +169,7 @@ private:
 		}
 	}
 
-	std::string encoding;
+	KString encoding;
 	int line;
 	const char* file;
 	char* hot;
@@ -178,5 +178,5 @@ private:
 };
 void buildAttribute(char* buf, KXmlAttribute& attribute);
 char* getString(char* str, char** nextstr, const char* ended_chars = NULL, bool end_no_quota_value = false, bool skip_slash = false);
-std::string replace(const char* buf, std::map<std::string, std::string>& replaceMap, const char* start = NULL, const char* end = NULL);
+KString replace(const char* buf, std::map<KString, KString>& replaceMap, const char* start = NULL, const char* end = NULL);
 #endif

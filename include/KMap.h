@@ -92,8 +92,9 @@ public:
 		assert(rbtree_is_empty(&tree));
 		clear();
 	}
+	template<typename KeyType>
 	static int cmp_func(const void* k1, const void* k2) {
-		return ((const Value*)k2)->cmp((const Key*)k1);
+		return ((const Value*)k2)->cmp((const KeyType*)k1);
 	}
 	inline bool empty() const {
 		return rbtree_is_empty(&tree);
@@ -103,13 +104,16 @@ public:
 			return iterator_remove_continue;
 			}, NULL);
 	}
-	inline KMapNode<Value>* find(const Key* key) const {
-		return (KMapNode<Value> *)rbtree_find(&tree, key, cmp_func);
+	template<typename KeyType = Key>
+	inline KMapNode<Value>* find(const KeyType* key) const {
+		return (KMapNode<Value> *)rbtree_find(&tree, key, cmp_func<KeyType>);
 	}
-	inline KMapNode<Value>* insert(const Key* key, int* new_flag) {
-		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func);
+	template<typename KeyType = Key>
+	inline KMapNode<Value>* insert(const KeyType* key, int* new_flag) {
+		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func<KeyType>);
 	}
-	inline Value *add(const Key* key, Value* value) {
+	template<typename KeyType = Key>
+	inline Value *add(const KeyType* key, Value* value) {
 		int new_flag;
 		auto it = insert(key, &new_flag);
 		if (!new_flag) {
@@ -144,7 +148,7 @@ public:
 	inline void erase(KMapNode<Value>* node) noexcept {
 		rbtree_remove(&tree, node);
 	}
-	void swap(KMap<Key, Value>* a) {
+	void swap(KMap<Key, Value>* a) noexcept {
 		struct krb_tree tmp;
 		memcpy(&tmp, &tree, sizeof(struct krb_tree));
 		memcpy(&tree, &a->tree, sizeof(struct krb_tree));

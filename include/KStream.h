@@ -28,6 +28,7 @@
 #include <string>
 #include <string.h>
 #include <stdlib.h>
+#include <new>
 #include "kforwin32.h"
 #include "kstring.h"
 #include "khttp.h"
@@ -114,6 +115,9 @@ public:
 	virtual KGL_RESULT write_end(KGL_RESULT result) {
 		return flush();
 	}
+	virtual bool empty() const {
+		return false;
+	}
 	virtual void release() {
 		delete this;
 	}
@@ -122,7 +126,7 @@ public:
 	KWStream& operator<< (const KStringBuf& a);
 	inline KWStream& operator <<(const char* str) {
 		if (KGL_OK != write_all(str, (int)strlen(str))) {
-			fprintf(stderr, "cann't write to stream 1\n");
+			throw std::bad_alloc();
 		}
 		return *this;
 	}
@@ -146,6 +150,10 @@ public:
 		write_all(str.c_str(), (int)str.size());
 		return *this;
 	}
+	inline KWStream& operator << (const kgl_str_t& str) {
+		write_all(str.data, (int)str.len);
+		return *this;
+	}
 	inline KWStream& operator <<(const kgl_ref_str_t& str) {
 		write_all(str.data, (int)str.len);
 		return *this;
@@ -161,7 +169,7 @@ public:
 			return *this;
 		}
 		if (KGL_OK != write_all(buf, len)) {
-			fprintf(stderr, "cann't write to stream 2\n");
+			throw std::bad_alloc();
 		}
 		return *this;
 	}
@@ -169,7 +177,15 @@ public:
 		char buf[INT2STRING_LEN];
 		int2string(value, buf, false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
-			fprintf(stderr, "cann't write to stream 3\n");
+			throw std::bad_alloc();
+		}
+		return *this;
+	}
+	inline KWStream& operator<<(uint64_t value) {
+		char buf[INT2STRING_LEN];
+		int2string((int64_t)value, buf, false);
+		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
+			throw std::bad_alloc();
 		}
 		return *this;
 	}
