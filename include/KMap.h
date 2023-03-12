@@ -104,15 +104,15 @@ public:
 			return iterator_remove_continue;
 			}, NULL);
 	}
-	template<typename KeyType = Key>
+	template <typename KeyType>
 	inline KMapNode<Value>* find(const KeyType* key) const {
 		return (KMapNode<Value> *)rbtree_find(&tree, key, cmp_func<KeyType>);
 	}
-	template<typename KeyType = Key>
+	template <typename KeyType>
 	inline KMapNode<Value>* insert(const KeyType* key, int* new_flag) {
 		return (KMapNode<Value> *)rbtree_insert(&tree, key, new_flag, cmp_func<KeyType>);
 	}
-	template<typename KeyType = Key>
+	template <typename KeyType>
 	inline Value *add(const KeyType* key, Value* value) {
 		int new_flag;
 		auto it = insert(key, &new_flag);
