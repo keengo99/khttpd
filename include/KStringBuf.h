@@ -50,7 +50,7 @@ public:
 	KString(const char* str) {
 		s = kstring_from(str);
 	}
-	KString(const char* str,size_t len) {
+	KString(const char* str, size_t len) {
 		s = kstring_from2(str, len);
 	}
 	KString(const std::string& a) : s{ 0 } {
@@ -101,17 +101,14 @@ public:
 		if (!s) {
 			return npos;
 		}
-		auto pos = (char *)memchr(s->data, c, s->len);
+		auto pos = (char*)memchr(s->data, c, s->len);
 		if (pos == nullptr) {
 			return npos;
 		}
 		return pos - s->data;
 	}
 	explicit operator bool() const noexcept {
-		if (s) {
-			return true;
-		}
-		return false;
+		return !empty();
 	}
 	KString substr(size_t pos = 0, size_t count = npos) const {
 		if (!s) {
@@ -120,15 +117,15 @@ public:
 		if (pos > s->len) {
 			throw std::out_of_range("pos is wrong");
 		}
-		if (count==npos || pos + count > s->len) {
+		if (count == npos || pos + count > s->len) {
 			return KString(s->data + pos);
 		}
 		return KString(s->data + pos, count);
 	}
-	bool empty() const {
+	bool empty() const noexcept {
 		return size() == 0;
 	}
-	uint32_t size() const {
+	uint32_t size() const noexcept {
 		if (s) {
 			return s->len;
 		}
@@ -303,7 +300,7 @@ public:
 private:
 	static constexpr int max_align_size = 2048;
 	bool append(const char* str, size_t len) {
-		if (!guarantee((uint32_t)len+1)) {
+		if (!guarantee((uint32_t)len + 1)) {
 			return false;
 		}
 		kgl_memcpy(s->data + s->len, str, len);
@@ -316,7 +313,7 @@ private:
 			return true;
 		}
 		uint32_t new_size = size;
-		if (s!=nullptr) {
+		if (s != nullptr) {
 			new_size += s->len;
 		}
 		new_size = kgl_align(new_size, align_size);
@@ -367,6 +364,6 @@ private:
 	kgl_str_t s;
 };
 inline kgl_ref_str_t operator "" _CS(const char* str, size_t len) {
-	return kgl_ref_str_t{ (char*)str, (uint32_t)len,1};
+	return kgl_ref_str_t{ (char*)str, (uint32_t)len,1 };
 }
 #endif /* KSTRING_H_ */
