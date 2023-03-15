@@ -1,5 +1,6 @@
 #ifndef KHTTPD_SHARED_OBJ_INCLUDE
 #define KHTTPD_SHARED_OBJ_INCLUDE
+#include <cstddef>
 #include <memory>
 template<class T>
 struct KSharedObjDeleter
@@ -13,7 +14,7 @@ class KSharedObj : public std::unique_ptr<T, KSharedObjDeleter<T>>
 {
 public:
     using unique_ptr = std::unique_ptr<T, KSharedObjDeleter<T>>;
-    constexpr KSharedObj(nullptr_t) noexcept : unique_ptr(nullptr) {
+    constexpr KSharedObj(std::nullptr_t) noexcept : unique_ptr(nullptr) {
     }
     explicit KSharedObj(T* a) : unique_ptr(a) {
     }
