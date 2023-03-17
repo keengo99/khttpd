@@ -27,9 +27,9 @@ public:
     KSharedObj(KSharedObj<DT>&& a) noexcept : unique_ptr(static_cast<T*>(a.release())) {
     }
     template<class DT>
-    KSharedObj(const KSharedObj<DT> &a) noexcept : unique_ptr(static_cast<T*>(a->add_ref())) {
+    KSharedObj(const KSharedObj<DT> &a) noexcept : unique_ptr(static_cast<T*>(a?a->add_ref():nullptr)) {
     }
-    KSharedObj(const KSharedObj& a) noexcept : unique_ptr(static_cast<T *>(a->add_ref())) {
+    KSharedObj(const KSharedObj& a) noexcept : unique_ptr(static_cast<T *>(a?a->add_ref():nullptr)) {
     }
     KSharedObj& operator=(const KSharedObj& a) {
         if (!a) {

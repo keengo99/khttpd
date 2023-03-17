@@ -62,6 +62,9 @@ public:
 	KString(kgl_ref_str_t* a) noexcept {
 		s = a;
 	}
+	KString(const kgl_ref_str_t* a) noexcept {
+		s = kstring_refs(a);
+	}
 	KString(const kgl_str_t& a) : s{ 0 } {
 		assign(a.data, a.len);
 	}
@@ -140,9 +143,6 @@ public:
 	const kgl_ref_str_t& str() const {
 		return *s;
 	}
-	kgl_ref_str_t* data() {
-		return s;
-	}
 	const kgl_ref_str_t* data() const {
 		return s;
 	}
@@ -171,16 +171,10 @@ public:
 	KString operator + (const KString& a) const;
 	KString& operator += (const KString& a);
 	bool operator !=(const KString& a) const {
-		return !this->operator==(a);
+		return cmp(a) != 0;
 	}
 	bool operator==(const KString& a) const {
-		if (s == a.s) {
-			return true;
-		}
-		if (s && a.s) {
-			return kgl_cmp(s->data, s->len, a.s->data, a.s->len) == 0;
-		}
-		return false;
+		return cmp(a) == 0;
 	}
 	char operator[](size_t pos) const {
 		if (!s) {
@@ -188,11 +182,11 @@ public:
 		}
 		return s->data[pos];
 	}
+	int cmp(const KString& a) const {
+		return kgl_string_cmp(s, a.s);
+	}
 	bool operator< (const KString& a) const {
-		if (s && a.s) {
-			return kgl_cmp(s->data, s->len, a.s->data, a.s->len) < 0;
-		}
-		return s == nullptr;
+		return cmp(a) < 0;
 	}
 	friend class KStringBuf;
 	static constexpr size_t npos = std::string::npos;

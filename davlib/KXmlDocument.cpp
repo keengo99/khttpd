@@ -260,10 +260,10 @@ namespace khttpd {
 		return node;
 	}
 
-	KXmlNode* KXmlNodeBody::find_child(const std::string& tag) const {
+	KXmlNode* KXmlNodeBody::find_child(const KString& tag) const {
 		size_t pos = tag.find('/');
-		std::string child_tag;
-		if (pos != std::string::npos) {
+		KString child_tag;
+		if (pos != KString::npos) {
 			child_tag = tag.substr(0, pos);
 		} else {
 			child_tag = tag;
@@ -273,7 +273,7 @@ namespace khttpd {
 		if (!it) {
 			return nullptr;
 		}
-		if (pos != std::string::npos) {
+		if (pos != KString::npos) {
 			return it->value()->find_child(tag.substr(pos + 1));
 		}
 		return it->value();

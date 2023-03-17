@@ -42,16 +42,9 @@ namespace khttpd {
 			ref = 1;
 			tag_id = 0;
 		}
-		void set_tag(const std::string& tag) {
-			assert(this->tag == nullptr);
-			this->tag = kstring_from2(tag.c_str(), tag.size());
-		}
 		~KXmlKey() {
 			kstring_release(tag);
 			kstring_release(vary);
-		}
-		bool is_wide() const {
-			return *(tag->data) == '*';
 		}
 		int cmp(const kgl_ref_str_t* key) const {
 			return kgl_cmp(tag->data, tag->len, key->data, key->len);
@@ -89,7 +82,7 @@ namespace khttpd {
 			}
 			return (*it).second.c_str();
 		}
-		const KString get_character() const {
+		KString get_character() const {
 			auto it = attributes.find(text_as_attribute_name);
 			if (it == attributes.end()) {
 				return KXmlAttribute::empty;
@@ -102,7 +95,7 @@ namespace khttpd {
 				(*(result.first)).second = value;
 			}
 		}
-		KXmlNode* find_child(KXmlKey* a) const {
+		KXmlNode* find_child(const KXmlKey* a) const {
 			auto it = childs.find(a);
 			if (!it) {
 				return nullptr;
@@ -116,7 +109,7 @@ namespace khttpd {
 			return attributes;
 		}
 		void copy_child_from(const KXmlNodeBody* node);
-		KXmlNode* find_child(const std::string& tag) const;
+		KXmlNode* find_child(const KString& tag) const;
 		void clear() {
 			childs.clear();
 			attributes.clear();
@@ -172,7 +165,7 @@ namespace khttpd {
 		bool is_tag(const char* tag, size_t len) const {
 			return kgl_cmp(key.tag->data, key.tag->len, tag, len) == 0;
 		}
-		KXmlNode* find_child(const std::string& tag) const {
+		KXmlNode* find_child(const KString& tag) const {
 			auto body = get_first();
 			if (!body) {
 				return nullptr;
@@ -250,10 +243,10 @@ namespace khttpd {
 			body->add(xml, index);
 			return true;
 		}
-		const KString get_tag() const {
-			return key.tag->data;
+		KString get_tag() const {
+			return KString(kstring_refs(key.tag));
 		}
-		const KString get_character() const {
+		KString get_character() const {
 			auto body = get_first();
 			if (!body) {
 				return KXmlAttribute::empty;
