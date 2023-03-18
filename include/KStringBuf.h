@@ -65,6 +65,9 @@ public:
 	KString(const kgl_ref_str_t* a) noexcept {
 		s = kstring_refs(a);
 	}
+	KString(const kgl_ref_str_t& a) : s{ 0 } {
+		assign(a.data, a.len);
+	}
 	KString(const kgl_str_t& a) : s{ 0 } {
 		assign(a.data, a.len);
 	}

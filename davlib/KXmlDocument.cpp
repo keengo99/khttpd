@@ -5,8 +5,7 @@
 #include "KXmlDocument.h"
 using namespace std;
 namespace khttpd {
-	const KString KXmlNodeBody::text_as_attribute_name("_");
-
+	const KString KXmlNodeBody::text_as_attribute_name(internal_xml_attribute);
 	KXmlDocument::KXmlDocument(bool skip_ns) {
 		this->skip_ns = skip_ns;
 	}
@@ -171,7 +170,7 @@ namespace khttpd {
 		*body = xml_body;
 		return true;
 	}
-	KXmlNodeBody *KXmlNodeBody::add(KXmlNode* xml, uint32_t index) {
+	KXmlNodeBody* KXmlNodeBody::add(KXmlNode* xml, uint32_t index) {
 		int new_flag;
 		auto it = childs.insert(&xml->key, &new_flag);
 		if (new_flag) {
@@ -197,6 +196,10 @@ namespace khttpd {
 		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
 			if ((*it).first == text_as_attribute_name) {
 				text = &(*it).second;
+				continue;
+			}
+			if ((*it).first[0] == internal_xml_attribute) {
+				//skip
 				continue;
 			}
 			out->write_all(_KS(" "));

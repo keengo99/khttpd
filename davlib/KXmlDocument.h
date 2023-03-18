@@ -15,6 +15,7 @@
 #include "KSharedObj.h"
 
 namespace khttpd {
+	constexpr char internal_xml_attribute = '_';
 	class KXmlKey
 	{
 	public:
