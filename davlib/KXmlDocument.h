@@ -120,7 +120,7 @@ namespace khttpd {
 			childs.clear();
 			attributes.clear();
 		}
-		bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs, bool create_flag);
+		bool update(KXmlKey* key, uint32_t index, KXmlNode* xml, bool copy_childs=true, bool create_flag=false);
 		KMap<KXmlKey, KXmlNode> childs;
 		KXmlAttribute attributes;
 		KXmlNodeBody* add(KXmlNode* xml, uint32_t index);
