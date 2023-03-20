@@ -139,6 +139,7 @@ public:
 	KMapIterator<Value> end() const {
 		return KMapIterator<Value>(nullptr);
 	}
+	KMap& operator=(const KMap& a) = delete;
 	inline KMapNode<Value>* first() const {
 		return (KMapNode<Value> *)rb_first(&tree.root);
 	}

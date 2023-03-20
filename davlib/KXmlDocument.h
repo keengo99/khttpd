@@ -16,12 +16,25 @@
 
 namespace khttpd {
 	constexpr char internal_xml_attribute = '_';
-	class KXmlKey
+	class KXmlKeyTag
 	{
 	public:
-		KXmlKey(const char* tag, size_t size, uint32_t tag_id = 0) {
-			ref = 1;
+		KXmlKeyTag(kgl_ref_str_t* tag, uint32_t tag_id) {
+			this->tag = tag;
 			this->tag_id = tag_id;
+			ref = 1;
+		}
+		~KXmlKeyTag() {
+			kstring_release(tag);
+		}
+		kgl_ref_str_t* tag;
+		uint32_t tag_id;
+		volatile uint32_t ref;
+	};
+	class KXmlKey : public KXmlKeyTag
+	{
+	public:
+		KXmlKey(const char* tag, size_t size, uint32_t tag_id = 0) : KXmlKeyTag(nullptr,tag_id){
 			const char* p = (char*)memchr(tag, '@', size);
 			if (!p) {
 				this->tag = kstring_from2(tag, size);
@@ -31,20 +44,13 @@ namespace khttpd {
 			this->tag = kstring_from2(tag, p - tag);
 			this->vary = kstring_from2(p + 1, size - this->tag->len - 1);
 		}
-		KXmlKey(kgl_ref_str_t* tag, kgl_ref_str_t* vary, uint32_t tag_id = 0) {
-			this->tag = tag;
+		KXmlKey(kgl_ref_str_t* tag, kgl_ref_str_t* vary, uint32_t tag_id = 0) : KXmlKeyTag(tag,tag_id){
 			this->vary = vary;
-			this->tag_id = tag_id;
-			ref = 1;
 		}
-		KXmlKey() {
-			tag = nullptr;
+		KXmlKey() : KXmlKeyTag(nullptr,0){
 			vary = nullptr;
-			ref = 1;
-			tag_id = 0;
 		}
 		~KXmlKey() {
-			kstring_release(tag);
 			kstring_release(vary);
 		}
 		int cmp(const kgl_ref_str_t* key) const {
@@ -57,10 +63,7 @@ namespace khttpd {
 			}
 			return kgl_string_cmp(vary, a->vary);
 		}
-		kgl_ref_str_t* tag;
 		kgl_ref_str_t* vary;
-		uint32_t tag_id;
-		volatile uint32_t ref;
 	};
 	class KXmlNode;
 	using KSafeXmlNode = KSharedObj<KXmlNode>;
@@ -71,6 +74,7 @@ namespace khttpd {
 		}
 		KXmlNodeBody(const KXmlNodeBody& a) = delete;
 		~KXmlNodeBody();
+		void clone_to(KXmlNodeBody* body) const;
 		KXmlNodeBody* clone() const;
 		KGL_RESULT write(KWStream* out, int level) const;
 		bool is_same(KXmlNodeBody* node) const {
@@ -110,6 +114,7 @@ namespace khttpd {
 			return attributes;
 		}
 		void copy_child_from(const KXmlNodeBody* node);
+		KMapNode<KXmlNode>* find_any_child(const KXmlKeyTag *tag) const;
 		KXmlNode* find_child(const KString& tag) const;
 		void clear() {
 			childs.clear();
@@ -151,6 +156,16 @@ namespace khttpd {
 		}
 		KXmlNode(KXmlKey* name) : key(kstring_refs(name->tag), kstring_refs(name->vary), name->tag_id), body(new KXmlNodeBody) {
 		}
+		int cmp(const KXmlKeyTag* a) const {
+			int result = (int)a->tag_id - (int)key.tag_id;
+			if (result != 0) {
+				return result;
+			}
+			if (key.tag_id != 0) {
+				return 0;
+			}
+			return key.cmp(a->tag);
+		}
 		int cmp(const KXmlKey* a)  const {
 			int result = (int)a->tag_id - (int)key.tag_id;
 			if (result != 0) {
@@ -162,9 +177,18 @@ namespace khttpd {
 			}
 			return key.cmp(a);
 		}
-
+		bool is_tag(const kgl_ref_str_t& tag) const {
+			return kgl_cmp(key.tag->data, key.tag->len, tag.data, tag.len) == 0;
+		}
 		bool is_tag(const char* tag, size_t len) const {
 			return kgl_cmp(key.tag->data, key.tag->len, tag, len) == 0;
+		}
+		KMapNode<KXmlNode>* find_any_child(const KXmlKeyTag *tag) const {
+			auto body = get_first();
+			if (!body) {
+				return nullptr;
+			}
+			return body->find_any_child(tag);
 		}
 		KXmlNode* find_child(const KString& tag) const {
 			auto body = get_first();

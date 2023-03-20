@@ -254,15 +254,20 @@ namespace khttpd {
 		}
 		return KGL_OK;
 	}
+	void KXmlNodeBody::clone_to(KXmlNodeBody* body) const {
+		body->attributes = attributes;
+		for (auto child : childs) {
+			body->add(child->clone().get(), last_pos);
+		}
+	}
 	KXmlNodeBody* KXmlNodeBody::clone() const {
 		KXmlNodeBody* node = new KXmlNodeBody;
-		node->attributes = attributes;
-		for (auto child : childs) {
-			node->add(child->clone().get(), last_pos);
-		}
+		clone_to(node);
 		return node;
 	}
-
+	KMapNode<KXmlNode>* KXmlNodeBody::find_any_child(const KXmlKeyTag *tag) const {
+		return childs.find<KXmlKeyTag>(tag);
+	}
 	KXmlNode* KXmlNodeBody::find_child(const KString& tag) const {
 		size_t pos = tag.find('/');
 		KString child_tag;

@@ -166,7 +166,7 @@ inline int kgl_parse_value_int(const char* val, int val_len, int* value) {
 	return 0;
 }
 bool kgl_adjust_range(kgl_request_range* range, int64_t* len);
-inline int kgl_string_cmp(kgl_ref_str_t* a, kgl_ref_str_t* b) {
+inline int kgl_string_cmp(const kgl_ref_str_t* a, const kgl_ref_str_t* b) {
 	if (!a) {
 		if (!b) {
 			return 0;
