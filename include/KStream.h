@@ -173,22 +173,6 @@ public:
 		}
 		return *this;
 	}
-	inline KWStream& operator <<(int64_t value) {
-		char buf[INT2STRING_LEN];
-		int2string(value, buf, false);
-		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
-			throw std::bad_alloc();
-		}
-		return *this;
-	}
-	inline KWStream& operator<<(uint64_t value) {
-		char buf[INT2STRING_LEN];
-		int2string((int64_t)value, buf, false);
-		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
-			throw std::bad_alloc();
-		}
-		return *this;
-	}
 	inline bool add_as_hex64(int64_t value) {
 		return add(value, INT64_FORMAT_HEX);
 	}
@@ -208,12 +192,30 @@ public:
 		return *this;
 	}
 	inline KWStream& operator << (unsigned long value) {
-		return this->operator << ((uint64_t)value);
+		return this->add_i64((int64_t)value);
+	}
+	inline KWStream& operator << (unsigned long long value) {
+		return this->add_i64((int64_t)value);
 	}
 	inline KWStream& operator << (long value) {
-		return this->operator << ((int64_t)value);
+		return this->add_i64((int64_t)value);
+	}
+	inline KWStream& operator << (long long value) {
+		return this->add_i64((int64_t)value);
+	}
+	inline KWStream& operator << (const void *value) {
+		this->add_as_hex64((int64_t)value);
+		return *this;
 	}
 protected:
+	KWStream& add_i64(int64_t value) {
+		char buf[INT2STRING_LEN];
+		int2string(value, buf, false);
+		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
+			throw std::bad_alloc();
+		}
+		return *this;
+	}
 	virtual int write(const char* buf, int len) {
 		return -1;
 	}
