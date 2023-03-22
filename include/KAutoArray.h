@@ -68,10 +68,10 @@ namespace khttpd {
 				}
 			}
 		}
-		iterator begin() {
+		iterator begin() const {
 			return iterator(*this, 0);
 		}
-		iterator end() {
+		iterator end() const {
 			return iterator(*this, this->size());
 		}
 		KAutoArray<T>& operator=(KAutoArray<T>& a) = delete;
@@ -179,7 +179,7 @@ namespace khttpd {
 			}
 			}
 		}
-		uint32_t size() {
+		uint32_t size() const {
 			return count;
 		}
 		void insert(T* body, uint32_t index) {
