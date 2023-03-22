@@ -173,16 +173,14 @@ public:
 		}
 		return *this;
 	}
-	template <typename T>
-	inline KWStream& operator <<(T value) {
+	inline KWStream& operator <<(int64_t value) {
 		char buf[INT2STRING_LEN];
-		int2string((int64_t)value, buf, false);
+		int2string(value, buf, false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
 			throw std::bad_alloc();
 		}
 		return *this;
 	}
-#if 0
 	inline KWStream& operator<<(uint64_t value) {
 		char buf[INT2STRING_LEN];
 		int2string((int64_t)value, buf, false);
@@ -191,13 +189,6 @@ public:
 		}
 		return *this;
 	}
-	inline KWStream& operator<<(size_t value) {
-		return this->operator << ((uint64_t)value);
-	}
-	inline KWStream& operator<<(time_t value) {
-		return this->operator << ((uint64_t)value);
-	}
-#endif
 	inline bool add_as_hex64(int64_t value) {
 		return add(value, INT64_FORMAT_HEX);
 	}
@@ -215,6 +206,12 @@ public:
 			fprintf(stderr, "cann't write to stream 4\n");
 		}
 		return *this;
+	}
+	inline KWStream& operator << (unsigned long value) {
+		return this->operator << ((uint64_t)value);
+	}
+	inline KWStream& operator << (long value) {
+		return this->operator << ((int64_t)value);
 	}
 protected:
 	virtual int write(const char* buf, int len) {
