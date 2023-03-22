@@ -173,7 +173,7 @@ public:
 		}
 		return *this;
 	}
-	inline KWStream& operator <<(INT64 value) {
+	inline KWStream& operator <<(int64_t value) {
 		char buf[INT2STRING_LEN];
 		int2string(value, buf, false);
 		if (KGL_OK != write_all(buf, (int)strlen(buf))) {
@@ -188,6 +188,12 @@ public:
 			throw std::bad_alloc();
 		}
 		return *this;
+	}
+	inline KWStream& operator<<(size_t value) {
+		return this->operator << ((uint64_t)value);
+	}
+	inline KWStream& operator<<(time_t value) {
+		return this->operator << ((uint64_t)value);
 	}
 	inline bool add_as_hex64(int64_t value) {
 		return add(value, INT64_FORMAT_HEX);
