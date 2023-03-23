@@ -149,11 +149,11 @@ public:
 	inline void erase(KMapNode<Value>* node) noexcept {
 		rbtree_remove(&tree, node);
 	}
-	void swap(KMap<Key, Value>* a) noexcept {
+	void swap(KMap<Key, Value>& a) noexcept {
 		struct krb_tree tmp;
 		memcpy(&tmp, &tree, sizeof(struct krb_tree));
-		memcpy(&tree, &a->tree, sizeof(struct krb_tree));
-		memcpy(&a->tree, &tmp, sizeof(struct krb_tree));
+		memcpy(&tree, &a.tree, sizeof(struct krb_tree));
+		memcpy(&a.tree, &tmp, sizeof(struct krb_tree));
 	}
 private:
 	struct krb_tree tree;
