@@ -179,6 +179,19 @@ inline int kgl_string_cmp(const kgl_ref_str_t* a, const kgl_ref_str_t* b) {
 	}
 	return kgl_cmp(a->data, a->len, b->data, b->len);
 }
+inline int kgl_string_case_cmp(const kgl_ref_str_t* a, const kgl_ref_str_t* b) {
+	if (!a) {
+		if (!b) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+	if (!b) {
+		return -1;
+	}
+	return kgl_icmp(a->data, a->len, b->data, b->len);
+}
 inline void* kgl_memrchr(const void* s, int c, size_t n) 	{
 	if (n == 0) {
 		return NULL;

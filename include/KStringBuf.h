@@ -363,4 +363,10 @@ private:
 inline kgl_ref_str_t operator "" _CS(const char* str, size_t len) {
 	return kgl_ref_str_t{ (char*)str, (uint32_t)len,1 };
 }
+struct kstring_lessf
+{
+	bool operator()(const KString& __x, const KString& __y) const {
+		return filecmp(__x.c_str(), __y.c_str()) < 0;
+	}
+};
 #endif /* KSTRING_H_ */

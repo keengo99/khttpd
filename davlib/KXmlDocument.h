@@ -27,6 +27,9 @@ namespace khttpd {
 		~KXmlKeyTag() {
 			kstring_release(tag);
 		}
+		bool is_vary_icase() const {
+			return tag_id & 1;
+		}
 		kgl_ref_str_t* tag;
 		uint32_t tag_id;
 		volatile uint32_t ref;
@@ -60,6 +63,9 @@ namespace khttpd {
 			int ret = cmp(a->tag);
 			if (ret != 0) {
 				return ret;
+			}
+			if (is_vary_icase()) {
+				return kgl_string_case_cmp(vary, a->vary);
 			}
 			return kgl_string_cmp(vary, a->vary);
 		}
