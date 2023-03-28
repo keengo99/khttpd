@@ -249,7 +249,7 @@ KUpstream* KSockPoolHelper::get_upstream(uint32_t flags, const char* sni_host) {
 	bind(socket);
 	return socket;
 }
-bool KSockPoolHelper::setHostPort(std::string host, int port, const char* s) {
+bool KSockPoolHelper::setHostPort(KString host, int port, const char* s) {
 	bool destChanged = false;
 	lock.Lock();
 	if (s && *s == 'h') {
@@ -355,7 +355,7 @@ bool KSockPoolHelper::setHostPort(std::string host, int port, const char* s) {
 	}
 	return true;
 }
-bool KSockPoolHelper::setHostPort(std::string host, const char* port) {
+bool KSockPoolHelper::setHostPort(KString host, const char* port) {
 	const char* s = port;
 	while (*s && IS_DIGIT(*s)) {
 		s++;
@@ -393,11 +393,11 @@ bool KSockPoolHelper::parse(const KXmlAttribute& attr) {
 	sign = (attr["sign"] == "1");
 	weight = atoi(attr["weight"].c_str());
 	lock.Unlock();
-	setIp(attr["self_ip"].c_str());	
+	setIp(attr["self_ip"].c_str());
 	return true;
 }
-std::string KSockPoolHelper::get_port() {
-	std::stringstream s;
+KString KSockPoolHelper::get_port() {
+	KStringBuf s;
 	if (is_unix) {
 		s << "-";
 		return s.str();
@@ -413,7 +413,7 @@ std::string KSockPoolHelper::get_port() {
 	}
 	return s.str();
 }
-void KSockPoolHelper::build(std::map<std::string, std::string>& attr) {
+void KSockPoolHelper::build(std::map<KString, KString>& attr) {
 	kgl_refs_string* str = GetParam();
 	lock.Lock();
 	attr["host"] = host;
@@ -447,8 +447,8 @@ KHttpHeader* KSockPoolHelper::get_proxy_header(kgl_pool_t* pool) {
 		KStringBuf up;
 		KStringBuf val;
 		up << auth_user.c_str() << ":" << auth_passwd.c_str();
-		val << "Basic " << b64encode((const unsigned char*)up.getString(), up.getSize());
-		header = new_pool_http_header(pool, _KS("Proxy-Authorization"), val.getBuf(), val.getSize());
+		val << "Basic " << b64encode((const unsigned char*)up.c_str(), up.size());
+		header = new_pool_http_header(_KS("Proxy-Authorization"), val.buf(), val.size(), (kgl_malloc)kgl_pnalloc, pool);
 	}
 	lock.Unlock();
 	return header;

@@ -79,11 +79,11 @@ public:
 	}
 	void shutdown() override;
 	bool parse(const KXmlAttribute& attr);
-	void build(std::map<std::string, std::string>& attr);
+	void build(std::map<KString, KString>& attr);
 	KUpstream* get_upstream(uint32_t flags, const char* sni_host = NULL);
-	std::string get_port();
-	bool setHostPort(std::string host, const char* port);
-	bool setHostPort(std::string host, int port, const char* s);
+	KString get_port();
+	bool setHostPort(KString host, const char* port);
+	bool setHostPort(KString host, int port, const char* s);
 	void disable();
 	void enable();
 	bool is_enabled();
@@ -103,10 +103,10 @@ public:
 	}
 #ifdef HTTP_PROXY
 	KHttpHeader* get_proxy_header(kgl_pool_t* pool) override;
-	std::string auth_user;
-	std::string auth_passwd;
+	KString auth_user;
+	KString auth_passwd;
 #endif
-	std::string host;
+	KString host;
 	volatile uint64_t total_hit = 0;
 	volatile uint64_t total_error = 0;
 	volatile uint64_t total_connect = 0;
@@ -127,7 +127,7 @@ public:
 	bool need_verify() {
 		return ssl == "S";
 	}
-	std::string ssl;
+	KString ssl;
 #endif
 	void stopMonitor() {
 		lock.Lock();
