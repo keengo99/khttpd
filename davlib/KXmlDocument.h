@@ -86,7 +86,14 @@ namespace khttpd {
 		bool is_same(KXmlNodeBody* node) const {
 			return attributes == node->attributes;
 		}
-		const char* get_text(const char* default_text = "") const {
+		KString get_text() const {
+			auto it = attributes.find(text_as_attribute_name);
+			if (it == attributes.end()) {
+				return KXmlAttribute::empty;
+			}
+			return (*it).second;
+		}
+		const char* get_text_cstr(const char* default_text = "") const {
 			auto it = attributes.find(text_as_attribute_name);
 			if (it == attributes.end()) {
 				return default_text;
@@ -284,12 +291,12 @@ namespace khttpd {
 			}
 			return body->get_character();
 		}
-		const char* get_text() const {
+		const char* get_text_cstr() const {
 			auto body = get_first();
 			if (!body) {
 				return "";
 			}
-			return body->get_text("");
+			return body->get_text_cstr("");
 		}
 		KXmlAttribute& attributes() const {
 			return get_first()->attributes;

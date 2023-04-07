@@ -23,7 +23,7 @@ bool KWebDavFileList::parse(khttpd::KXmlDocument& document,int strip_prefix)
 		if (href == nullptr) {
 			continue;
 		}
-		KString path = href->get_text();
+		KString path = href->get_text_cstr();
 		if ((int)path.size() <= strip_prefix) {
 			continue;
 		}
