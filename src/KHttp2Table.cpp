@@ -71,7 +71,14 @@ static kgl_http_v2_header_t  kgl_http_v2_static_table[] = {
 #define KGL_HTTP_V2_STATIC_TABLE_ENTRIES                                      \
     (sizeof(kgl_http_v2_static_table)                                         \
      / sizeof(kgl_http_v2_header_t))
-
+u_char kgl_find_http2_static_table(const kgl_str_t* name) {
+	for (int i = 0; i < KGL_HTTP_V2_STATIC_TABLE_ENTRIES; ++i) {
+		if (strcasecmp(name->data, kgl_http_v2_static_table[i].name.data) == 0) {
+			return i + 1;
+		}
+	}
+	return 0;
+}
 bool KHttp2::get_indexed_header(uintptr_t index, bool name_only)
 {
 	u_char                *p;

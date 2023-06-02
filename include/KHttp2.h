@@ -82,6 +82,10 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 #define KGL_HTTP_V2_ENCODE_RAW            0
 #define KGL_HTTP_V2_ENCODE_HUFF           0x80
 
+#define KGL_HTTP_V2_METHOD_INDEX          2
+#define KGL_HTTP_V2_METHOD_GET_INDEX      2
+#define KGL_HTTP_V2_METHOD_POST_INDEX     3
+
 #define KGL_HTTP_V2_STATUS_INDEX          8
 #define KGL_HTTP_V2_STATUS_200_INDEX      8
 #define KGL_HTTP_V2_STATUS_204_INDEX      9
@@ -91,6 +95,8 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 #define KGL_HTTP_V2_STATUS_404_INDEX      13
 #define KGL_HTTP_V2_STATUS_500_INDEX      14
 
+#define KGL_HTTP_V2_COOKIE_INDEX          32
+/*
 #define KGL_HTTP_V2_CONTENT_LENGTH_INDEX  28
 #define KGL_HTTP_V2_CONTENT_TYPE_INDEX    31
 #define KGL_HTTP_V2_DATE_INDEX            33
@@ -98,7 +104,7 @@ bool kgl_http_v2_huff_decode(u_char* state, u_char* src, size_t len, u_char** ds
 #define KGL_HTTP_V2_LOCATION_INDEX        46
 #define KGL_HTTP_V2_SERVER_INDEX          54
 #define KGL_HTTP_V2_VARY_INDEX            59
-
+*/
 
 /* errors */
 #define KGL_HTTP_V2_NO_ERROR                     0x0
@@ -199,6 +205,7 @@ class KHttp2;
 class KHttp2Sink;
 class KHttp2Upstream;
 bool test_http2();
+u_char kgl_find_http2_static_table(const kgl_str_t *name);
 typedef int (*http2_header_parser_pt)(KHttp2Context* ctx, kgl_str_t* name, kgl_str_t* value);
 typedef int (*http2_accept_handler_pt)(KHttp2Context* ctx);
 typedef u_char* (KHttp2::* kgl_http_v2_handler_pt) (u_char* pos, u_char* end);

@@ -39,6 +39,9 @@ public:
 	{
 		return http2->add_status(ctx, status_code);
 	}
+	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override {
+		return http2->add_header(ctx, know_header, val, (hlen_t)val_len);
+	}
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override
 	{
 		return http2->add_header(ctx, name, name_len, val, val_len);

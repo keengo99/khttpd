@@ -124,7 +124,6 @@ typedef enum _kgl_header_type
 	kgl_header_host,
 	kgl_header_accept_encoding,
 	kgl_header_range,
-
 	kgl_header_server,
 	kgl_header_date,
 	kgl_header_content_length,
@@ -152,6 +151,8 @@ typedef enum _kgl_header_type
 	kgl_header_if_none_match,
 	kgl_header_if_match,
 	kgl_header_if_unmodified_since,
+	kgl_header_cookie,
+	kgl_header_scheme,
 	kgl_header_unknow
 } kgl_header_type;
 

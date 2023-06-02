@@ -736,7 +736,7 @@ kev_result KHttp2::NextWrite(int got) {
 	}
 	return try_write();
 }
-kev_result KHttp2::try_write() 	{
+kev_result KHttp2::try_write() {
 	assert(write_processing == 1);
 	if (write_buffer.getBufferSize() > 0) {
 		if (write_buffer.is_sendfile()) {
@@ -756,7 +756,7 @@ kev_result KHttp2::on_write_result(void* arg, int got) {
 	}
 	http2_buff* remove_list = write_buffer.readSuccess(c->st.fd, got);
 	KHttp2WriteBuffer::remove_buff(remove_list, false);
-	
+
 	return try_write();
 }
 kev_result KHttp2::start_read() {
@@ -1104,9 +1104,26 @@ bool KHttp2::add_method(KHttp2Context* ctx, u_char meth) {
 	if (ctx->send_header == NULL) {
 		ctx->send_header = new KHttp2HeaderFrame;
 	}
-	auto method = KHttpKeyValue::get_method(meth);
-	add_header(ctx, kgl_expand_string(":method"), method->data, (hlen_t)method->len);
-	return true;
+	switch (meth) {
+	case METH_GET:
+		ctx->send_header->write(kgl_http_v2_indexed(KGL_HTTP_V2_METHOD_GET_INDEX));
+		return true;
+	case METH_POST:
+		ctx->send_header->write(kgl_http_v2_indexed(KGL_HTTP_V2_METHOD_POST_INDEX));
+		return true;
+	default:
+	{
+		ctx->send_header->write(kgl_http_v2_inc_indexed(KGL_HTTP_V2_METHOD_INDEX));
+		auto method = KHttpKeyValue::get_method(meth);
+		ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), method->len);
+		ctx->send_header->write(method->data, (hlen_t)method->len);
+		return true;
+	}
+	}
+	//
+	//return add_header(ctx,kgl_header_method)
+	//add_header(ctx, kgl_expand_string(":method"), method->data, (hlen_t)method->len);
+	//return true;
 }
 bool KHttp2::add_status(KHttp2Context* ctx, uint16_t status_code) {
 	u_char  status;
@@ -1152,12 +1169,28 @@ bool KHttp2::add_status(KHttp2Context* ctx, uint16_t status_code) {
 	return true;
 }
 bool KHttp2::add_header(KHttp2Context* ctx, kgl_header_type name, const char* val, hlen_t val_len) {
-	return add_header(ctx, kgl_header_type_string[name].low_case.data, (hlen_t)kgl_header_type_string[name].low_case.len, val, val_len);
+	if (ctx->send_header == NULL) {
+		ctx->send_header = new KHttp2HeaderFrame;
+	}
+	if (name == kgl_header_cookie) {
+		return add_header_cookie(ctx, val, val_len);
+	}
+	if (kgl_header_type_string[name].http2_index == 0) {
+		ctx->send_header->write(0);/* not indexed */
+		ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), kgl_header_type_string[name].low_case.len);
+		ctx->send_header->write(kgl_header_type_string[name].low_case.data, (int)kgl_header_type_string[name].low_case.len);
+		ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
+		ctx->send_header->write(val, val_len);
+		return true;
+	}
+	ctx->send_header->write(kgl_http_v2_inc_indexed(kgl_header_type_string[name].http2_index));
+	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
+	ctx->send_header->write(val, val_len);
+	return true;
 }
 bool KHttp2::add_header_cookie(KHttp2Context* ctx, const char* val, hlen_t val_len) {
-	ctx->send_header->write(0);
-	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), sizeof("cookie") - 1);
-	ctx->send_header->write_lower_string(_KS("cookie"));
+	//TODO: split cookie
+	ctx->send_header->write(kgl_http_v2_inc_indexed(KGL_HTTP_V2_COOKIE_INDEX));
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
 	ctx->send_header->write(val, val_len);
 	return true;
@@ -1183,7 +1216,7 @@ bool KHttp2::add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, c
 	default:
 		break;
 	}
-	ctx->send_header->write(0);
+	ctx->send_header->write(0);/* not indexed */
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), name_len);
 	ctx->send_header->write_lower_string(name, name_len);
 	ctx->send_header->write_int(KGL_HTTP_V2_ENCODE_RAW, kgl_http_v2_prefix(7), val_len);
@@ -1367,7 +1400,7 @@ int KHttp2::on_write_window_ready(KHttp2Context* http2_ctx) {
 	}
 	return len;
 }
-int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {	
+int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {
 	if (ctx->write_wait) {
 		kassert(IS_WRITE_WAIT_FOR_HUP(ctx->write_wait));
 		delete ctx->write_wait;
@@ -1383,7 +1416,7 @@ int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {
 		send_header(ctx, ctx->content_left == 0);
 	}
 	ctx->sendfile = 1;
-	ctx->CreateWriteWaitWindow((WSABUF *)file, length);
+	ctx->CreateWriteWaitWindow((WSABUF*)file, length);
 	on_write_window_ready(ctx);
 	return kfiber_wait(ctx->write_wait);
 }

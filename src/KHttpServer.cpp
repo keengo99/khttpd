@@ -82,6 +82,7 @@ void init_http_server_callback(kconnection_start_func on_new_connection, kreques
 	kmutex_init(&ssl_config_lock, NULL);
 	kgl_init_sink_queue();
 	init_time_zone();
+	kgl_init_header_string();
 	memset(&http_config, 0, sizeof(http_config));
 	http_config.time_out = 60;
 	server_on_new_connection = on_new_connection;

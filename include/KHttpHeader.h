@@ -12,9 +12,13 @@ typedef struct _kgl_header_string
 	kgl_str_t value;
 	kgl_str_t low_case;
 	kgl_str_t http11;
+#ifdef ENABLE_HTTP2
+	u_char http2_index;
+#endif
 } kgl_header_string;
 
 extern kgl_header_string kgl_header_type_string[];
+void kgl_init_header_string();
 #define kgl_cpymem(dst, src, n)   (((u_char *) kgl_memcpy(dst, src, n)) + (n))
 inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result) {
 	if (header->name_is_know) {

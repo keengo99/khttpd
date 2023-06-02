@@ -66,39 +66,7 @@
  */
 const KString KXmlAttribute::empty(_KS(""));
 
-kgl_header_string kgl_header_type_string[] = {
-	{ _KS("Host"),_KS("host"),_KS("\r\nHost: ")},
-	{ _KS("Accept-Encoding"),_KS("accept-encoding"),_KS("\r\nAccept-Encoding: ")},
-	{ _KS("Range"),_KS("range"),_KS("\r\nRange: ")},
-	{ _KS("Server"),_KS("server"),_KS("\r\nServer: ")},
-	{ _KS("Date"),_KS("date"),_KS("\r\nDate: ")},
-	{ _KS("Content-Length"),_KS("content-length"),_KS("\r\nContent-Length: ")},
-	{ _KS("Last-Modified"),_KS("last-modified"),_KS("\r\nLast-Modified: ")},
-	{ _KS("Etag"),_KS("etag"),_KS("\r\nEtag: ")},
-	{ _KS("Content-Range"),_KS("content-range"),_KS("\r\nContent-Range: ")},
-	{ _KS("Content-Type"),_KS("content-type"),_KS("\r\nContent-Type: ")},
-	{ _KS("Set-Cookie"),_KS("set-cookie"),_KS("\r\nSet-Cookie: ")},
-	{ _KS("Pragma"),_KS("pragma"),_KS("\r\nPragma: ")},
-	{ _KS("Cache-Control"),_KS("cache-control"),_KS("\r\nCache-Control: ")},
-	{ _KS("Vary"),_KS("vary"),_KS("\r\nVary: ")},
-	{ _KS("Age"),_KS("age"),_KS("\r\nAge: ")},
-	{ _KS("Transfer-Encoding"),_KS("transfer-encoding"),_KS("\r\nTransfer-Encoding: ")},
-	{ _KS("Content-Encoding"),_KS("content-encoding"),_KS("\r\nContent-Encoding: ")},
-	{ _KS("Expires"),_KS("expires"),_KS("\r\nExpires: ")},
-	{ _KS("Location"),_KS("location"),_KS("\r\nLocation: ")},
-	{_KS("Keep-Alive"),_KS("keep-alive"),_KS("\r\nKeep-Alive: ")},
-	{_KS("Alt-Svc"),_KS("alt-svc"),_KS("\r\nAlt-Svc: ")},
-	{_KS("Connection"),_KS("connection"),_KS("\r\nConnection: ")},
-	{_KS("Upgrade"),_KS("upgrade"),_KS("\r\nUpgrade: ")},
-	{_KS("Expect"),_KS("expect"),_KS("\r\nExpect: ")},
-	{_KS("Status"),_KS("status"),_KS("\r\nStatus: ")},
-	{_KS("If-Range"),_KS("if-range"),_KS("\r\nIf-Range: ")},
-	{_KS("If-Modified-Since"),_KS("if-modified-since"),_KS("\r\nIf-Modified-Since: ")},
-	{_KS("If-None-Match"),_KS("if-none-match"),_KS("\r\nIf-None-Match: ")},
-	{_KS("If-Match"),_KS("if-match"),_KS("\r\nIf-Match: ")},
-	{_KS("If-Unmodified-Since"),_KS("if-unmodified-since"),_KS("\r\nIf-Unmodified-Since: ")},
-	{ _KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
-};
+
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #define B64PAD '='
 
@@ -106,6 +74,7 @@ static const char* days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 static uint32_t  mday[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 static int timz_minutes = 0;
+
 void init_time_zone() {
 	time_t tt = time(NULL);
 	struct tm t;
