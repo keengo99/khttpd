@@ -4,8 +4,6 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "khttp.h"
-
-char* make_http_time(time_t time, char* buf, int size);
 KBEGIN_DECLS
 typedef struct _kgl_header_string
 {
@@ -19,7 +17,9 @@ typedef struct _kgl_header_string
 
 extern kgl_header_string kgl_header_type_string[];
 void kgl_init_header_string();
+bool kgl_build_know_header_value(KHttpHeader* header, const char* val, int val_len, kgl_malloc m, void* arg);
 #define kgl_cpymem(dst, src, n)   (((u_char *) kgl_memcpy(dst, src, n)) + (n))
+
 inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result) {
 	if (header->name_is_know) {
 		result->data = kgl_header_type_string[header->know_header].value.data;
@@ -50,36 +50,7 @@ inline KHttpHeader* new_pool_http_know_header(kgl_header_type type, const char* 
 	assert(type >= 0 && type < kgl_header_unknow);
 	KHttpHeader* header = (KHttpHeader*)m(arg, sizeof(KHttpHeader));
 	memset(header, 0, sizeof(KHttpHeader));
-	switch (val_len) {
-	case KGL_HEADER_VALUE_INT64:
-		header->buf = (char*)m(arg, KGL_INT64_LEN + 1);
-		header->val_len = snprintf(header->buf, KGL_INT64_LEN, INT64_FORMAT, *(int64_t*)val);
-		break;
-	case KGL_HEADER_VALUE_INT:
-	{
-		header->buf = (char*)m(arg, KGL_INT32_LEN + 1);
-		header->val_len = snprintf(header->buf, KGL_INT32_LEN, "%d", *(int*)val);
-		break;
-	}
-	case KGL_HEADER_VALUE_TIME:
-	{
-		header->buf = (char*)m(arg,KGL_1123_TIME_LEN + 1);
-		char* end = make_http_time(*(time_t*)val, header->buf, KGL_1123_TIME_LEN);
-		header->val_len = (hlen_t)(end - header->buf);
-		break;
-	}
-	default:
-		if (val_len <= 0 || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
-			xfree(header);
-			fprintf(stderr, "unknow header=[%d] val_len=[%d]\n", type, val_len);
-			return NULL;
-		}
-		header->buf = (char*)m(arg,val_len + 1);
-		kgl_memcpy(header->buf, val, val_len);
-		header->val_len = val_len;
-		break;
-	}
-	header->buf[header->val_len] = '\0';
+	kgl_build_know_header_value(header, val, val_len, m, arg);
 	header->know_header = (uint16_t)type;
 	header->name_is_know = 1;
 	return header;

@@ -36,6 +36,7 @@ u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...);
 u_char* kgl_sprintf(u_char* buf, const char* fmt, ...);
 time_t kgl_parse_http_time(u_char *str,size_t len);
 const char *mk1123time(time_t time, char *buf, int size);
+char* make_http_time(time_t time, char* buf, int size);
 void make_last_modified_time(time_t *a, char *b, size_t l);
 void init_time_zone();
 class KUrl;
