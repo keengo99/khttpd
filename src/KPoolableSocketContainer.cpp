@@ -36,7 +36,7 @@ int kfiber_next_destroy(void* arg, int got)
 }
 void SafeDestroyUpstream(KUpstream *st)
 {
-	kselector *selector = st->get_connection()->st.selector;
+	kselector *selector = st->get_connection()->st.base.selector;
 	if (selector != NULL && selector != kgl_get_tls_selector()) {
 		kfiber_create2(selector, kfiber_next_destroy, st, 0, http_config.fiber_stack_size, NULL);
 	} else {
@@ -206,7 +206,7 @@ KUpstream *KPoolableSocketContainer::get_pool_socket(uint32_t flags) {
 		return NULL;
 	}
 	socket->read_header_time = kgl_current_sec;
-	kselector *selector = socket->get_connection()->st.selector;
+	kselector *selector = socket->get_connection()->st.base.selector;
 	if (selector!=NULL && selector!=kgl_get_tls_selector()) {
 		//连接和当前selector不一致,一般发生在windows上，多线程情况上.
 		//因为windows中socket一但绑定了iocp，无法解绑。

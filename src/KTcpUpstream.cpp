@@ -4,11 +4,11 @@
 void KTcpUpstream::unbind_selector()
 {
 #ifndef _WIN32
-	if (cn->st.selector) {
+	if (cn->st.base.selector) {
 		selectable_remove(&cn->st);
-		cn->st.selector = NULL;
+		cn->st.base.selector = NULL;
 	}
-	kassert(KBIT_TEST(cn->st.st_flags, STF_READ | STF_WRITE ) == 0);
+	kassert(KBIT_TEST(cn->st.base.st_flags, STF_READ | STF_WRITE ) == 0);
 #endif
 }
 bool KTcpUpstream::set_header_callback(void* arg, kgl_header_callback cb)
@@ -30,8 +30,8 @@ void KTcpUpstream::gc(int life_time)
 		return;
 	}
 #ifndef NDEBUG
-	if (cn->st.selector) {
-		kassert(cn->st.queue.next == NULL);
+	if (cn->st.base.selector) {
+		kassert(cn->st.base.queue.next == NULL);
 	}
 #endif
 	container->gcSocket(this, life_time);
@@ -47,8 +47,8 @@ int KTcpUpstream::write(WSABUF* buf, int bc)
 
 void KTcpUpstream::bind_selector(kselector *selector)
 {
-	kassert(cn->st.selector == NULL || cn->st.selector == selector);
-	if (cn->st.selector == NULL) {
+	kassert(cn->st.base.selector == NULL || cn->st.base.selector == selector);
+	if (cn->st.base.selector == NULL) {
 		selectable_bind(&cn->st, selector);
 	}
 }

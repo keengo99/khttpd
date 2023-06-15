@@ -227,7 +227,7 @@ int KHttp2::get_write_buffer(iovec* buf, int bufCount) {
 	return write_buffer.getReadBuffer(c->st.fd, buf, bufCount);
 }
 u_char* KHttp2::close(bool read, int status) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	//printf("%lld http2 [%p] close read=[%d] status=[%d]\n", kgl_current_sec,this,read,status);
 	http2_buff* buf = NULL;
 	if (!read && write_buffer.getBufferSize() > 0) {
@@ -276,7 +276,7 @@ u_char* KHttp2::close(bool read, int status) {
 	}
 	//read_processing/write_processing  Òª×îºóÖÃ0¡£
 	closed = 1;
-	KBIT_SET(c->st.st_flags, STF_ERR);
+	KBIT_SET(c->st.base.st_flags, STF_ERR);
 	if (read) {
 		assert(read_processing == 1);
 		read_processing = 0;
@@ -701,7 +701,7 @@ KHttp2Context* KHttp2::create_stream() {
 		return stream;
 	}
 #endif
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	state.keep_pool = 1;
 	KHttp2Sink* sink = new KHttp2Sink(this, stream, state.pool);
 	sink->data.set_http_version(2, 0);
@@ -800,7 +800,7 @@ void KHttp2::ping() {
 	start_write();
 }
 kev_result KHttp2::start_write() {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	kassert(read_processing);
 	if (write_processing || closed || write_buffer.getBufferSize() == 0) {
 		return kev_err;
@@ -810,7 +810,7 @@ kev_result KHttp2::start_write() {
 	return kev_ok;
 }
 void KHttp2::write_end(KHttp2Context* ctx) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (IsWriteClosed(ctx)) {
 		return;
 	}
@@ -856,7 +856,7 @@ void KHttp2::destroy_node(KHttp2Node* node) {
 	delete node;
 }
 void KHttp2::release_stream(KHttp2Context* ctx) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	kassert(ctx->queue.next == NULL);
 	kassert(ctx->read_wait == NULL || ctx->read_wait->fiber == NULL);
 	kassert(ctx->write_wait == NULL);
@@ -883,7 +883,7 @@ void KHttp2::release_stream(KHttp2Context* ctx) {
 	}
 }
 void KHttp2::release_admin(KHttp2Context* ctx) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	//{{ent
 #ifdef ENABLE_UPSTREAM_HTTP2
 	if (ctx->admin_stream) {
@@ -908,7 +908,7 @@ void KHttp2::release(KHttp2Context* ctx) {
 	release_admin(ctx);
 }
 kselector* KHttp2::getSelector() {
-	return c->st.selector;
+	return c->st.base.selector;
 }
 int KHttp2::copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc) {
 	//WSABUF vc[MAX_HTTP2_BUFFER_SIZE];
@@ -939,7 +939,7 @@ int KHttp2::ReadHeader(KHttp2Context* http2_ctx) {
 #ifdef ENABLE_UPSTREAM_HTTP2
 	kassert(IsClientModel());
 #endif//}}
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (http2_ctx->rst) {
 		return -1;
 		//return result(http2_ctx->data, arg, -1);
@@ -973,7 +973,7 @@ bool KHttp2::check_recv_window(KHttp2Context* http2_ctx) {
 	return false;
 }
 bool KHttp2::terminate_stream(KHttp2Context* ctx, uint32_t status) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	kgl_http2_event* re = NULL, * we = NULL;
 	bool send_flag = false;
 	if (ctx->read_wait) {
@@ -1027,7 +1027,7 @@ void KHttp2::remove_readhup(KHttp2Context* http2_ctx) {
 	}
 }
 bool KHttp2::readhup(KHttp2Context* http2_ctx, result_callback result, void* arg) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (http2_ctx->write_wait && !IS_WRITE_WAIT_FOR_HUP(http2_ctx->write_wait)) {
 		//write wait is setting not for hup
 		return false;
@@ -1062,7 +1062,7 @@ bool KHttp2::send_altsvc(KHttp2Context* ctx, const char* val, int val_len) {
 }
 int KHttp2::send_header(KHttp2Context* http2_ctx, bool body_end) {
 	kassert(http2_ctx->send_header);
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (read_processing == 0) {
 		return 0;
 	}
@@ -1232,7 +1232,7 @@ bool KHttp2::add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, c
 void KHttp2::init(kconnection* c) {
 	//printf("Http2 init [%p]\n", this);
 	this->c = c;
-	KBIT_SET(c->st.st_flags, STF_RTIME_OUT);
+	KBIT_SET(c->st.base.st_flags, STF_RTIME_OUT);
 	read_processing = 1;
 	send_window = KGL_HTTP_V2_DEFAULT_WINDOW;
 	recv_window = KGL_HTTP_V2_CONNECTION_RECV_WINDOW;
@@ -1243,7 +1243,7 @@ void KHttp2::init(kconnection* c) {
 }
 #ifdef ENABLE_UPSTREAM_HTTP2
 KHttp2Upstream* KHttp2::get_admin_stream() {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (has_admin_stream || self_goaway || peer_goaway || !client_model) {
 		return NULL;
 	}
@@ -1328,7 +1328,7 @@ void KHttp2::server(kconnection* c) {
 	start_read();
 }
 int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	assert(http2_ctx);
 	assert(http2_ctx->parsed_header);
 	if (http2_ctx->write_wait && IS_WRITE_WAIT_FOR_HUP(http2_ctx->write_wait)) {
@@ -1406,7 +1406,7 @@ int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {
 		delete ctx->write_wait;
 		ctx->write_wait = NULL;
 	}
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (IsWriteClosed(ctx)) {
 		return -1;
 	}
@@ -1426,7 +1426,7 @@ int KHttp2::write(KHttp2Context* ctx, WSABUF* buf, int bc) {
 		delete ctx->write_wait;
 		ctx->write_wait = NULL;
 	}
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	if (IsWriteClosed(ctx)) {
 		return -1;
 	}
@@ -1984,7 +1984,7 @@ void KHttp2::check_write_wait() {
 	KHttp2Context* stream;
 	int size = kgl_http_v2_index_size();
 	bool buffer_writed = false;
-	kassert(kselector_is_same_thread(c->st.selector));
+	kassert(kselector_is_same_thread(c->st.base.selector));
 	for (int i = 0; i < size; i++) {
 		for (node = streams_index[i]; node; node = node->index) {
 			if (send_window <= 0) {

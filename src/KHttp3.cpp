@@ -690,7 +690,7 @@ int KHttp3ServerEngine::init(kselector* selector, int udp_flag) {
 	if (!kudp_bind(uc, &server->addr)) {
 		return -1;
 	}
-	KBIT_SET(uc->st.st_flags, STF_RTIME_OUT);
+	KBIT_SET(uc->st.base.st_flags, STF_RTIME_OUT);
 	selectable_bind_opaque(&uc->st, this);
 	return 0;
 }

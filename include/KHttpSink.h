@@ -15,7 +15,7 @@ public:
 	~KHttpSink();
 	bool is_locked() override
 	{
-		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
+		return KBIT_TEST(cn->st.base.st_flags, STF_LOCK);
 	}
 	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
@@ -44,12 +44,12 @@ public:
 	}
 	void set_time_out(int tmo) override
 	{
-		cn->st.tmo = tmo;
-		cn->st.tmo_left = tmo;
+		cn->st.base.tmo = tmo;
+		cn->st.base.tmo_left = tmo;
 	}
 	int get_time_out() override
 	{
-		return cn->st.tmo;
+		return cn->st.base.tmo;
 	}
 	int end_request() override;
 	ks_buffer buffer;

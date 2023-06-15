@@ -540,7 +540,7 @@ private:
 	kev_result CloseWrite();
 	void ReleaseStateStream();
 	bool can_destroy() {
-		kassert(kselector_is_same_thread(c->st.selector));
+		kassert(kselector_is_same_thread(c->st.base.selector));
 		return katom_get((void*)&processing) == 0 && write_processing == 0 && read_processing == 0;
 	}
 	//void destroy();

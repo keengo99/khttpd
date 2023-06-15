@@ -42,8 +42,8 @@ public:
 	}
 	void set_time_out(int tmo) override
 	{
-		cn->st.tmo = tmo;
-		cn->st.tmo_left = tmo;
+		cn->st.base.tmo = tmo;
+		cn->st.base.tmo_left = tmo;
 	}
 	bool send_connection(const char* val, hlen_t val_len) override
 	{

@@ -11,16 +11,16 @@ public:
 	~KTcpSink();
 	bool is_locked() override
 	{
-		return KBIT_TEST(cn->st.st_flags, STF_LOCK);
+		return KBIT_TEST(cn->st.base.st_flags, STF_LOCK);
 	}
 	void set_time_out(int tmo) override
 	{
-		cn->st.tmo = tmo;
-		cn->st.tmo_left = tmo;
+		cn->st.base.tmo = tmo;
+		cn->st.base.tmo_left = tmo;
 	}
 	int get_time_out() override
 	{
-		return cn->st.tmo;
+		return cn->st.base.tmo;
 	}
 	bool readhup(void *arg, result_callback result) override
 	{

@@ -35,7 +35,7 @@ skip_trailer:
 	return true;
 }
 bool KHttp2Upstream::set_header_callback(void* arg, kgl_header_callback header) {
-	assert(kselector_is_same_thread(http2->c->st.selector));
+	assert(kselector_is_same_thread(http2->c->st.base.selector));
 	assert(!ctx->in_closed);
 	assert(ctx->read_wait == NULL);
 	kgl_http2_event* e = new kgl_http2_event;

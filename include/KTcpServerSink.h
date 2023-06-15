@@ -22,7 +22,7 @@ public:
 	}
 	kselector* get_selector() override
 	{
-		return get_connection()->st.selector;
+		return get_connection()->st.base.selector;
 	}
 	kgl_pool_t* get_connection_pool() override
 	{

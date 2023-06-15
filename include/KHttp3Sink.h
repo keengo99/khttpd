@@ -195,7 +195,7 @@ public:
 		return nullptr;
 	}
 	kselector* get_selector() override {
-		return cn->engine->uc->st.selector;
+		return cn->engine->uc->st.base.selector;
 	}
 	void set_time_out(int tmo_count) override {
 

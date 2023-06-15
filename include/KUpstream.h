@@ -54,7 +54,7 @@ public:
 		return get_connection()->st.data;
 	}
 	kselector* get_selector() {
-		return get_connection()->st.selector;
+		return get_connection()->st.base.selector;
 	}
 	virtual bool support_websocket() {
 		return false;
