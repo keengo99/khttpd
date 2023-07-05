@@ -325,7 +325,6 @@ int send_packets_out(
 #else
 		s = lpfnWsaSendMsg(uc->st.fd, &msg, 0, &bytes, NULL, NULL);
 #endif
-		//printf("sendmsg s=[%d] bytes=[%d]\n",s, bytes);
 		if (s < 0) {
 			break;
 		}
@@ -412,7 +411,9 @@ kev_result h3_result_udp_recv(KOPAQUE data, void* arg, int got) {
 	if (got < 0) {
 		return h3_recv_package(h3_engine, uc);
 	}
-	h3_process_package_in(h3_engine, uc, got);
+	if (got>0) {
+		h3_process_package_in(h3_engine, uc, got);
+	}
 	return h3_recv_package(h3_engine, uc);
 }
 SSL_CTX* h3_lookup_cert(void* lsquic_cert_lookup_ctx, const struct sockaddr* local, const char* hostname) {
@@ -446,7 +447,6 @@ static struct lsxpack_header*
 interop_server_hset_prepare_decode(void* hset_p, struct lsxpack_header* xhdr,
 	size_t req_space) {
 	struct header_decoder* req = (struct header_decoder*)hset_p;
-
 	if (xhdr) {
 		//LSQ_WARN("we don't reallocate headers: can't give more");
 		return NULL;
