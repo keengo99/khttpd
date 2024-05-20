@@ -82,7 +82,7 @@ bool KRequestData::parse_connect_url(u_char *src, size_t len) {
 bool KRequestData::parse_host(const char* val,size_t len)
 {
 	if (raw_url->host == NULL) {
-		return raw_url->parse_host(val, len);
+		return parse_url_host(raw_url, val, len);
 	}
 	return true;
 }

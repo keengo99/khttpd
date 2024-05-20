@@ -35,27 +35,26 @@ public:
 	const KString &operator[](const char* key) const {
 		auto it = find(key);
 		if (it == end()) {
-			return empty;
+			return KString::empty_string;
 		}
 		return (*it).second;
 	}
 	const KString &operator[](const KString& key) const {
 		auto it = find(key);
 		if (it == end()) {
-			return empty;
+			return KString::empty_string;
 		}
 		return (*it).second;
 	}
 	KString remove(const KString& key) {
 		auto it = find(key);
 		if (it == end()) {
-			return empty;
+			return KString::empty_string;
 		}
 		KString ret(std::move((*it).second));
 		erase(it);
 		return ret;
 	}
-	static const KString empty;
 private:
 };
 #endif

@@ -17,55 +17,24 @@
  */
 #include "kfeature.h"
 #ifdef MALLOCDEBUG
-#include 	<map>
+#include <map>
 #endif
 #ifndef 	_WIN32
-#include	<syslog.h>
+#include <syslog.h>
 #include <unistd.h>
 #endif
 #ifdef FREEBSD
 #define HAVE_TIMEGM 1
 #endif
-#include	<time.h>
-#include 	<ctype.h>
+#include	 <time.h>
+#include <ctype.h>
 #include <string>
 #include <sstream>
 #include <stdarg.h>
 #include "kforwin32.h"
 #include "kmalloc.h"
 #include "KHttpLib.h"
-#include "KUrl.h"
-#include "KHttpHeader.h"
 #include "klib.h"
-#include "KXmlAttribute.h"
-
- /*
-	kgl_header_host,
-	kgl_header_accept_encoding,
-	kgl_header_range,
-	 kgl_header_server,
-	 kgl_header_date,
-	 kgl_header_content_length,
-	 kgl_header_last_modified,
-	 kgl_header_etag,
-	 kgl_header_content_range,
-	 kgl_header_content_type,
-	 kgl_header_set_cookie,
-	 kgl_header_pragma,
-	 kgl_header_cache_control,
-	 kgl_header_vary,
-	 kgl_header_age,
-	 kgl_header_transfer_encoding,
-	 kgl_header_content_encoding,
-	 kgl_header_expires,
-	 kgl_header_location,
-	kgl_header_keep_alive,
-	kgl_header_alt_svc,
-	kgl_header_connection,
-	kgl_header_unknow,
- */
-const KString KXmlAttribute::empty(_KS(""));
-
 
 static const char* b64alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #define B64PAD '='
@@ -119,7 +88,7 @@ time_t kgl_parse_http_time(u_char* value, size_t len) {
 
 	u_char* p, * end;
 	int    month;
-	uint32_t   day, year, hour, min, sec;
+	uint64_t   day, year, hour, min, sec;
 	uint64_t     time;
 	enum
 	{
@@ -639,8 +608,45 @@ std::string url_encode(const char* str, size_t len_string) {
 	}
 	return s;
 }
-
-bool parse_url(const char* src, size_t len, KUrl* url) {
+bool parse_url_host(kgl_url* url, const char* val, size_t len) {
+	assert(url->host == NULL);
+	char* port;
+	if (*val == '[') {
+		KBIT_SET(url->flags, KGL_URL_IPV6);
+		val++;
+		len--;
+		char* host_end = (char*)memchr(val, ']', len);
+		if (host_end == NULL) {
+			return false;
+		}
+		size_t host_len = host_end - val;
+		port = (char*)memchr(host_end, ':', len - host_len);
+		if (port) {
+			size_t port_len = len - host_len;
+			port_len -= (port - host_end);
+			url->port = (uint16_t)kgl_atoi((u_char*)port + 1, port_len - 1);
+		}
+		len = host_len;
+	} else {
+		port = (char*)memchr(val, ':', len);
+		if (port) {
+			size_t port_len = len;
+			len = port - val;
+			port_len -= len;
+			url->port = (uint16_t)kgl_atoi((u_char*)port + 1, port_len - 1);
+		}
+	}
+	url->host = kgl_strndup(val, len);
+	if (port == NULL) {
+		if (KBIT_TEST(url->flags, KGL_URL_ORIG_SSL)) {
+			url->port = 443;
+		} else {
+			url->port = 80;
+		}
+	}
+	return true;
+}
+bool parse_url(const char* src, size_t len, kgl_url * url) {
 	const char* host, * path;
 	if (len == 0) {
 		return false;
@@ -672,7 +678,7 @@ bool parse_url(const char* src, size_t len, KUrl* url) {
 	}
 	host_len = path - host;
 	len -= host_len;
-	if (!url->parse_host(host, host_len)) {
+	if (!parse_url_host(url, host, host_len)) {
 		return false;
 	}
 only_path: const char* sp = (char*)memchr(path, '?', len);
@@ -695,7 +701,7 @@ only_path: const char* sp = (char*)memchr(path, '?', len);
 	url->path = kgl_strndup(path, path_len);
 	return true;
 }
-bool parse_url(const char* src, KUrl* url) {
+bool parse_url(const char* src, kgl_url* url) {
 	return parse_url(src, strlen(src), url);
 }
 
@@ -715,7 +721,7 @@ static int my_htoi(char* s) {
 
 	return (value);
 }
-int url_decode(char* str, int len, KUrl* url, bool space2plus) {
+int url_decode(char* str, int len, kgl_url * url, bool space2plus) {
 	char* dest = str;
 	char* data = str;
 	bool mem_availble = false;

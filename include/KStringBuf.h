@@ -192,6 +192,7 @@ public:
 		return cmp(a) < 0;
 	}
 	friend class KStringBuf;
+	static const KString empty_string;
 	static constexpr size_t npos = std::string::npos;
 private:
 	void assign(const char* str, size_t len) {

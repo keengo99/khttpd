@@ -28,6 +28,7 @@
 #include "KXmlContext.h"
 #include "KXml.h"
 #include "kmalloc.h"
+
 KXmlContext::KXmlContext(KXml *xml)
 {
 	node = NULL;

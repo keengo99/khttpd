@@ -25,6 +25,7 @@
 #include "KStringBuf.h"
 #include "kmalloc.h"
 #include "kforwin32.h"
+const KString KString::empty_string(_KS(""));
  /*
   * return the next string
   *

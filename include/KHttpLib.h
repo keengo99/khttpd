@@ -4,9 +4,10 @@
 #include <string>
 #include <memory>
 #include <cstring>
-#include "khttp.h"
 #include "KHttpHeader.h"
+#include "khttp.h"
 #include "klib.h"
+
 typedef unsigned char* domain_t;
 struct kgl_auto_cstr_free
 {
@@ -29,7 +30,7 @@ std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);
 char *url_encode(const char *s, size_t len, size_t *new_length);
 char *url_value_encode(const char *s, size_t len, size_t *new_length);
-std::string url_encode(const char *str, size_t len_string);
+std::string url_encode(const char *str, size_t len_string=0);
 
 u_char* kgl_slprintf(u_char* buf, u_char* last, const char* fmt, ...);
 u_char* kgl_snprintf(u_char* buf, size_t max, const char* fmt, ...);
@@ -39,9 +40,9 @@ const char *mk1123time(time_t time, char *buf, int size);
 char* make_http_time(time_t time, char* buf, int size);
 void make_last_modified_time(time_t *a, char *b, size_t l);
 void init_time_zone();
-class KUrl;
-bool parse_url(const char* src, KUrl* url);
-bool parse_url(const char* src, size_t len, KUrl* url);
+bool parse_url_host(kgl_url* url, const char* val, size_t len);
+bool parse_url(const char* src, kgl_url* url);
+bool parse_url(const char* src, size_t len, kgl_url* url);
 int64_t kgl_atol(const u_char* line, size_t n);
 int kgl_atoi(const u_char* line, size_t n);
 int64_t kgl_atofp(const char* line, size_t n, size_t point);
@@ -131,7 +132,7 @@ inline const char* kgl_skip_space(const char* start, const char* end, bool space
 	}
 	return NULL;
 }
-int url_decode(char* str, int len, KUrl* url, bool space2plus);
+int url_decode(char* str, int len=0, kgl_url* url=NULL, bool space2plus=true);
 void CTIME_R(time_t* a, char* b, size_t l);
 inline int kgl_parse_value_time(const char* val, int val_len, time_t* value) {
 	if (val_len == KGL_HEADER_VALUE_TIME) {

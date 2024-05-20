@@ -89,7 +89,7 @@ namespace khttpd {
 		KString get_text() const {
 			auto it = attributes.find(text_as_attribute_name);
 			if (it == attributes.end()) {
-				return KXmlAttribute::empty;
+				return KString::empty_string;
 			}
 			return (*it).second;
 		}
@@ -103,7 +103,7 @@ namespace khttpd {
 		KString get_character() const {
 			auto it = attributes.find(text_as_attribute_name);
 			if (it == attributes.end()) {
-				return KXmlAttribute::empty;
+				return KString::empty_string;
 			}
 			return (*it).second;
 		}
@@ -287,7 +287,7 @@ namespace khttpd {
 		KString get_character() const {
 			auto body = get_first();
 			if (!body) {
-				return KXmlAttribute::empty;
+				return KString::empty_string;
 			}
 			return body->get_character();
 		}

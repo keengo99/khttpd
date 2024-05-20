@@ -221,6 +221,8 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_COMPRESS);
 			} else if (field.is(kgl_expand_string("br"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_BR);
+			} else if (field.is(kgl_expand_string("zstd"))) {
+				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_ZSTD);
 			} else if (!field.is(kgl_expand_string("identity"))) {
 				KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
 			}
