@@ -65,6 +65,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/khttp.h.in ${CMAKE_CURRENT_SO
 
 message(STATUS "KHTTP_LIBS ${KHTTPD_LIBS}")
 add_library(khttpd STATIC ${KHTTPD_SOURCE_FILES} ${KHTTPD_INCLUDE_FILES})
+set_target_properties(khttpd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(khttpd PUBLIC ${KHTTPD_INCLUDE_DIR})
 target_link_libraries(khttpd ${KHTTPD_LIBS})
 if (NOT (CMAKE_SYSTEM_NAME MATCHES "Windows"))
