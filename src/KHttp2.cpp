@@ -2422,33 +2422,4 @@ u_char* KHttp2::state_field_skip(u_char* pos, u_char* end) {
 
 	return handle_continuation(pos, end, &KHttp2::state_field_skip);
 }
-bool test_http2() {
-	//8544 8520 8512 8504 8488
-	//printf("sizeof(KHttp2)=[%d]\n", sizeof(KHttp2));
-#if 0
-	KHttp2WriteBuffer wb;
-	http2_buff* buf = get_frame(0, 8, 1, 0);
-	buf->tcp_nodelay = 1;
-	wb.push(buf);
-	buf = get_frame(0, 8, 1, 0);
-	buf->tcp_nodelay = 1;
-	wb.push(buf);
-	SOCKET socket;
-	WSABUF buffer[8];
-	wb.getReadBuffer(socket, buffer, 1);
-	http2_buff* buf2 = wb.readSuccess(socket, buf->used - 1);
-#ifdef ENABLE_HTTP2_TCP_CORK
-	assert(socket.delay);
-#endif
-	assert(buf2 == NULL);
-	wb.getReadBuffer(&socket, buffer, 1);
-	buf2 = wb.readSuccess(&socket, buf->used + 1);
-#ifdef ENABLE_HTTP2_TCP_CORK
-	assert(!socket.delay);
-#endif
-	assert(buf2 && buf2->next);
-	KHttp2WriteBuffer::remove_buff(buf2);
-#endif
-	return true;
-}
 #endif

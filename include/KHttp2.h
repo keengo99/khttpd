@@ -204,7 +204,6 @@ class KHttp2Context;
 class KHttp2;
 class KHttp2Sink;
 class KHttp2Upstream;
-bool test_http2();
 u_char kgl_find_http2_static_table(const kgl_str_t *name);
 typedef int (*http2_header_parser_pt)(KHttp2Context* ctx, kgl_str_t* name, kgl_str_t* value);
 typedef int (*http2_accept_handler_pt)(KHttp2Context* ctx);
