@@ -130,6 +130,9 @@ public:
 	}
 	virtual kgl_ref_str_t* get_param();
 	virtual void gc(int life_time) = 0;
+	virtual KPoolableSocketContainer* get_container() {
+		return container;
+	}
 	friend class KPoolableSocketContainer;
 	union
 	{

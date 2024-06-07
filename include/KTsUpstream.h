@@ -94,6 +94,9 @@ public:
 	kgl_refs_string* get_param() override {
 		return us->get_param();
 	}
+	KPoolableSocketContainer* get_container() override {
+		return us->get_container();
+	}
 	void gc(int life_time) override;
 	KUpstreamCallBack stack;
 	KUpstream* us;
