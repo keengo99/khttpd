@@ -80,7 +80,7 @@ public:
 		katom_inc16((void*)&refs_count);
 		return this;
 	}
-	bool IsBad() {
+	bool is_bad() {
 		return host == NULL || path == NULL;
 	}
 	kgl_auto_cstr getUrl() {
