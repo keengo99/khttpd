@@ -83,7 +83,7 @@ public:
 	bool is_multi();
 	char* realloc_buffer()
 	{
-		char* old_buffer = iov_buf[1].iov_base;
+		char* old_buffer = (char *)iov_buf[1].iov_base;
 		iov_buf[1].iov_base = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
 		return old_buffer;
 	}
