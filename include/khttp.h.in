@@ -284,13 +284,13 @@ typedef enum
 
 typedef struct _kgl_url
 {
-#define KGL_URL_SSL       1   /* listen port is ssl */
-#define KGL_URL_IPV6      2
-#define KGL_URL_REWRITED  8
-#define KGL_URL_RANGED    0x10
-#define KGL_URL_ENCODE    0x20
-#define KGL_URL_ORIG_SSL  0x40  /* request is ssl */
-
+#define KGL_URL_SSL       1      /* listen port is ssl */
+#define KGL_URL_IPV6      (1<<1)
+#define KGL_URL_REWRITED  (1<<3)
+#define KGL_URL_RANGED    (1<<4)
+#define KGL_URL_ENCODE    (1<<5)
+#define KGL_URL_ORIG_SSL  (1<<6) /* request is ssl */
+#define KGL_URL_HAS_PORT  (1<<7) /* url has port */
 
 #define KGL_ENCODING_DEFLATE  1
 #define KGL_ENCODING_COMPRESS (1<<1)

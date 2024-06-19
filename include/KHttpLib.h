@@ -7,6 +7,7 @@
 #include "KHttpHeader.h"
 #include "khttp.h"
 #include "klib.h"
+#include "KStream.h"
 
 typedef unsigned char* domain_t;
 struct kgl_auto_cstr_free
@@ -43,6 +44,7 @@ void init_time_zone();
 bool parse_url_host(kgl_url* url, const char* val, size_t len);
 bool parse_url(const char* src, kgl_url* url);
 bool parse_url(const char* src, size_t len, kgl_url* url);
+void build_url_host_port(kgl_url* url, KWStream& s);
 int64_t kgl_atol(const u_char* line, size_t n);
 int kgl_atoi(const u_char* line, size_t n);
 int64_t kgl_atofp(const char* line, size_t n, size_t point);

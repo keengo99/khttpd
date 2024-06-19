@@ -638,11 +638,14 @@ bool parse_url_host(kgl_url* url, const char* val, size_t len) {
 	}
 	url->host = kgl_strndup(val, len);
 	if (port == NULL) {
+		//no port
 		if (KBIT_TEST(url->flags, KGL_URL_ORIG_SSL)) {
 			url->port = 443;
 		} else {
 			url->port = 80;
 		}
+	} else {
+		KBIT_SET(url->flags, KGL_URL_HAS_PORT);
 	}
 	return true;
 }
@@ -1359,4 +1362,17 @@ bool kgl_adjust_range(kgl_request_range* range, int64_t* len) 	{
 }
 int kgl_domain_cmp(const domain_t s1, const domain_t s2) {
 	return kgl_cmp((const char*)(s1 + 1), *s1, (const char*)(s2 + 1), *s2);
+}
+void build_url_host_port(kgl_url* url, KWStream& s) {
+	if (unlikely(KBIT_TEST(url->flags, KGL_URL_IPV6))) {
+		s.WSTR("[");
+		s << url->host;
+		s.WSTR("]");
+	} else {
+		s << url->host;
+	}
+	if (KBIT_TEST(url->flags, KGL_URL_HAS_PORT)) {
+		s.WSTR(":");
+		s << url->port;
+	}
 }

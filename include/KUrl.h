@@ -124,17 +124,6 @@ public:
 			}
 		}
 	}
-	void GetHost(KWStream&s, uint16_t default_port)
-	{
-		if (unlikely(KBIT_TEST(flags, KGL_URL_IPV6))) {
-			s << "[" << host << "]";
-		} else {
-			s << host;
-		}
-		if (unlikely(port != default_port)) {
-			s << ":" << port;
-		}
-	}
 	bool GetSchema(KWStream& s)
 	{
 		if (unlikely(host == NULL || path == NULL)) {
@@ -151,17 +140,13 @@ public:
 		if (!GetSchema(s)) {
 			return false;
 		}
-		GetHost(s);
+		build_url_host_port(this, s);
 		GetPath(s, urlEncode);
 		return true;
 	}
 	void GetHost(KWStream& s)
 	{
-		int default_port = 80;
-		if (KBIT_TEST(flags, KGL_URL_SSL)) {
-			default_port = 443;
-		}
-		GetHost(s, default_port);
+		build_url_host_port(this, s);
 	}
 	void relase()
 	{
