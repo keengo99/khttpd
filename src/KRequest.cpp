@@ -73,7 +73,7 @@ bool KRequestData::parse_connect_url(u_char *src, size_t len) {
 		return false;
 	}
 	KBIT_CLR(raw_url->flags, KGL_URL_ORIG_SSL);
-	
+	KBIT_SET(raw_url->flags, KGL_URL_HAS_PORT);
 	raw_url->host = kgl_strndup((char *)src, ss - src);
 	len -= (ss - src);
 	raw_url->port = (uint16_t)kgl_atoi(ss + 1, len - 1);
