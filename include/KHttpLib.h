@@ -26,6 +26,7 @@ struct kgl_auto_ref_str_free
 using kgl_auto_cstr = std::unique_ptr<char, kgl_auto_cstr_free>;
 using kgl_auto_ref_str = std::unique_ptr<kgl_ref_str_t, kgl_auto_ref_str_free>;
 
+
 int kgl_domain_cmp(const domain_t s1, const domain_t s2);
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);

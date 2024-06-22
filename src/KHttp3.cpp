@@ -89,30 +89,7 @@ http_server_on_goaway(lsquic_conn_t* conn) {
 static struct lsquic_stream_if http_server_if;
 static struct lsquic_hset_if header_bypass_api;
 inline kev_result h3_recv_package(KHttp3ServerEngine* h3_engine, kconnection* uc) {
-	for (;;) {
-	retry:
-		int got = kudp_recvmsg(uc, h3_result_udp_recv, h3_buffer_udp_recv, uc);
-		switch (got) {
-		case KASYNC_IO_PENDING:
-			goto done;
-		case KASYNC_IO_ERR_BUFFER:
-			goto retry;
-		case KASYNC_IO_ERR_SYS:
-			if (h3_engine->server->is_shutdown()) {
-				h3_engine->release();
-				return kev_destroy;
-			}
-			klog(KLOG_ERR, "MAY HAVE BUG! I DO NOT KNOW HOW TO DO. recv msg error.\n");
-			h3_engine->release();
-			return kev_destroy;
-		default:
-			//printf("h3_process_package_in got=[%d]\n", got);
-			h3_process_package_in(h3_engine, uc, got);
-		}
-	}
-done:
-	//h3_engine->ticked();
-	return kev_ok;
+	return selectable_read(&uc->st, h3_result_udp_recv, h3_buffer_udp_recv, uc);
 }
 static void
 setup_control_msg(
@@ -404,17 +381,16 @@ kev_result h3_result_udp_recv(KOPAQUE data, void* arg, int got) {
 	kconnection* uc = (kconnection*)arg;
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)data;
 	if (got == ST_ERR_TIME_OUT) {
-		//lsquic_engine_process_conns(h3_engine->engine);
-		//h3_engine->ticked();
 		return kev_ok;
 	}
-	if (got < 0) {
-		return h3_recv_package(h3_engine, uc);
-	}
-	if (got>0) {
+	if (got > 0) {
 		h3_process_package_in(h3_engine, uc, got);
 	}
-	return h3_recv_package(h3_engine, uc);
+	if (h3_engine->server->is_shutdown()) {
+		h3_engine->release();
+		return kev_destroy;
+	}
+	return h3_recv_package(h3_engine, uc);	
 }
 SSL_CTX* h3_lookup_cert(void* lsquic_cert_lookup_ctx, const struct sockaddr* local, const char* hostname) {
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)lsquic_cert_lookup_ctx;
