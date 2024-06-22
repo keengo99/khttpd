@@ -583,7 +583,7 @@ int KHttp3Server::init(const char* ip, uint16_t port, int sock_flags, kgl_ssl_ct
 	}
 	allow_src_ip = 0;
 	if (addr.v4.sin_family == PF_INET) {
-		if (addr.v4.sin_addr.s_addr == in4addr_any.s_addr) {
+		if (addr.v4.sin_addr.s_addr == INADDR_ANY) {
 			allow_src_ip = 1;
 		}
 #ifdef KSOCKET_IPV6
