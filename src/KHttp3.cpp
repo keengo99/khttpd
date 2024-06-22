@@ -267,7 +267,7 @@ int send_packets_out(
 		msg.lpBuffers = specs[n].iov;
 		msg.dwFlags = 0;
 #endif        
-		if (h3_engine->is_server_model() && specs[n].local_sa->sa_family) {
+		if (h3_engine->allow_src_ip() && specs[n].local_sa->sa_family) {
 			cw = CW_SENDADDR;
 			ancil_key = (uintptr_t)specs[n].local_sa;
 			assert(0 == (ancil_key & 3));
@@ -581,6 +581,18 @@ int KHttp3Server::init(const char* ip, uint16_t port, int sock_flags, kgl_ssl_ct
 	if (!ksocket_getaddr(ip, port, PF_UNSPEC, AI_NUMERICHOST, &addr)) {
 		return -1;
 	}
+	allow_src_ip = 0;
+	if (addr.v4.sin_family == PF_INET) {
+		if (addr.v4.sin_addr.s_addr == in4addr_any.s_addr) {
+			allow_src_ip = 1;
+		}
+#ifdef KSOCKET_IPV6
+	} else {
+		if (memcmp(&addr.v6.sin6_addr, &in6addr_any, sizeof(addr.v6.sin6_addr)) == 0) {
+			allow_src_ip = 1;
+		}
+#endif
+	}
 	kgl_add_ref_ssl_ctx(ssl_ctx);
 	this->ssl_ctx = ssl_ctx;
 	this->flags = model;
@@ -678,6 +690,9 @@ void KHttp3ServerEngine::release() {
 }
 bool KHttp3ServerEngine::is_multi() {
 	return server->engine_count > 1;
+}
+bool KHttp3ServerEngine::allow_src_ip() {
+	return server->allow_src_ip;
 }
 int KHttp3ServerEngine::shutdown() {
 	if (uc == nullptr) {

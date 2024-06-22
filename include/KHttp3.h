@@ -57,10 +57,7 @@ public:
 		seq = rand();
 		this->server = server;
 	}
-	bool is_server_model()
-	{
-		return true;
-	}
+	bool allow_src_ip();
 	void ticked()
 	{
 		if (lsquic_engine_has_unsent_packets(engine)) {
@@ -145,6 +142,7 @@ public:
 		ssl_ctx = nullptr;
 		free_opaque = nullptr;
 		data = NULL;
+		count_flags = 0;
 		engine_count = count;
 		engines = (KHttp3ServerEngine **)malloc(sizeof(KHttp3ServerEngine*)*count);
 		for (int i = 0; i < (int)count; i++) {
@@ -186,8 +184,14 @@ public:
 	sockaddr_i addr;
 	kgl_ssl_ctx* ssl_ctx;
 	uint32_t flags;
-protected:	
-	uint16_t engine_count;
+protected:
+	union {
+		struct {
+			uint16_t allow_src_ip : 1;
+			uint16_t engine_count;
+		};
+		uint32_t count_flags;
+	};
 	kserver_free_opaque free_opaque;
 	KOPAQUE data;
 	void try_free_data()
