@@ -13,7 +13,7 @@
 #ifdef ENABLE_HTTP2
 #define ENABLE_UPSTREAM_HTTP2 1
 #endif
-
+#define ENABLE_STAT_STUB           1
 #define MAX_HTTP_HEAD_SIZE	4194304
 #define IF_FREE(p) {if ( p ) xfree(p);p=NULL;}
 

@@ -372,7 +372,6 @@ void KSink::set_state(uint8_t state) {
 	}
 	switch (data.state) {
 	case STATE_IDLE:
-	case STATE_QUEUE:
 		katom_dec((void*)&kgl_waiting);
 		break;
 	case STATE_RECV:
@@ -387,7 +386,6 @@ void KSink::set_state(uint8_t state) {
 #ifdef ENABLE_STAT_STUB
 	switch (state) {
 	case STATE_IDLE:
-	case STATE_QUEUE:
 		katom_inc((void*)&kgl_waiting);
 		break;
 	case STATE_RECV:
