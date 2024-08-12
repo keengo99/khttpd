@@ -10,7 +10,7 @@
 #include "kmalloc.h"
 #include "KHttpLib.h"
 #include "katom.h"
-
+#include "KSharedObj.h"
 
 
 class KUrl : public kgl_url{
@@ -20,8 +20,6 @@ public:
 		memset(this, 0, sizeof(KUrl));
 		refs_count = 1;
 	}
-	
-
 	bool match_accept_encoding(u_char accept_encoding) {
 		if (encoding > 0) {
 			return KBIT_TEST(accept_encoding,encoding) > 0  && KBIT_TEST(this->accept_encoding,accept_encoding) == accept_encoding;
@@ -76,7 +74,7 @@ public:
 		}
 		return strcmp(param, a->param);
 	}
-	KUrl* refs() {
+	KUrl* add_ref() {
 		katom_inc16((void*)&refs_count);
 		return this;
 	}
@@ -148,7 +146,7 @@ public:
 	{
 		build_url_host_port(this, s);
 	}
-	void relase()
+	void release()
 	{
 		if (katom_dec16((void*)&refs_count) > 0) {
 			return;
@@ -165,6 +163,8 @@ private:
 #endif
 	}
 };
+using KSafeUrl = KSharedObj<KUrl>;
+#if 0
 class KAutoUrl
 {
 public:
@@ -178,4 +178,5 @@ public:
 	}
 	KUrl* u;
 };
+#endif
 #endif

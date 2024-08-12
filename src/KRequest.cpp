@@ -36,7 +36,7 @@ void KRequestData::free_lazy_memory()
 		client_ip = NULL;
 	}
 	if (raw_url) {
-		raw_url->relase();
+		raw_url->release();
 		raw_url = NULL;
 	}
 	free_header_list(header);
@@ -46,7 +46,7 @@ void KRequestData::free_lazy_memory()
 void KRequestData::clean()
 {
 	if (url) {
-		url->relase();
+		url->release();
 		url = NULL;
 	}
 	while (fh) {
