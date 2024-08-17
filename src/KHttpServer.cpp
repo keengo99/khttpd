@@ -68,11 +68,9 @@ void khttp_server_alpn(SSL* ssl, void* ssl_ctx_data, const unsigned char** out, 
 	*outlen = sizeof(KGL_HTTP_NPN_ADVERTISE) - 1;
 }
 #endif
-int khttp_server_new_request(void* arg, int got) {
-	KSink* sink = (KSink*)arg;
+int khttp_server_new_request(KSink *sink, int got) {
 	if (!sink->begin_request()) {
 		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
-		sink->end_request();
 		return 0;
 	}
 	server_on_new_request(sink, got);

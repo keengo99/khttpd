@@ -6,7 +6,7 @@
 #include "KResponseContext.h"
 #include "KHttpHeader.h"
 #include "KDechunkContext.h"
-
+#include "KHttpServer.h"
 //handle http/1.x protocol
 class KHttpSink : public KSingleConnectionSink
 {
@@ -51,10 +51,11 @@ public:
 	{
 		return cn->st.base.tmo;
 	}
-	int end_request() override;
+	/* return true will use pipe_line */
+	bool end_request();
 	ks_buffer buffer;
-	kev_result read_header() override;
-	kev_result Parse();
+	bool read_header();
+	kgl_parse_result parse();
 	KResponseContext* rc;
 	kconnection* get_connection() override
 	{
@@ -71,9 +72,9 @@ public:
 		return dechunk->trailer->header;
 	}
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
-	void SkipPost();
-	int StartPipeLine();
-	void EndFiber();
+	void start(int header_len) override;
+	bool skip_post();
+	bool start_pipe_line();
 	int sendfile(kfiber_file* fp, int len) override;
 protected:
 	bool response_altsvc_header(const char* val, int val_len) override

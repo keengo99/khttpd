@@ -11,7 +11,7 @@ KTcpSink::~KTcpSink()
 {
 	kconnection_destroy(cn);
 }
-kev_result KTcpSink::read_header()
+void KTcpSink::start(int header_len)
 {
 	assert(data.raw_url == NULL);
 	sockaddr_i addr;
@@ -26,11 +26,7 @@ kev_result KTcpSink::read_header()
 	snprintf(data.raw_url->host + len, 7, ".%d", data.raw_url->port);
 	data.raw_url->path = strdup("/");
 	data.meth = METH_CONNECT;
-	kfiber_create(khttp_server_new_request, (KSink *)this, 0, http_config.fiber_stack_size, NULL);
-	return kev_ok;
-}
-int KTcpSink::end_request()
-{
-	delete this;
-	return 0;
+	khttp_server_new_request(this, header_len);
+	//kfiber_create(khttp_server_new_request, (KSink *)this, 0, http_config.fiber_stack_size, NULL);
+	//return kev_ok;
 }

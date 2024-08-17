@@ -38,6 +38,18 @@ public:
 		response_headers.new_first();
 	}
 	~KHttp3Sink() {
+		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+		if (st && content_left > 0) {
+			//printf("stream reset [%p]\n", st);
+			lsquic_stream_maybe_reset(st, 0, 0);
+		}
+		assert(is_processing());
+		KBIT_CLR(st_flags, H3_IS_PROCESSING);
+		if (st) {
+			//printf("stream close st=[%p]\n", st);
+			lsquic_stream_close(st);
+			st = NULL;
+		}
 		for (int i = 0; i < 2; i++) {
 			ev[i].cd->f->release(ev[i].cd);
 		}
@@ -153,25 +165,8 @@ public:
 	}
 	void on_read(lsquic_stream_t* st);
 	void on_write(lsquic_stream_t* st);
-	kev_result read_header() override;
-	int end_request() override {
-		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (st && content_left > 0) {
-			//printf("stream reset [%p]\n", st);
-			lsquic_stream_maybe_reset(st, 0, 0);
-		}
-		assert(is_processing());
-		KBIT_CLR(st_flags, H3_IS_PROCESSING);
-		if (st) {
-			//printf("stream close st=[%p]\n", st);
-			lsquic_stream_close(st);
-			st = NULL;
-			return 0;
-		}
-		//quic stream already closed.
-		delete this;
-		return 0;
-	}
+	void start(int got) override;
+	
 	kgl_pool_t* get_connection_pool() override {
 		return cn->get_pool();
 	}

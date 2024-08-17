@@ -4,5 +4,5 @@
 #include "kconnection.h"
 #include "kserver.h"
 
-
+int kgl_sink_start_fiber(void* arg, int got);
 #endif

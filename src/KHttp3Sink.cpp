@@ -1,17 +1,19 @@
 #include "KHttp3Sink.h"
 #include "KHttpServer.h"
+#include "KPreRequest.h"
 #ifdef ENABLE_HTTP3
-kev_result KHttp3Sink::read_header() {
+void KHttp3Sink::start(int got) {
 	void* hset = lsquic_stream_get_hset(st);
 	if (hset == NULL) {
-		lsquic_stream_close(st);
-		return kev_destroy;
+		//lsquic_stream_close(st);
+		return;
 	}
 	KBIT_SET(st_flags, STF_RREADY | H3_IS_PROCESSING);
 	struct header_decoder* req = (struct header_decoder*)hset;
 	free_header_decoder(req);
-	kfiber_create(khttp_server_new_request, (KSink*)this, 0, http_config.fiber_stack_size, NULL);
-	return kev_ok;
+	khttp_server_new_request(this, 0);
+	//kfiber_create(khttp_server_new_request, (KSink*)this, 0, http_config.fiber_stack_size, NULL);
+	//return kev_ok;
 }
 void KHttp3Sink::on_read(lsquic_stream_t* st) {
 	lsquic_stream_wantread(st, 0);
@@ -19,7 +21,7 @@ void KHttp3Sink::on_read(lsquic_stream_t* st) {
 		assert(!is_processing());
 		assert(!KBIT_TEST(st_flags, STF_READ));
 		this->st = st;		
-		read_header();
+		kfiber_create(kgl_sink_start_fiber, (KSink*)this, 0, http_config.fiber_stack_size, NULL);
 		return;
 	}
 	assert(KBIT_TEST(st_flags, STF_READ));

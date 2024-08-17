@@ -8,7 +8,7 @@
 #include "KHttpServer.h"
 #include "KHttpKeyValue.h"
 #include "klog.h"
-
+#include "KPreRequest.h"
 
 #ifdef ENABLE_HTTP2
 http2_buff* get_frame(uint32_t sid, size_t length, uint8_t type, u_char flags) {
@@ -612,7 +612,7 @@ bool KHttp2::on_header_success(KHttp2Context* stream) {
 	assert(processing >= 0);
 	katom_inc((void*)&processing);
 	state.stream = NULL;
-	kfiber_create(khttp_server_new_request, stream->sink, (int)state.header_length, http_config.fiber_stack_size, NULL);
+	kfiber_create(kgl_sink_start_fiber, stream->sink, (int)state.header_length, http_config.fiber_stack_size, NULL);
 	return true;
 }
 u_char* KHttp2::state_header_complete(u_char* pos, u_char* end) {
@@ -1300,12 +1300,29 @@ KHttp2Upstream* KHttp2::NewClientStream(bool admin) {
 	return new KHttp2Upstream(this, stream);
 }
 #endif
-bool KHttp2::server_h2c(kconnection* c, const char* buf, int len) {
+void KHttp2::server_h2c(int got) {
+	send_settings();
+	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
+		start_write();
+	}
+	if (got > 0) {
+		resultHttp2Read(this, c, got);
+		return;
+	}
+	start_read();
+}
+bool KHttp2::init_h2c(kconnection* c, const char* buf, int len) {
 	if (len > sizeof(state.buffer)) {
 		return false;
 	}
 	init(c);
 	state.handler = &KHttp2::state_preface_end;
+	if (len > 0) {
+		memcpy(state.buffer, buf, len);
+		return true;
+	}
+	return true;
+
 	send_settings();
 	if (send_window_update(0, KGL_HTTP_V2_CONNECTION_RECV_WINDOW - KGL_HTTP_V2_DEFAULT_WINDOW)) {
 		start_write();

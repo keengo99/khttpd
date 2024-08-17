@@ -469,7 +469,8 @@ public:
 	KHttp2();
 public:
 	void server(kconnection* c);
-	bool server_h2c(kconnection* c, const char* buf, int len);
+	bool init_h2c(kconnection* c, const char* buf, int len);
+	void server_h2c(int got);
 	kselector* getSelector();
 #ifdef ENABLE_UPSTREAM_HTTP2
 	KHttp2Upstream* client(kconnection* cn);

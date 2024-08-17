@@ -36,7 +36,8 @@ public:
 		}
 	}
 	//called by low level to start sink.
-	virtual kev_result read_header() = 0;
+	//virtual kev_result read_header() = 0;
+	virtual void start(int header_len) = 0;
 	bool adjust_range(int64_t* len);
 	void add_down_flow(int flow, bool is_header_length = false)
 	{
@@ -200,7 +201,6 @@ public:
 	bool write_all(const char* buf, int len);
 	bool parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first);
 	bool begin_request();
-	virtual int end_request() = 0;
 	virtual bool is_locked() = 0;
 	kgl_precondition_flag get_precondition_flag() {
 		return (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);

@@ -10,12 +10,19 @@
 
 kev_result handle_ssl_accept(KOPAQUE data, void* arg, int got);
 #define KGL_BUSY_MSG "HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\n\r\nServer is busy."
+int kgl_sink_start_fiber(void* arg, int got) {
+	KSink* sink = (KSink*)arg;
+	sink->start(got);
+	delete sink;
+	return 0;
+}
 static kev_result handle_http_request(kconnection* cn) {
 #ifdef WORK_MODEL_TCP
 	if (KBIT_TEST(cn->server->flags, WORK_MODEL_TCP)) {
 		KTcpSink* sink = new KTcpSink(cn, NULL);
 		selectable_bind_opaque(&cn->st, (KSink*)sink);
-		return sink->read_header();
+		kfiber_create(kgl_sink_start_fiber, static_cast<KSink*>(sink), 0, http_config.fiber_stack_size, NULL);
+		return kev_ok;
 	}
 #endif
 	KHttpSink* sink = new KHttpSink(cn, NULL);
@@ -23,7 +30,9 @@ static kev_result handle_http_request(kconnection* cn) {
 		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
 	}
 	selectable_bind_opaque(&cn->st, (KSink*)sink);
-	return sink->read_header();
+	kfiber_create(kgl_sink_start_fiber, static_cast<KSink*>(sink), 0, http_config.fiber_stack_size, NULL);
+	return kev_ok;
+	//return sink->read_header();
 }
 
 static kev_result handle_ssl_proxy_callback(KOPAQUE data, void* arg, int got) {

@@ -46,8 +46,7 @@ public:
 	{
 		return cn;
 	}
-	kev_result read_header() override;
-	int end_request() override;
+	void start(int header_len) override;
 	bool internal_response_status(uint16_t status_code) override
 	{
 		return false;

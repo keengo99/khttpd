@@ -13,7 +13,6 @@ void on_new_http_request(KSink *rq, int header_size)
 	rq->response_header(kgl_expand_string("x-server"), kgl_expand_string("test"));
 	rq->start_response_body(4);
 	rq->write(kgl_expand_string("test"));
-	rq->end_request();
 }
 static bool us_header(KUpstream *us, void* arg, const char* attr, int attr_len, const char* val, int val_len,bool is_first)
 {
