@@ -243,7 +243,6 @@ struct kgl_http_v2_state_t
 	uint32_t                         header_length;
 	uint32_t                         buffer_used;
 	u_char                           buffer[8192];
-	kgl_iovec                        iovec_buf[2];
 	kgl_http_v2_handler_pt           handler;
 	KHttp2Context* stream;
 };
@@ -529,11 +528,9 @@ private:
 	u_char* state_altsvc(u_char* pos, u_char* end);
 private:
 	kgl_iovec* get_read_buffer() {
-		state.iovec_buf[0].iov_base = (char*)&state.iovec_buf[1];
-		state.iovec_buf[0].iov_len = 1;
-		state.iovec_buf[1].iov_base = (char*)(state.buffer + state.buffer_used);
-		state.iovec_buf[1].iov_len = (int)(sizeof(state.buffer) - state.buffer_used);
-		return state.iovec_buf;
+		read_buffer[1].iov_base = (char*)(state.buffer + state.buffer_used);
+		read_buffer[1].iov_len = (int)(sizeof(state.buffer) - state.buffer_used);
+		return read_buffer;
 	}
 	kgl_iovec* get_write_buffer() {
 		return write_buffer.get_read_buffer(c->st.fd);
@@ -562,6 +559,7 @@ private:
 	int copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc);
 	void set_dependency(KHttp2Node* node, uint32_t depend, bool exclusive);
 	intptr_t parse_int(u_char** pos, u_char* end, uintptr_t prefix);
+	kgl_iovec         read_buffer[2];
 	KHttp2WriteBuffer write_buffer;
 	kgl_list active_queue;
 	KHttp2Node** streams_index;

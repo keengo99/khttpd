@@ -53,9 +53,12 @@ public:
 		uc = nullptr;
 		engine = nullptr;
 		selector_tick = NULL;
-		udp_buffer = (char *)xmalloc(MAX_QUIC_UDP_SIZE);
 		seq = rand();
 		this->server = server;
+		iov_buf[0].iov_base = (char*)(iov_buf + 1);
+		iov_buf[0].iov_len = 1;
+		iov_buf[1].iov_base = (char *)xmalloc(MAX_QUIC_UDP_SIZE);
+		iov_buf[1].iov_len = MAX_QUIC_UDP_SIZE;
 	}
 	bool allow_src_ip();
 	void ticked()
@@ -80,8 +83,8 @@ public:
 	bool is_multi();
 	char* realloc_buffer()
 	{
-		char* old_buffer = udp_buffer;
-		udp_buffer = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
+		char* old_buffer = iov_buf[1].iov_base;
+		iov_buf[1].iov_base = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
 		return old_buffer;
 	}
 	int start();
@@ -109,6 +112,7 @@ public:
 		}
 		last_sni = new KHttp3CachedSni(hostname, sni);
 	}
+	kgl_iovec iov_buf[2];
 	char* udp_buffer;
 	kconnection* uc;
 	lsquic_engine* engine;
@@ -126,7 +130,7 @@ protected:
 		if (engine) {
 			lsquic_engine_destroy(engine);
 		}
-		xfree(udp_buffer);
+		xfree(iov_buf[1].iov_base);
 		assert(selector_tick == NULL);
 		if (last_sni) {
 			delete last_sni;

@@ -124,6 +124,8 @@ KHttp2::KHttp2() {
 	streams_index = (KHttp2Node**)malloc(sizeof(KHttp2Node*) * kgl_http_v2_index_size());
 	memset(streams_index, 0, sizeof(KHttp2Node*) * kgl_http_v2_index_size());
 	klist_init(&active_queue);
+	read_buffer[0].iov_base = (char*)&read_buffer[1];
+	read_buffer[0].iov_len = 1;
 }
 KHttp2::~KHttp2() {
 	//printf("~KHttp2 called [%p]\n",this);
