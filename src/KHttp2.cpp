@@ -62,14 +62,6 @@ kev_result http2_next_read(KOPAQUE data, void* arg, int got) {
 	KHttp2* http2 = (KHttp2*)data;
 	return http2->NextRead(got);
 }
-int bufferHttp2Read(KOPAQUE data, void* arg, iovec* buf, int bufCount) {
-	KHttp2* http2 = (KHttp2*)data;
-	return http2->get_read_buffer(buf, bufCount);
-}
-int bufferHttp2Write(KOPAQUE data, void* arg, iovec* buf, int bufCount) {
-	KHttp2* c = (KHttp2*)data;
-	return c->get_write_buffer(buf, bufCount);
-}
 
 static bool construct_cookie_header(KHttp2Context* ctx, KHttp2Sink* r) {
 	char* buf, * p, * end;
@@ -212,19 +204,6 @@ bool KHttp2::send_window_update(uint32_t sid, size_t window) {
 	buf->tcp_nodelay = 1;
 	write_buffer.push(buf);
 	return true;
-}
-int KHttp2::get_read_buffer(iovec* buf, int bufCount) {
-	buf[0].iov_base = (char*)(state.buffer + state.buffer_used);
-	buf[0].iov_len = (int)(sizeof(state.buffer) - state.buffer_used);
-#ifndef NDEBUG
-	if (buf[0].iov_len > 1) {
-		//buf[0].iov_len = 1;
-	}
-#endif
-	return 1;
-}
-int KHttp2::get_write_buffer(iovec* buf, int bufCount) {
-	return write_buffer.getReadBuffer(c->st.fd, buf, bufCount);
 }
 u_char* KHttp2::close(bool read, int status) {
 	kassert(kselector_is_same_thread(c->st.base.selector));
@@ -740,23 +719,23 @@ kev_result KHttp2::try_write() {
 	assert(write_processing == 1);
 	if (write_buffer.getBufferSize() > 0) {
 		if (write_buffer.is_sendfile()) {
-			if (!kgl_selector_module.sendfile(&c->st, resultHttp2Write, bufferHttp2Write, this)) {
+			if (!kgl_selector_module.sendfile(&c->st, resultHttp2Write, get_write_buffer(), this)) {
 				return resultHttp2Write(c->st.data, this, -1);
 			}
 			return kev_ok;
 		}
-		return selectable_write(&c->st, resultHttp2Write, bufferHttp2Write, this);
+		return selectable_write(&c->st, resultHttp2Write, get_write_buffer(), this);
 	}
 	return CloseWrite();
 }
 kev_result KHttp2::on_write_result(void* arg, int got) {
+	kgl_iovec* buf = (kgl_iovec*)arg;
 	if (got <= 0) {
 		close(false, KGL_HTTP_V2_CONNECT_ERROR);
 		return kev_destroy;
 	}
 	http2_buff* remove_list = write_buffer.readSuccess(c->st.fd, got);
 	KHttp2WriteBuffer::remove_buff(remove_list, false);
-
 	return try_write();
 }
 kev_result KHttp2::start_read() {
@@ -770,7 +749,7 @@ kev_result KHttp2::start_read() {
 		close(true, KGL_HTTP_V2_NO_ERROR);
 		return kev_destroy;
 	}
-	return selectable_read(&c->st, resultHttp2Read, bufferHttp2Read, c);
+	return selectable_read(&c->st, resultHttp2Read, get_read_buffer(), c);
 }
 void KHttp2::goaway(int error_code) {
 	//printf("self_goaway\n");

@@ -224,7 +224,7 @@ typedef struct
 
 struct kgl_http_v2_state_t
 {
-	uint32_t					    sid;
+	uint32_t					        sid;
 	uint32_t                        length;
 	uint8_t                         padding;
 	uint8_t                         flags;
@@ -243,6 +243,7 @@ struct kgl_http_v2_state_t
 	uint32_t                         header_length;
 	uint32_t                         buffer_used;
 	u_char                           buffer[8192];
+	kgl_iovec                        iovec_buf[2];
 	kgl_http_v2_handler_pt           handler;
 	KHttp2Context* stream;
 };
@@ -505,8 +506,7 @@ public:
 	int send_header(KHttp2Context* ctx, bool fin);
 	void write_end(KHttp2Context* ctx);
 public:
-	int get_read_buffer(iovec* buf, int bufCount);
-	int get_write_buffer(iovec* buf, int bufCount);
+
 	kev_result on_read_result(void* arg, int got);
 	kev_result on_write_result(void* arg, int got);
 	kev_result NextWrite(int got);
@@ -528,6 +528,16 @@ private:
 	u_char* state_continuation(u_char* pos, u_char* end);
 	u_char* state_altsvc(u_char* pos, u_char* end);
 private:
+	kgl_iovec* get_read_buffer() {
+		state.iovec_buf[0].iov_base = (char*)&state.iovec_buf[1];
+		state.iovec_buf[0].iov_len = 1;
+		state.iovec_buf[1].iov_base = (char*)(state.buffer + state.buffer_used);
+		state.iovec_buf[1].iov_len = (int)(sizeof(state.buffer) - state.buffer_used);
+		return state.iovec_buf;
+	}
+	kgl_iovec* get_write_buffer() {
+		return write_buffer.get_read_buffer(c->st.fd);
+	}
 	kev_result try_write();
 	bool on_header_success(KHttp2Context* stream);
 	bool check_recv_window(KHttp2Context* ctx);

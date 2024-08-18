@@ -61,7 +61,7 @@ public:
 	bool set_header_callback(void* arg, kgl_header_callback cb) override;
 	virtual KGL_RESULT read_header() override;
 	int read(char* buf, int len) override;
-	int write(WSABUF* buf, int bc) override;
+	int write(kgl_iovec* buf,int bc) override;
 	void bind_selector(kselector *selector) override;
 	virtual void gc(int life_time) override;
 	void unbind_selector() override;

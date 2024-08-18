@@ -57,7 +57,7 @@ public:
 		return us->get_trailer();
 	}
 	int read(char* buf, int len) override;
-	int write(WSABUF* buf, int bc) override;
+	int write(kgl_iovec* buf, int bc) override;
 	bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) override {
 		return us->send_trailer(name, name_len, val, val_len);
 	}
