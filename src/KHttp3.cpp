@@ -341,17 +341,11 @@ static kev_result next_quic_package_in(KOPAQUE data, void* arg, int got) {
 	xfree(package);
 	return kev_ok;
 }
-int h3_buffer_udp_recv(KOPAQUE data, void* arg, struct iovec* buf, int bc) {
-	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)data;
-	buf[0].iov_base = h3_engine->udp_buffer;
-	buf[0].iov_len = MAX_QUIC_UDP_SIZE;
-	return 1;
-}
 int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int got) {
 	if (h3_engine->is_multi()) {
 		lsquic_cid_t cid;
 		cid.len = 0;
-		if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->udp_buffer, got, &cid) || cid.len < sizeof(kgl_h3_cid_header)) {
+		if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->get_udp_buffer(), got, &cid) || cid.len < sizeof(kgl_h3_cid_header)) {
 			return -1;
 
 		}

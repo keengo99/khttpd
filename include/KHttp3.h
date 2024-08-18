@@ -87,6 +87,9 @@ public:
 		iov_buf[1].iov_base = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
 		return old_buffer;
 	}
+	char* get_udp_buffer() {
+		return (char *)iov_buf[1].iov_base;
+	}
 	int start();
 	int init(kselector *selector, int udp_flag);
 	void release();
@@ -113,7 +116,6 @@ public:
 		last_sni = new KHttp3CachedSni(hostname, sni);
 	}
 	kgl_iovec iov_buf[2];
-	char* udp_buffer;
 	kconnection* uc;
 	lsquic_engine* engine;
 	uint32_t seq;
