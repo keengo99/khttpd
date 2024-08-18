@@ -127,7 +127,7 @@ kev_result KRequestProxy::state(int got)
 		destroy();
 		return kev_destroy;
 	}
-	((char *)iovec_buf[1].iov_base) += got;
+	iovec_buf[1].iov_base = (char *)iovec_buf[1].iov_base + got;
 	iovec_buf[1].iov_len -= got;
 	if (iovec_buf[1].iov_len > 0) {
 		return selectable_read(&cn->st, result_proxy_reader, iovec_buf, this);
