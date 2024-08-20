@@ -9,9 +9,20 @@
 #include "KRequest.h"
 #include "kfiber.h"
 #define KGL_FLAG_PRECONDITION_MASK  7
+//#define KGL_DEBUG_TIME
+#ifdef KGL_DEBUG_TIME
+void kgl_log_total_timespec() ;
+#endif
 class KSink
 {
 public:
+#ifdef KGL_DEBUG_TIME
+	void log_passed_time(const char *tip);
+	void reset_start_time() {
+		clock_gettime(CLOCK_REALTIME, &start_time);
+	}
+	struct timespec start_time;
+#endif
 	KSink(kgl_pool_t* pool);
 	virtual ~KSink();
 
@@ -38,7 +49,10 @@ public:
 	//called by low level to start sink.
 	//virtual kev_result read_header() = 0;
 	virtual void start(int header_len) = 0;
-	bool adjust_range(int64_t* len);
+	bool adjust_range(int64_t* len) {
+		assert(data.range);
+		return kgl_adjust_range(data.range, len);
+	}
 	void add_down_flow(int flow)
 	{
 		KFlowInfoHelper* helper = data.fh;
@@ -64,9 +78,24 @@ public:
 		}
 		return response_connection(kgl_expand_string("keep-alive"));
 	}
-	bool response_content_length(int64_t content_len);
-
-	inline bool response_status(uint16_t status_code)
+	bool response_content_length(int64_t content_len) {
+		if (content_len >= 0) {
+			//有content-length时
+			char len_str[INT2STRING_LEN];
+			int len = int2string2(content_len, len_str, false);
+			return response_header(kgl_header_content_length, len_str, len, false);
+		}
+		//无content-length时
+		if (data.http_version==0x100) {
+			//HTTP/1.0 client not support transfer-encoding
+			//The connection MUST close
+			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+		} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && set_transfer_chunked()) {
+			KBIT_SET(data.flags, RQ_TE_CHUNKED);
+		}
+		return true;
+	}
+	bool response_status(uint16_t status_code)
 	{
 		if (data.status_code > 0) {
 			//status_code只能发送一次
@@ -147,7 +176,39 @@ public:
 		return data.self_port;
 	}
 	const char* get_state();
-	void set_state(uint8_t state);
+	void set_state(uint8_t state) {		
+#ifdef ENABLE_STAT_STUB
+		if (data.state == state) {
+			return;
+		}
+		switch (data.state) {
+		case STATE_IDLE:
+			katom_dec((void*)&kgl_waiting);
+			break;
+		case STATE_RECV:
+			katom_dec((void*)&kgl_reading);
+			break;
+		case STATE_SEND:
+			katom_dec((void*)&kgl_writing);
+			break;
+		}
+#endif
+		data.state = state;
+#ifdef ENABLE_STAT_STUB
+		switch (state) {
+		case STATE_IDLE:
+			katom_inc((void*)&kgl_waiting);
+			break;
+		case STATE_RECV:
+			katom_inc((void*)&kgl_reading);
+			break;
+		case STATE_SEND:
+			katom_inc((void*)&kgl_writing);
+			break;
+		}
+#endif
+
+	}
 	virtual kselector* get_selector() = 0;
 	virtual void shutdown() = 0;
 	virtual uint32_t get_server_model() = 0;
@@ -184,7 +245,7 @@ public:
 		return "";
 	}
 	virtual void end_request() {
-		
+
 	}
 	void set_client_ip(const char* ip)
 	{
@@ -194,7 +255,19 @@ public:
 		data.client_ip = strdup(ip);
 	}
 
-	bool start_response_body(INT64 body_len);
+	bool start_response_body(INT64 body_len) {
+		assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
+		if (KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER)) {
+			return true;
+		}
+		KBIT_SET(data.flags, RQ_HAS_SEND_HEADER);
+		if (data.meth == METH_HEAD) {
+			body_len = 0;
+		}
+		int header_len = internal_start_response_body(body_len, false);
+		add_down_flow(header_len);
+		return header_len >= 0;
+	}
 	int read(char* buf, int len);
 	/* 
 	* write_all will send data until all success or failed.
@@ -215,7 +288,28 @@ public:
 		return len;
 	}
 	bool parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first);
-	bool begin_request();
+	bool begin_request() {
+		katom_inc64((void*)&kgl_total_requests);
+		set_state(STATE_RECV);
+		assert(data.url == NULL);
+		if (data.raw_url == nullptr) {
+			return false;
+		}
+		data.url = new KUrl;
+		if (data.raw_url->host) {
+			data.url->host = xstrdup(data.raw_url->host);
+		}
+		if (data.raw_url->param) {
+			data.url->param = strdup(data.raw_url->param);
+		}
+		data.url->flag_encoding = data.raw_url->flag_encoding;
+		data.url->port = data.raw_url->port;
+		if (data.raw_url->path) {
+			data.url->path = xstrdup(data.raw_url->path);
+			url_decode(data.url->path, 0, data.url, false);
+		}
+		return true;
+	}
 	virtual bool is_locked() = 0;
 	kgl_precondition_flag get_precondition_flag() {
 		return (kgl_precondition_flag)(data.flags & KGL_FLAG_PRECONDITION_MASK);
@@ -254,9 +348,27 @@ public:
 	KRequestData data;
 	friend class KHttp2;
 protected:
-	void start_parse();
-	void reset_pipeline();
-	void init_pool(kgl_pool_t* pool);
+	void start_parse() {
+		data.start_parse();
+		if (KBIT_TEST(get_server_model(), WORK_MODEL_SSL)) {
+			KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
+		}
+	}
+	void reset_pipeline() {
+		data.clean();
+		data.init();
+		if (pool) {
+			kgl_destroy_pool(pool);
+			pool = kgl_create_pool(KGL_REQUEST_POOL_SIZE);
+		}
+		set_state(STATE_IDLE);
+	}
+	void init_pool(kgl_pool_t* pool) {
+		this->pool = pool;
+		if (this->pool == NULL) {
+			this->pool = kgl_create_pool(KGL_REQUEST_POOL_SIZE);
+		}
+	}
 	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
 	virtual bool response_connection(const char* val, int val_len) = 0;

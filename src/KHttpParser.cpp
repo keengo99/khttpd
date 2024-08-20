@@ -5,7 +5,7 @@
 #include "khttp.h"
 #include "KHttpParser.h"
 
-kgl_parse_result khttp_parse_header(khttp_parser *parser, char *header, char *end, khttp_parse_result *rs)
+static INLINE kgl_parse_result khttp_parse_header(khttp_parser *parser, char *header, char *end, khttp_parse_result *rs)
 {
 	char *val;
 	if (rs->is_first && !parser->first_same) {

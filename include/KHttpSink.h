@@ -7,6 +7,7 @@
 #include "KHttpHeader.h"
 #include "KDechunkContext.h"
 #include "KHttpServer.h"
+#include "klog.h"
 //handle http/1.x protocol
 class KHttpSink : public KSingleConnectionSink
 {
@@ -54,8 +55,7 @@ public:
 	/* return true will use pipe_line */
 	void end_request() override;
 	ks_buffer buffer;
-	bool read_header();
-	kgl_parse_result parse();
+	bool read_header();	
 	KResponseContext* rc;
 	kconnection* get_connection() override
 	{
@@ -105,6 +105,59 @@ protected:
 	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext* dechunk;
 	khttp_parser parser;
+private:
+
+	kgl_parse_result parse() {
+		khttp_parse_result rs;
+		char* hot = buffer.buf;
+		char* end = buffer.buf + buffer.used;
+		for (;;) {
+			memset(&rs, 0, sizeof(rs));
+			kgl_parse_result result = khttp_parse(&parser, &hot, end, &rs);
+			//printf("len=[%d],result=[%d]\n", len,result);
+			switch (result) {
+			case kgl_parse_continue:
+			{
+				if (kgl_current_msec - data.begin_time_msec > 60000) {
+					return kgl_parse_error;
+				}
+				if (parser.header_len > MAX_HTTP_HEAD_SIZE) {
+					return kgl_parse_error;
+				}
+				ks_save_point(&buffer, hot);
+				return kgl_parse_continue;
+			}
+			case kgl_parse_success:
+				if (!parse_header(rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
+					return kgl_parse_error;
+				}
+				if (rs.is_first && data.meth == METH_PRI && KBIT_TEST(cn->server->flags, KGL_SERVER_H2)) {
+	#ifdef ENABLE_HTTP2
+					ks_save_point(&buffer, hot);
+					if (!switch_h2c()) {
+						klog(KLOG_ERR, "cann't switch to h2c, buffer size=[%d] may greater than http2 buffer\n", buffer.used);
+					}
+	#endif
+					return kgl_parse_error;
+				}
+				break;
+			case kgl_parse_finished:
+				kassert(rc == NULL);
+				ksocket_delay(cn->st.fd);
+				ks_save_point(&buffer, hot);
+				if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
+					kassert(dechunk == NULL);
+					dechunk = new KDechunkContext;
+				}
+				//printf("***************body_len=[%d]\n", parser.body_len);
+				rc = new KResponseContext(pool);
+				return kgl_parse_finished;
+
+			default:
+				return kgl_parse_error;
+			}
+		}
+	}
 };
 #endif
 
