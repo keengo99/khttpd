@@ -109,7 +109,7 @@ public:
 	virtual bool response_header(kgl_header_type know_header,const char *val, int val_len, bool lock_value)
 	{
 		assert(know_header<kgl_header_unknow);
-		return response_header(kgl_header_type_string[know_header].value.data, (int)kgl_header_type_string[know_header].value.len, val, val_len);
+		return response_header(kgl_header_type_string[(int)know_header].value.data, (int)kgl_header_type_string[(int)know_header].value.len, val, val_len);
 	}
 	virtual bool readhup(void* arg, result_callback result) = 0;
 	virtual void remove_readhup() = 0;
