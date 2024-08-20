@@ -183,6 +183,9 @@ public:
 		}
 		return "";
 	}
+	virtual void end_request() {
+		
+	}
 	void set_client_ip(const char* ip)
 	{
 		if (data.client_ip) {

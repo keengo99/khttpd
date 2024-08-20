@@ -256,20 +256,23 @@ int KHttpSink::write_all(const kbuf* buf, int len) {
 	}
 	return internal_write(buf, len, nullptr);
 }
-bool KHttpSink::end_request() {
+void KHttpSink::end_request() {
 	if (rc) {
 		if (rc->ab.empty()) {
-			return false;
+			KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+			return;
 		}
 		//has header to send.
 		if (KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen()) != 0) {
-			return false;
+			KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+			return;
 		}
 		delete rc;
 		rc = nullptr;
 	}
 	if (response_left > 0) {
-		return false;
+		KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+		return;
 	}
 	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED) && response_left == -1) {
 		//has chunked but body is complete successful.
@@ -287,18 +290,8 @@ bool KHttpSink::end_request() {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}
-	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE | RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
-		return false;
-	}
-	ksocket_no_delay(cn->st.fd, false);
-	kassert(buffer.buf_size > 0);
-	kassert(data.left_read >= 0 || dechunk != NULL);
-
-	if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
-		//still have data to read
-		return skip_post();
-	}
-	return start_pipe_line();
+	
+	return;
 }
 bool KHttpSink::skip_post() {
 	kassert(data.left_read != 0);
@@ -340,6 +333,18 @@ bool KHttpSink::skip_post() {
 	return start_pipe_line();
 }
 bool KHttpSink::start_pipe_line() {
+	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE | RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
+		return false;
+	}
+	assert(rc==nullptr);
+	ksocket_no_delay(cn->st.fd, false);
+	kassert(buffer.buf_size > 0);
+	kassert(data.left_read >= 0 || dechunk != NULL);
+
+	if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
+		//still have data to read
+		return skip_post();
+	}
 	kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
 	reset_pipeline();
 	memset(&parser, 0, sizeof(parser));
@@ -397,7 +402,7 @@ void KHttpSink::start(int header_len) {
 			}
 #endif
 			khttp_server_new_request((KSink*)this, parser.header_len);
-			if (!end_request()) {
+			if (!start_pipe_line()) {
 				return;
 			}
 			if (buffer.used > 0) {

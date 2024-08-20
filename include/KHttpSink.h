@@ -52,7 +52,7 @@ public:
 		return cn->st.base.tmo;
 	}
 	/* return true will use pipe_line */
-	bool end_request();
+	void end_request() override;
 	ks_buffer buffer;
 	bool read_header();
 	kgl_parse_result parse();
