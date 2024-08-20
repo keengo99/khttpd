@@ -891,12 +891,26 @@ void KHttp2::release(KHttp2Context* ctx) {
 kselector* KHttp2::getSelector() {
 	return c->st.base.selector;
 }
-int KHttp2::copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc) {
+int KHttp2::copy_read_buffer(KHttp2Context* ctx, char* buf, int length) {
 	//WSABUF vc[MAX_HTTP2_BUFFER_SIZE];
 	int total_send = 0;
+	assert(ctx->read_buffer->getHeader());
 	if (ctx->read_buffer->getHeader() == NULL) {
 		return 0;
 	}
+	while (length > 0) {
+		int this_len;
+		char* data = ctx->read_buffer->getReadBuffer(this_len);
+		this_len = KGL_MIN(this_len, length);
+		kgl_memcpy(buf, data, this_len);
+		total_send += this_len;
+		length -= this_len;
+		buf += this_len;
+		if (!ctx->read_buffer->readSuccess(this_len)) {
+			break;
+		}
+	}
+#if 0
 	//int bufferCount = buffer(ctx->data, arg,vc, MAX_HTTP2_BUFFER_SIZE);
 	for (int i = 0; i < bc; i++) {
 		while (buf[i].iov_len > 0) {
@@ -912,7 +926,7 @@ int KHttp2::copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc) {
 			}
 		}
 	}
-done:
+#endif
 	return total_send;
 }
 int KHttp2::ReadHeader(KHttp2Context* http2_ctx) {
@@ -1325,7 +1339,7 @@ void KHttp2::server(kconnection* c) {
 	}
 	start_read();
 }
-int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
+int KHttp2::read(KHttp2Context* http2_ctx, char* buf, int len) {
 	kassert(kselector_is_same_thread(c->st.base.selector));
 	assert(http2_ctx);
 	assert(http2_ctx->parsed_header);
@@ -1362,7 +1376,7 @@ int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
 		start_write();
 	}
 	if (http2_ctx->read_buffer && http2_ctx->read_buffer->getHeader() != NULL) {
-		return copy_read_buffer(http2_ctx, buf, bc);
+		return copy_read_buffer(http2_ctx, buf, len);
 	}
 	if (http2_ctx->rst) {
 		return -1;
@@ -1371,8 +1385,8 @@ int KHttp2::read(KHttp2Context* http2_ctx, WSABUF* buf, int bc) {
 		return 0;
 	}
 	http2_ctx->read_wait = new kgl_http2_event;
-	http2_ctx->read_wait->buf = buf;
-	http2_ctx->read_wait->bc = bc;
+	http2_ctx->read_wait->rbuf = buf;
+	http2_ctx->read_wait->buf_len = len;
 	http2_ctx->read_wait->fiber = kfiber_self();
 	AddQueue(http2_ctx);
 	return kfiber_wait(http2_ctx->read_wait);
@@ -1414,11 +1428,11 @@ int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {
 		send_header(ctx, ctx->content_left == 0);
 	}
 	ctx->sendfile = 1;
-	ctx->CreateWriteWaitWindow((WSABUF*)file, length);
+	ctx->CreateWriteWaitWindow((kbuf*)file, length);
 	on_write_window_ready(ctx);
 	return kfiber_wait(ctx->write_wait);
 }
-int KHttp2::write(KHttp2Context* ctx, WSABUF* buf, int bc) {
+int KHttp2::write(KHttp2Context* ctx, const kbuf* buf, int bc) {
 	if (ctx->write_wait) {
 		kassert(IS_WRITE_WAIT_FOR_HUP(ctx->write_wait));
 		delete ctx->write_wait;
@@ -1668,7 +1682,7 @@ u_char* KHttp2::state_read_data(u_char* pos, u_char* end) {
 			assert(read_wait->fiber);
 			stream->read_wait = NULL;
 			FlushQueue(stream);
-			int got = copy_read_buffer(stream, read_wait->buf, read_wait->bc);
+			int got = copy_read_buffer(stream, read_wait->rbuf, read_wait->buf_len);
 			read_wait->on_read(got);
 			delete read_wait;
 		}

@@ -162,24 +162,19 @@ int KHttpSink::internal_start_response_body(int64_t body_size, bool is_100_conti
 	rc->ab.SwitchRead();
 	int header_len = rc->ab.getLen();
 	assert(!kfiber_is_main());
-
-	WSABUF buf[64];
-	for (;;) {
-		int bc = rc->ab.getReadBuffer(buf, 64);
-		kassert(bc > 0);
-		int got = kfiber_net_writev(cn, buf, bc);
-		if (got <= 0) {
-			header_len = -1;
-			break;
+	if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
+		if (0 != KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen())) {
+			return -1;
 		}
-		if (!rc->ab.readSuccess(&got)) {
-			kassert(got == 0);
-			break;
-		}
-	}
-	if (!is_100_continue) {
 		delete rc;
-		rc = NULL;
+		rc = nullptr;
+		return header_len;
+	}
+	if (is_100_continue) {
+		if (0 != KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen())) {
+			return -1;
+		}
+		rc->ab.clean();
 	}
 	return header_len;
 }
@@ -196,6 +191,14 @@ int KHttpSink::internal_read(char* buf, int len) {
 	return kfiber_net_read(cn, buf, len);
 }
 int KHttpSink::sendfile(kfiber_file* fp, int len) {
+	if (rc && !rc->ab.empty()) {
+		int left = KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen());
+		delete rc;
+		rc = nullptr;
+		if (left != 0) {
+			return 0;
+		}
+	}
 	if (!KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
 		return KSingleConnectionSink::sendfile(fp, len);
 	}
@@ -204,47 +207,70 @@ int KHttpSink::sendfile(kfiber_file* fp, int len) {
 	if (!kfiber_net_write_full(cn, header, &size)) {
 		return -1;
 	}
-	size = len;
-	if (!kfiber_sendfile_full(cn, fp, &size)) {
+	int size2 = len;
+	bool result = kfiber_sendfile_full(cn, fp, &size2);
+	add_down_flow(len - size2 + size + 2);
+	if (!result) {
 		return -1;
 	}
-	size = sizeof("\r\n");
-	if (!kfiber_net_write_full(cn, "\r\n", &size)) {
+	size2 = sizeof("\r\n");
+	if (!kfiber_net_write_full(cn, "\r\n", &size2)) {
 		return -1;
 	}
-	on_success_response(len);
-	add_down_flow(len);
+	on_success_response(len+size+2);
 	return len;
 }
-int KHttpSink::internal_write(WSABUF* buf, int bc) {
-	assert(!kfiber_is_main());
+int KHttpSink::write_all(const char* str, int len) {
 	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
-		int size = 0;
-		for (int i = 0; i < bc; i++) {
-			size += buf[i].iov_len;
-		}
 		char header[32];
-		WSABUF* new_bufs = (WSABUF*)alloca(sizeof(WSABUF) * (bc + 2));
-		new_bufs[0].iov_len = sprintf(header, "%x\r\n", size);
-		new_bufs[0].iov_base = header;
-		memcpy(new_bufs + 1, buf, sizeof(WSABUF) * bc);
-		bc++;
-		new_bufs[bc].iov_base = (char*)"\r\n";
-		new_bufs[bc].iov_len = 2;
-		bc++;
-		if (!kfiber_net_writev_full(cn, new_bufs, &bc)) {
-			return -1;
-		}
-		on_success_response(size);
-		return size;
+		kbuf buf[2];
+		buf[0].used = sprintf(header, "%x\r\n", len);
+		buf[0].next = &buf[1];
+		buf[0].data = (char*)header;
+		buf[1].used = len;
+		buf[1].data = (char*)str;
+		kgl_iovec chunked_end;
+		chunked_end.iov_base = (char*)"\r\n";
+		chunked_end.iov_len = 2;
+		return internal_write(buf, len + buf[0].used, &chunked_end);
 	}
-	return on_success_response(kfiber_net_writev(cn, buf, bc));
+	if (rc && !rc->ab.empty()) {
+		kbuf buf{ 0 };
+		buf.data = (char*)str;
+		buf.used = len;
+		return internal_write(&buf, len, nullptr);
+	}
+	return KSingleConnectionSink::write_all(str, len);
+}
+int KHttpSink::write_all(const kbuf* buf, int len) {
+	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED)) {
+		char header[32];
+		kbuf chunked_buf;
+		chunked_buf.used = sprintf(header, "%x\r\n", len);
+		chunked_buf.next = (kbuf *)buf;
+		chunked_buf.data = (char*)header;
+		kgl_iovec chunked_end;
+		chunked_end.iov_base = (char*)"\r\n";
+		chunked_end.iov_len = 2;
+		return internal_write(&chunked_buf, len + chunked_buf.used, &chunked_end);
+	}
+	return internal_write(buf, len, nullptr);
 }
 bool KHttpSink::end_request() {
-	if (rc || response_left > 0) {
-		//KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+	if (rc) {
+		if (rc->ab.empty()) {
+			return false;
+		}
+		//has header to send.
+		if (KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen()) != 0) {
+			return false;
+		}
+		delete rc;
+		rc = nullptr;
+	}
+	if (response_left > 0) {
 		return false;
-	} 
+	}
 	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED) && response_left == -1) {
 		//has chunked but body is complete successful.
 		WSABUF bufs;

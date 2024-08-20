@@ -12,7 +12,6 @@ public:
 	kbuf *last;
 	char *hot;
 	int total_len;
-	kgl_pool_t *pool;
 };
 class KAutoBuffer : public KWStream, public KAutoBufferData
 {
@@ -22,7 +21,7 @@ public:
 		memset(static_cast<KAutoBufferData *>(this), 0, sizeof(KAutoBufferData));
 		this->pool = pool;
 	}
-	KAutoBuffer()
+	KAutoBuffer() :pool{ 0 }
 	{
 		memset(static_cast<KAutoBufferData *>(this), 0, sizeof(KAutoBufferData));
 	}
@@ -34,10 +33,10 @@ public:
 	{
 		if (this->pool == NULL) {
 			destroy_kbuf(head);
-			memset(static_cast<KAutoBufferData *>(this), 0, sizeof(KAutoBufferData));
 		}
+		memset(static_cast<KAutoBufferData*>(this), 0, sizeof(KAutoBufferData));
 	}
-	int write(const char* buf, int len);
+	int write(const char* buf, int len) override;
 	void writeSuccess(int got);
 	char *getWriteBuffer(int &len);
 	void Insert(const char *str, int len) {
@@ -54,6 +53,12 @@ public:
 		}
 		head = buf;
 		total_len += buf->used;
+	}
+	/* do not use this function when pool is NULL */
+	inline void attach_buffers(const kbuf* buf, int len) {
+		assert(pool);
+		last->next = (kbuf *)buf;
+		total_len += len;
 	}
 	inline void Append(kbuf *buf)
 	{
@@ -101,8 +106,6 @@ public:
 		return ret;
 	}
 	kbuf *stealBuff();
-	int getReadBuffer(LPWSABUF buffer, int bufferCount);
-	bool readSuccess(int *got);
 	inline kbuf *new_buff(int chunk_size)
 	{
 		if (pool == NULL) {
@@ -123,6 +126,7 @@ public:
 		buf->next = NULL;
 		return buf;
 	}
+	kgl_pool_t* pool;
 };
 #endif
 

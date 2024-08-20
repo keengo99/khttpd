@@ -40,9 +40,57 @@ int KTcpUpstream::read(char* buf, int len)
 {
 	return kfiber_net_read(cn, buf, len);
 }
-int KTcpUpstream::write(WSABUF* buf, int bc)
+int KTcpUpstream::write_all(const char* buf, int length) {
+	while (length > 0) {
+		int got = kfiber_net_write(cn, buf, length);
+		if (got <= 0) {
+			return length;
+		}
+		length -= got;
+	}
+	return 0;
+}
+int KTcpUpstream::write_all(const kbuf* buf, int length)
 {
-	return kfiber_net_writev(cn, buf, bc);
+#define KGL_RQ_WRITE_BUF_COUNT 64
+	kgl_iovec iovec_buf[KGL_RQ_WRITE_BUF_COUNT];
+	while (length > 0) {
+		/* prepare iovec_buf */
+		int bc = 0;
+		for (; bc < KGL_RQ_WRITE_BUF_COUNT && length>0; ++bc) {
+			iovec_buf[bc].iov_len = KGL_MIN(length, buf->used);
+			iovec_buf[bc].iov_base = buf->data;
+			length -= iovec_buf[bc].iov_len;
+			buf = buf->next;
+		}
+		/*
+		if (length == 0 && suffix) {
+			iovec_buf[bc++] = *suffix;
+		}
+		*/
+		kgl_iovec* hot_buf = iovec_buf;
+		while (bc > 0) {
+			/* write iovec_buf */
+			int got = kfiber_net_writev(cn, hot_buf, bc);
+			if (got <= 0) {
+				return length;
+			}
+			//add_down_flow(got);
+			length -= got;
+			/* see iovec_buf left data */
+			while (got > 0) {
+				if ((int)hot_buf->iov_len > got) {
+					hot_buf->iov_len -= got;
+					hot_buf->iov_base = (char*)(hot_buf->iov_base) + got;
+					break;
+				}
+				got -= hot_buf->iov_len;
+				hot_buf++;
+				bc--;
+			}
+		}
+	}
+	return 0;
 }
 
 void KTcpUpstream::bind_selector(kselector *selector)

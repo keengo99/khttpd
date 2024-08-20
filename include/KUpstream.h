@@ -59,20 +59,6 @@ public:
 	virtual bool support_websocket() {
 		return false;
 	}
-	KGL_RESULT write_all(const char* buf, int len) {
-		while (len > 0) {
-			WSABUF bufs;
-			bufs.iov_base = (char*)buf;
-			bufs.iov_len = len;
-			int this_len = write(&bufs, 1);
-			if (this_len <= 0) {
-				return KGL_EIO;
-			}
-			len -= this_len;
-			buf += this_len;
-		}
-		return KGL_OK;
-	}
 	virtual KHttpHeader* get_trailer() {
 		return nullptr;
 	}
@@ -92,10 +78,20 @@ public:
 	virtual kgl_pool_t* GetPool() = 0;
 	virtual kconnection* get_connection() = 0;
 	virtual void write_end() {
-
 	}
 	virtual int read(char* buf, int len) = 0;
-	virtual int write(WSABUF* buf, int bc) = 0;
+	/*
+	* write_all will send data until all success or failed.
+	* if failed return left byte.
+	* if return 0 will all success.
+	*/
+	virtual int write_all(const kbuf* buf, int len) = 0;
+	virtual int write_all(const char* buf, int len) {
+		kbuf bufs{ 0 };
+		bufs.data = (char*)buf;
+		bufs.used = len;
+		return write_all(&bufs, len);
+	}
 	virtual void shutdown() = 0;
 	virtual void Destroy() = 0;
 	virtual bool IsMultiStream() {

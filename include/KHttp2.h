@@ -345,31 +345,41 @@ public:
 			new_buf->skip_data_free = 1;
 			new_buf->sendfile = 1;
 			new_buf->file = e->file;
-			total_len = (uint16_t)KGL_MIN(len, e->bc);
+			total_len = (uint16_t)KGL_MIN(len, e->buf_len);
 			new_buf->used = total_len;
 			buf_out = last = new_buf;
 		} else {
 			//int bufferCount = e->buffer(data, e->arg, vc, MAX_HTTP2_BUFFER_SIZE);
-			for (int i = 0; i < e->bc; i++) {
+			const kbuf* hot_buf = e->buf;
+			int total_buf_len = e->buf_len;
+			while (total_buf_len > 0) {
 				if (len <= 0) {
 					break;
 				}
 				http2_buff* new_buf = new http2_buff;
 				new_buf->skip_data_free = 1;
-				new_buf->data = (char*)e->buf[i].iov_base;
-				new_buf->used = (uint16_t)KGL_MIN(len, (int)e->buf[i].iov_len);
+				new_buf->data = (char*)hot_buf->data;
+				int buf_len = KGL_MIN(hot_buf->used, total_buf_len);
+				new_buf->used = KGL_MIN(len, buf_len);
 #ifndef NDEBUG
 				//KMD5Update(&md5, (unsigned char *)new_buf->data, new_buf->used);
 #endif
-			//fwrite(new_buf->data, 1, new_buf->used, stdout);
+				//fwrite(new_buf->data, 1, new_buf->used, stdout);
 				len -= new_buf->used;
 				total_len += new_buf->used;
+				total_buf_len -= new_buf->used;
+
 				if (last) {
 					last->next = new_buf;
 				} else {
 					buf_out = new_buf;
 				}
 				last = new_buf;
+				if (new_buf->used == hot_buf->used) {
+					hot_buf = hot_buf->next;
+				} else {
+					assert(total_buf_len <= 0 || len <= 0);
+				}
 			}
 		}
 		assert(last);
@@ -402,11 +412,11 @@ public:
 		len = total_len;
 		return new_buf;
 	}
-	void CreateWriteWaitWindow(WSABUF* buf, int bc) {
+	void CreateWriteWaitWindow(const kbuf* buf, int length) {
 		kassert(write_wait == NULL);
 		write_wait = new kgl_http2_event;
 		write_wait->buf = buf;
-		write_wait->bc = bc;
+		write_wait->buf_len = length;
 		write_wait->fiber = kfiber_self();
 		write_wait->len = -1;
 	}
@@ -482,8 +492,35 @@ public:
 #endif
 public:
 	int ReadHeader(KHttp2Context* ctx);
-	int read(KHttp2Context* ctx, WSABUF* buf, int bc);
-	int write(KHttp2Context* ctx, WSABUF* buf, int bc);
+	int read(KHttp2Context* ctx, char* buf, int length);
+	int write(KHttp2Context* ctx, const kbuf *buf, int length);
+	int write_all(KHttp2Context* ctx, const kbuf* buf, int length) {
+		kbuf header{ 0 };
+		const kbuf* hot_buf = buf;
+		for (;;) {
+			int got = write(ctx, hot_buf, length);
+			if (got <= 0) {
+				break;
+			}
+			length -= got;
+			if (length <= 0) {
+				return 0;
+			}
+			do {
+				if (hot_buf->used <= got) {
+					hot_buf = hot_buf->next;
+					got -= hot_buf->used;
+					continue;
+				}
+				header.used = hot_buf->used - got;
+				header.data = hot_buf->data + got;
+				header.next = hot_buf->next;
+				hot_buf = &header;
+				break;
+			} while (got > 0);
+		}
+		return length;
+	}
 	int sendfile(KHttp2Context* ctx, kasync_file* file, int length);
 	bool add_status(KHttp2Context* ctx, uint16_t status_code);
 	bool add_method(KHttp2Context* ctx, u_char meth);
@@ -556,7 +593,7 @@ private:
 	void ping();
 	void goaway(int error_code);
 	KHttp2Context* create_stream();
-	int copy_read_buffer(KHttp2Context* ctx, WSABUF* buf, int bc);
+	int copy_read_buffer(KHttp2Context* ctx, char* buf, int len);
 	void set_dependency(KHttp2Node* node, uint32_t depend, bool exclusive);
 	intptr_t parse_int(u_char** pos, u_char* end, uintptr_t prefix);
 	kgl_iovec         read_buffer[2];

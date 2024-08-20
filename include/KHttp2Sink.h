@@ -90,14 +90,20 @@ public:
 	}
 	int internal_read(char* buf, int len) override
 	{
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = len;
-		return http2->read(ctx, &bufs, 1);
+		return http2->read(ctx, buf, len);
 	}
-	int internal_write(WSABUF* buf, int bc) override
+	int write_all(const kbuf* buf, int length) override
 	{
-		return http2->write(ctx, buf, bc);
+		int left = http2->write_all(ctx, buf, length);
+		add_down_flow(length - left);
+		return left;
+	}
+	int write_all(const char* str, int length) override
+	{
+		kbuf buf{ 0 };
+		buf.data = (char*)str;
+		buf.used = length;
+		return write_all(&buf, length);
 	}
 	void shutdown() override
 	{

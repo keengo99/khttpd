@@ -8,7 +8,7 @@
 struct KTsUpstreamParam {
 	KUpstream* us;
 	union {
-		WSABUF* bufs;
+		const kbuf* bufs;
 		char* buf;
 		KTsUpstream* ts;
 	};
@@ -66,10 +66,14 @@ static int ts_read(void* arg, int len)
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
 	return param->us->read(param->buf, param->len);
 }
-static int ts_write(void* arg, int len)
+static int ts_write_str(void* arg, int len)
 {
 	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
-	return param->us->write(param->bufs, param->len);
+	return param->us->write_all(param->buf, param->len);
+}
+static int ts_write_buf(void* arg, int len) {
+	KTsUpstreamParam* param = (KTsUpstreamParam*)arg;
+	return param->us->write_all(param->bufs, param->len);
 }
 static int ts_read_http_header(void* arg, int len)
 {
@@ -104,15 +108,27 @@ KGL_RESULT KTsUpstream::read_header()
 	}
 	return (KGL_RESULT)ret;
 }
-int KTsUpstream::write(WSABUF* buf, int bc)
+int KTsUpstream::write_all(const char * buf, int bc)
 {
+	KTsUpstreamParam param;
+	param.us = us;
+	param.buf = (char *)buf;
+	param.len = bc;
+	kfiber* fiber = NULL;
+	if (kfiber_create2(us->get_selector(), ts_write_str, &param, 0, 0, &fiber) != 0) {
+		return -1;
+	}
+	int ret;
+	kfiber_join(fiber, &ret);
+	return ret;
+}
+int KTsUpstream::write_all(const kbuf* buf, int bc) {
 	KTsUpstreamParam param;
 	param.us = us;
 	param.bufs = buf;
 	param.len = bc;
-	assert(buf[0].iov_len > 0);
 	kfiber* fiber = NULL;
-	if (kfiber_create2(us->get_selector(), ts_write, &param, 0, 0, &fiber) != 0) {
+	if (kfiber_create2(us->get_selector(), ts_write_buf, &param, 0, 0, &fiber) != 0) {
 		return -1;
 	}
 	int ret;

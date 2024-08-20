@@ -89,7 +89,7 @@ bool KSink::start_response_body(INT64 body_len) {
 		body_len = 0;
 	}
 	int header_len = internal_start_response_body(body_len, false);
-	add_down_flow(header_len, true);
+	add_down_flow(header_len);
 	return header_len >= 0;
 }
 bool KSink::begin_request() {
@@ -424,6 +424,7 @@ bool KSink::response_content_length(int64_t content_len) {
 	}
 	return true;
 }
+#if 0
 int KSink::write(WSABUF* buf, int bc) {
 	int got = internal_write(buf, bc);
 	if (got > 0) {
@@ -437,6 +438,7 @@ int KSink::write(const char* buf, int len) {
 	bufs.iov_len = len;
 	return write(&bufs, 1);
 }
+#endif
 int KSink::read(char* buf, int len) {
 	KBIT_SET(data.flags, RQ_HAS_READ_POST);
 	kassert(!kfiber_is_main());
@@ -462,6 +464,7 @@ int KSink::read(char* buf, int len) {
 	}
 	return length;
 }
+#if 0
 bool KSink::write_all(const char* buf, int len) {
 	while (len > 0) {
 		int this_len = write(buf, len);
@@ -473,6 +476,7 @@ bool KSink::write_all(const char* buf, int len) {
 	}
 	return true;
 }
+#endif
 bool kgl_init_sink_queue() {
 	pthread_key_create(&kgl_request_key, NULL);
 	if (0 != selector_manager_thread_init(kgl_request_thread_init, NULL)) {

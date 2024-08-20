@@ -76,6 +76,8 @@ public:
 	bool skip_post();
 	bool start_pipe_line();
 	int sendfile(kfiber_file* fp, int len) override;
+	int write_all(const char* buf, int len) override;
+	int write_all(const kbuf* buf, int len) override;
 protected:
 	bool response_altsvc_header(const char* val, int val_len) override
 	{
@@ -83,7 +85,19 @@ protected:
 	}
 	int internal_start_response_body(int64_t body_size, bool is_100_continue) override;
 	int internal_read(char* buf, int len) override;
-	int internal_write(WSABUF* buf, int bc) override;
+	int internal_write(const kbuf* buf, int len,const kgl_iovec *suffix) {
+		if (rc && !rc->ab.empty()) {
+			rc->ab.attach_buffers(buf, len);
+			int left = KSingleConnectionSink::write_buf(rc->ab.getHead(),rc->ab.getLen(), suffix);
+			delete rc;
+			rc = nullptr;
+			on_success_response(len - left);
+			return left;
+		}
+		int left = KSingleConnectionSink::write_buf(buf, len, suffix);
+		on_success_response(len - left);
+		return left;
+	}
 protected:
 #ifdef ENABLE_HTTP2
 	bool switch_h2c();

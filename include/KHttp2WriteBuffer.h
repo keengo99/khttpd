@@ -63,13 +63,14 @@ public:
 		* on client model before complete read header. 
 		* read_event will use header callback and the fiber can be NULL(no wait header) or NOT NULL(wait the header).
 		*/
-		WSABUF* buf;
+		const kbuf* buf;
 		kgl_header_callback header;
 		kasync_file* file;
+		char* rbuf;
 	};
 	union {
 		struct {
-			int bc;
+			int buf_len;
 			int len;
 		};
 		void* header_arg;

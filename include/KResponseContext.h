@@ -38,6 +38,7 @@ public:
 		t->used = len;
 		ab.Append(t);
 	}
+
 	friend class KHttpSink;
 private:
 	KAutoBuffer ab;

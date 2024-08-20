@@ -139,10 +139,59 @@ public:
 		ev[OP_READ].cd->f->wait(ev[OP_READ].cd,&got);
 		assert(!KBIT_TEST(st_flags, STF_READ));
 		assert(got == ev[OP_READ].result);
-		printf("http3 read result=[%d]\n", ev[OP_READ].result);
+		//printf("http3 read result=[%d]\n", ev[OP_READ].result);
 		return ev[OP_READ].result;
 	}
-	int internal_write(WSABUF* buf, int bc) override {
+	int write_all(const kbuf* buf, int length) override {
+#define KGL_RQ_WRITE_BUF_COUNT 64
+		kgl_iovec iovec_buf[KGL_RQ_WRITE_BUF_COUNT];
+		while (length > 0) {
+			/* prepare iovec_buf */
+			int bc = 0;
+			for (; bc < KGL_RQ_WRITE_BUF_COUNT && length>0; ++bc) {
+				iovec_buf[bc].iov_len = KGL_MIN(length, buf->used);
+				iovec_buf[bc].iov_base = buf->data;
+				length -= iovec_buf[bc].iov_len;
+				buf = buf->next;
+			}
+			kgl_iovec* hot_buf = iovec_buf;
+			while (bc > 0) {
+				/* write iovec_buf */
+				int got = internal_write(hot_buf, bc);
+				if (got <= 0) {
+					return length;
+				}
+				length -= got;
+				/* see iovec_buf left data */
+				while (got > 0) {
+					if ((int)hot_buf->iov_len > got) {
+						hot_buf->iov_len -= got;
+						hot_buf->iov_base = (char*)(hot_buf->iov_base) + got;
+						break;
+					}
+					got -= hot_buf->iov_len;
+					hot_buf++;
+					bc--;
+				}
+			}
+		}
+		return 0;
+	}
+	int write_all(const char* str, int length) override {
+		while (length > 0) {
+			kgl_iovec buf;
+			buf.iov_base = (char*)str;
+			buf.iov_len = length;
+			int got = internal_write(&buf, 1);
+			if (got <= 0) {
+				break;
+			}
+			length -= got;
+			str += got;
+		}
+		return length;
+	}
+	int internal_write(WSABUF* buf, int bc)  {
 		assert(!KBIT_TEST(st_flags, STF_WRITE));
 		if (st == NULL) {
 			return -1;
@@ -161,6 +210,7 @@ public:
 		if (content_left > 0) {
 			content_left -= ev[OP_WRITE].result;
 		}
+		add_down_flow(ev[OP_WRITE].result);
 		return ev[OP_WRITE].result;
 	}
 	void on_read(lsquic_stream_t* st);

@@ -39,11 +39,8 @@ public:
 	//virtual kev_result read_header() = 0;
 	virtual void start(int header_len) = 0;
 	bool adjust_range(int64_t* len);
-	void add_down_flow(int flow, bool is_header_length = false)
+	void add_down_flow(int flow)
 	{
-		if (!is_header_length) {
-			data.send_size += flow;
-		}
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
 			helper->fi->AddDownFlow((INT64)flow, KBIT_TEST(data.flags, RQ_CACHE_HIT));
@@ -195,10 +192,25 @@ public:
 	}
 
 	bool start_response_body(INT64 body_len);
-	int write(WSABUF* buf, int bc);
-	int write(const char* buf, int len);
 	int read(char* buf, int len);
-	bool write_all(const char* buf, int len);
+	/* 
+	* write_all will send data until all success or failed.
+	* if failed return left byte.
+	* if return 0 will all success.
+	*/
+	virtual int write_all(const char* buf, int len) = 0;
+	virtual int write_all(const kbuf* buf, int len) {
+		while (len > 0) {
+			int got = KGL_MIN(len, buf->used);
+			len -= got;
+			int left = write_all(buf->data, got);
+			if (left > 0) {
+				return len + left;
+			}
+			buf = buf->next;
+		}
+		return len;
+	}
 	bool parse_header(const char* attr, int attr_len, const char* val, int val_len, bool is_first);
 	bool begin_request();
 	virtual bool is_locked() = 0;
@@ -242,7 +254,6 @@ protected:
 	void start_parse();
 	void reset_pipeline();
 	void init_pool(kgl_pool_t* pool);
-	virtual int internal_write(WSABUF* buf, int bc) = 0;
 	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
 	virtual bool response_connection(const char* val, int val_len) = 0;
