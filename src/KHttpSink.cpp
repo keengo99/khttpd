@@ -207,19 +207,19 @@ int KHttpSink::write_all(const kbuf* buf, int len) {
 void KHttpSink::end_request() {
 	if (rc) {
 		if (rc->ab.empty()) {
-			KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 			return;
 		}
 		//has header to send.
 		if (KSingleConnectionSink::write_all(rc->ab.getHead(), rc->ab.getLen()) != 0) {
-			KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 			return;
 		}
 		delete rc;
 		rc = nullptr;
 	}
 	if (response_left > 0) {
-		KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE);
+		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		return;
 	}
 	if (KBIT_TEST(data.flags, RQ_TE_CHUNKED) && response_left == -1) {
@@ -238,7 +238,6 @@ void KHttpSink::end_request() {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}
-	
 	return;
 }
 bool KHttpSink::skip_post() {
