@@ -153,6 +153,8 @@ typedef enum _kgl_header_type
 	kgl_header_if_unmodified_since,
 	kgl_header_cookie,
 	kgl_header_scheme,
+	kgl_header_referer,
+	kgl_header_user_agent,
 	kgl_header_unknow
 } kgl_header_type;
 
