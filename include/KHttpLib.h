@@ -27,7 +27,7 @@ using kgl_auto_cstr = std::unique_ptr<char, kgl_auto_cstr_free>;
 using kgl_auto_ref_str = std::unique_ptr<kgl_ref_str_t, kgl_auto_ref_str_free>;
 
 
-int kgl_domain_cmp(const domain_t s1, const domain_t s2);
+
 std::string b64encode(const unsigned char* in, int len = 0);
 char* b64decode(const unsigned char* in, int* l);
 char *url_encode(const char *s, size_t len, size_t *new_length);
@@ -239,6 +239,9 @@ inline void* kgl_memrchr(const void* s, int c, size_t n) 	{
 		end--;
 	}
 	return NULL;
+}
+inline int kgl_domain_cmp(const domain_t s1, const domain_t s2) {
+	return kgl_cmp((const char*)(s1 + 1), *s1, (const char*)(s2 + 1), *s2);
 }
 extern int program_rand_value;
 extern int open_file_limit;
