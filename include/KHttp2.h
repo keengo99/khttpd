@@ -527,18 +527,15 @@ public:
 	bool add_header(KHttp2Context* ctx, kgl_header_type name, const char* val, hlen_t val_len);
 	bool add_header(KHttp2Context* ctx, const char* name, hlen_t name_len, const char* val, hlen_t val_len);
 	bool send_altsvc(KHttp2Context* ctx, const char* val, int val_len);
-	//kev_result read(KHttp2Context *ctx,result_callback result,buffer_callback buffer,void *arg);
 	bool readhup(KHttp2Context* ctx, result_callback result, void* arg);
 	void remove_readhup(KHttp2Context* ctx);
 	void shutdown(KHttp2Context* ctx);
 	KHttp2Node** GetAllStream() {
 		return streams_index;
 	}
-	//kev_result write(KHttp2Context *ctx,result_callback result,buffer_callback buffer,void *arg);
 	void release(KHttp2Context* ctx);
 	void release_stream(KHttp2Context* ctx);
 	void release_admin(KHttp2Context* ctx);
-	//int sync_send_header(KHttp2Context *ctx,INT64 body_len);
 	int send_header(KHttp2Context* ctx, bool fin);
 	void write_end(KHttp2Context* ctx);
 public:
