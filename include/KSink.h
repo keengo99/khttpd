@@ -219,16 +219,16 @@ public:
 	virtual void set_time_out(int tmo_count) = 0;
 	virtual kgl_pool_t* get_connection_pool() = 0;
 	virtual int get_time_out() = 0;
+#if 0
 	virtual void set_delay()
 	{
 	}
 	virtual void set_no_delay(bool forever)
 	{
 	}
+#endif
 	virtual void flush()
-	{
-		set_no_delay(false);
-		set_delay();
+	{		
 	}
 	virtual kssl_session* get_ssl() {
 		return nullptr;

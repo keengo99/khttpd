@@ -1,6 +1,46 @@
 #ifndef KTCPSERVERSINK_H
 #define KTCPSERVERSINK_H
 #include "KSink.h"
+namespace kangle {
+	inline int write_buf(kconnection *cn, const kbuf* buf, int length, const kgl_iovec* suffix = nullptr) {
+#define KGL_RQ_WRITE_BUF_COUNT 64
+		kgl_iovec iovec_buf[KGL_RQ_WRITE_BUF_COUNT];
+		while (length > 0) {
+			/* prepare iovec_buf */
+			int bc = 0;
+			for (; bc < KGL_RQ_WRITE_BUF_COUNT - 1 && length>0; ++bc) {
+				iovec_buf[bc].iov_len = KGL_MIN(length, buf->used);
+				iovec_buf[bc].iov_base = buf->data;
+				length -= iovec_buf[bc].iov_len;
+				buf = buf->next;
+			}
+			if (length == 0 && suffix) {
+				iovec_buf[bc++] = *suffix;
+			}
+			kgl_iovec* hot_buf = iovec_buf;
+			while (bc > 0) {
+				/* write iovec_buf */
+				int got = kfiber_net_writev(cn, hot_buf, bc);
+				if (got <= 0) {
+					return length;
+				}
+				length -= got;
+				/* see iovec_buf left data */
+				while (got > 0) {
+					if ((int)hot_buf->iov_len > got) {
+						hot_buf->iov_len -= got;
+						hot_buf->iov_base = (char*)(hot_buf->iov_base) + got;
+						break;
+					}
+					got -= hot_buf->iov_len;
+					hot_buf++;
+					bc--;
+				}
+			}
+		}
+		return 0;
+	}
+}
 class KTcpServerSink : public KSink
 {
 public:
@@ -121,56 +161,23 @@ public:
 	}
 	virtual int write_all(const char* buf, int length) override {
 		while (length > 0) {
-			int got = kfiber_net_write(cn, buf, length);
+			int got = on_success_response(kfiber_net_write(cn, buf, length));
 			if (got <= 0) {
 				return length;
 			}
 			add_down_flow(got);
 			length -= got;
+			buf += got;
 		}
 		return 0;
 	}
 	virtual int write_all(const kbuf* buf, int length) override {
 		return write_buf(buf, length, nullptr);
 	}
-	int write_buf(const kbuf* buf, int length, const kgl_iovec *suffix=nullptr) {
-#define KGL_RQ_WRITE_BUF_COUNT 64
-		kgl_iovec iovec_buf[KGL_RQ_WRITE_BUF_COUNT];
-		while (length > 0) {
-			/* prepare iovec_buf */
-			int bc = 0;
-			for (; bc < KGL_RQ_WRITE_BUF_COUNT-1 && length>0; ++bc) {
-				iovec_buf[bc].iov_len = KGL_MIN(length, buf->used);
-				iovec_buf[bc].iov_base = buf->data;
-				length -= iovec_buf[bc].iov_len;
-				buf = buf->next;
-			}
-			if (length == 0 && suffix) {
-				iovec_buf[bc++] = *suffix;
-			}
-			kgl_iovec* hot_buf = iovec_buf;
-			while (bc > 0) {
-				/* write iovec_buf */
-				int got = kfiber_net_writev(cn, hot_buf, bc);
-				if (got <= 0) {
-					return length;
-				}
-				add_down_flow(got);
-				length -= got;
-				/* see iovec_buf left data */
-				while (got > 0) {
-					if ((int)hot_buf->iov_len > got) {
-						hot_buf->iov_len -= got;
-						hot_buf->iov_base = (char*)(hot_buf->iov_base) + got;
-						break;
-					}
-					got -= hot_buf->iov_len;
-					hot_buf++;
-					bc--;
-				}
-			}
-		}
-		return 0;
+	int write_buf(const kbuf* buf, int length, const kgl_iovec* suffix) {
+		int left = kangle::write_buf(cn, buf, length, nullptr);
+		add_down_flow(length - left);
+		return left;
 	}
 	kconnection* cn;
 protected:

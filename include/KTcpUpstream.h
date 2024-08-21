@@ -28,14 +28,6 @@ public:
 	{
 		return this->cn;
 	}
-	void set_delay() override
-	{
-		ksocket_delay(cn->st.fd);
-	}
-	void set_no_delay(bool forever) override
-	{
-		ksocket_no_delay(cn->st.fd,forever);
-	}
 	void shutdown() override
 	{
 		selectable_shutdown(&cn->st);

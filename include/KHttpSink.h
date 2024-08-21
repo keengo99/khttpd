@@ -31,14 +31,6 @@ public:
 	{
 		selectable_remove_readhup(&cn->st);
 	}
-	void set_delay() override
-	{
-		ksocket_delay(cn->st.fd);
-	}
-	void set_no_delay(bool forever) override
-	{
-		ksocket_no_delay(cn->st.fd, forever);
-	}
 	void shutdown() override
 	{
 		selectable_shutdown(&cn->st);
@@ -143,7 +135,7 @@ private:
 				break;
 			case kgl_parse_finished:
 				kassert(rc == NULL);
-				ksocket_delay(cn->st.fd);
+				//ksocket_delay(cn->st.fd);
 				ks_save_point(&buffer, hot);
 				if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
 					kassert(dechunk == NULL);

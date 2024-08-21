@@ -74,7 +74,6 @@ KGL_RESULT KWebDavClient::new_request(const char* method, const char* path, int6
 		return KGL_EIO;
 	}
 	*rq = new KWebDavRequest(this, us);
-	us->set_delay();
 	us->set_header_callback(*rq, webdav_header_callback);
 	if (!us->send_method_path(KHttpKeyValue::get_method(method, (int)strlen(method)), path, (hlen_t)strlen(path))) {
 		delete (*rq);

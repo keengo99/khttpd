@@ -160,7 +160,6 @@ public:
 	}
 	KGL_RESULT read_header()
 	{
-		resp.us->set_no_delay(false);
 		return resp.us->read_header();
 	}
 	bool send_http_auth(KWebDavAuth* auth);
