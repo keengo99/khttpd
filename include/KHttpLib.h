@@ -43,9 +43,23 @@ char* make_http_time(time_t time, char* buf, int size);
 void make_last_modified_time(time_t *a, char *b, size_t l);
 void init_time_zone();
 bool parse_url_host(kgl_url* url, const char* val, size_t len);
-bool parse_url(const char* src, kgl_url* url);
 bool parse_url(const char* src, size_t len, kgl_url* url);
-void build_url_host_port(kgl_url* url, KWStream& s);
+inline bool parse_url(const char* src, kgl_url* url) {
+	return parse_url(src, strlen(src), url);
+}
+inline void build_url_host_port(kgl_url* url, KWStream& s) {
+	if (unlikely(KBIT_TEST(url->flags, KGL_URL_IPV6))) {
+		s.WSTR("[");
+		s << url->host;
+		s.WSTR("]");
+	} else {
+		s << url->host;
+	}
+	if (KBIT_TEST(url->flags, KGL_URL_HAS_PORT)) {
+		s.WSTR(":");
+		s << url->port;
+	}
+}
 int64_t kgl_atol(const u_char* line, size_t n);
 int kgl_atoi(const u_char* line, size_t n);
 int64_t kgl_atofp(const char* line, size_t n, size_t point);
@@ -54,7 +68,23 @@ INLINE int64_t string2int(const char* buf) {
 }
 #define kgl_memcmp memcmp
 
-int kgl_casecmp(const char* s1, const char* s2, size_t attr_len);
+inline int kgl_casecmp(const char* s1, const char* s2, size_t attr_len) {
+	u_char  c1, c2;
+	while (attr_len > 0) {
+		c1 = (u_char)*s1++;
+		c2 = (u_char)*s2++;
+
+		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
+		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
+
+		int result = c1 - c2;
+		if (result != 0) {
+			return result;
+		}
+		attr_len--;
+	}
+	return 0;
+}
 const char* kgl_memstr(const char* haystack, size_t haystacklen,const char* needle, size_t needlen);
 void kgl_strlow(u_char* dst, u_char* src, size_t n);
 

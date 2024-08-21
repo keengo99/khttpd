@@ -35,6 +35,8 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("If-Unmodified-Since"),_KS("if-unmodified-since"),_KS("\r\nIf-Unmodified-Since: ")},
 	{_KS("Cookie"),_KS("cookie"),_KS("\r\nCookie: ")},
 	{_KS(":scheme"),_KS(":scheme"),_KS("\r\n:scheme: ")},
+	{_KS("Referer"),_KS("referer"),_KS("\r\nReferer: ")},
+	{_KS("User-Agent"),_KS("user-agent"),_KS("\r\nUser-Agent: ")},
 	{_KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 

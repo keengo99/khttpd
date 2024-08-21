@@ -534,24 +534,6 @@ void kgl_strlow(u_char* dst, u_char* src, size_t n) {
 		n--;
 	}
 }
-int kgl_casecmp(const char* s1, const char* s2, size_t attr_len) {
-	u_char  c1, c2;
-	while (attr_len > 0) {
-		c1 = (u_char)*s1++;
-		c2 = (u_char)*s2++;
-
-		c1 = (c1 >= 'A' && c1 <= 'Z') ? (c1 | 0x20) : c1;
-		c2 = (c2 >= 'A' && c2 <= 'Z') ? (c2 | 0x20) : c2;
-
-		int result = c1 - c2;
-		if (result != 0) {
-			return result;
-		}
-		attr_len--;
-	}
-	return 0;
-}
-
 const char* kgl_memstr(const char* haystack, size_t haystacklen, const char* needle, size_t needlen) {
 	const char* p;
 	for (p = (char*)haystack; p <= (haystack - needlen + haystacklen); p++) {
@@ -704,11 +686,6 @@ only_path: const char* sp = (char*)memchr(path, '?', len);
 	url->path = kgl_strndup(path, path_len);
 	return true;
 }
-bool parse_url(const char* src, kgl_url* url) {
-	return parse_url(src, strlen(src), url);
-}
-
-
 static int my_htoi(char* s) {
 	int c = ((unsigned char*)s)[0];
 	if (isupper(c)) {
@@ -1362,17 +1339,4 @@ bool kgl_adjust_range(kgl_request_range* range, int64_t* len) 	{
 }
 int kgl_domain_cmp(const domain_t s1, const domain_t s2) {
 	return kgl_cmp((const char*)(s1 + 1), *s1, (const char*)(s2 + 1), *s2);
-}
-void build_url_host_port(kgl_url* url, KWStream& s) {
-	if (unlikely(KBIT_TEST(url->flags, KGL_URL_IPV6))) {
-		s.WSTR("[");
-		s << url->host;
-		s.WSTR("]");
-	} else {
-		s << url->host;
-	}
-	if (KBIT_TEST(url->flags, KGL_URL_HAS_PORT)) {
-		s.WSTR(":");
-		s << url->port;
-	}
 }

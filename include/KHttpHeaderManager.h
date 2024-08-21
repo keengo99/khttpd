@@ -118,6 +118,16 @@ public:
 		append(new_t);
 		return new_t;
 	}
+	KHttpHeader* find(kgl_header_type attr) {
+		KHttpHeader* l = header;
+		while (l) {
+			if (l->name_is_know && l->know_header == attr) {
+				return l;
+			}
+			l = l->next;
+		}
+		return NULL;
+	}
 	KHttpHeader* find(const char* attr, int len)
 	{
 		KHttpHeader* l = header;
