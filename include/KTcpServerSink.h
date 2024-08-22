@@ -175,7 +175,7 @@ public:
 		return write_buf(buf, length, nullptr);
 	}
 	int write_buf(const kbuf* buf, int length, const kgl_iovec* suffix) {
-		int left = kangle::write_buf(cn, buf, length, nullptr);
+		int left = kangle::write_buf(cn, buf, length, suffix);
 		add_down_flow(length - left);
 		return left;
 	}
