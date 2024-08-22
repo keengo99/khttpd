@@ -15,6 +15,12 @@ public:
 	~KTsUpstream() {
 		kassert(us == NULL);
 	}
+	void set_delay() override {
+		us->set_delay();
+	}
+	void set_no_delay(bool forever) override {
+		us->set_no_delay(forever);
+	}
 	kconnection* get_connection() override {
 		return us->get_connection();
 	}

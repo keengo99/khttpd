@@ -282,7 +282,7 @@ bool KHttpSink::start_pipe_line() {
 		return false;
 	}
 	assert(rc==nullptr);
-	//ksocket_no_delay(cn->st.fd, false);
+	ksocket_no_delay(cn->st.fd, false);
 	kassert(buffer.buf_size > 0);
 	kassert(data.left_read >= 0 || dechunk != NULL);
 

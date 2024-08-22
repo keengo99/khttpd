@@ -45,6 +45,8 @@ public:
 		expire_time = 0;
 		container = NULL;
 	}
+	virtual void set_delay() {}
+	virtual void set_no_delay(bool forever) {}
 	virtual KOPAQUE GetOpaque() {
 		return get_connection()->st.data;
 	}

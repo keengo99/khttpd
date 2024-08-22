@@ -122,6 +122,9 @@ public:
 	{
 		return ctx->tmo;
 	}
+	void flush() override
+	{
+	}
 	void start(int got) override {
 		khttp_server_new_request(this, got);
 	}
