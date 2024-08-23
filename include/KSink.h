@@ -359,8 +359,7 @@ protected:
 		data.clean();
 		data.init();
 		if (pool) {
-			kgl_destroy_pool(pool);
-			pool = kgl_create_pool(KGL_REQUEST_POOL_SIZE);
+			kgl_reset_pool(pool);
 		}
 		set_state(STATE_IDLE);
 	}
