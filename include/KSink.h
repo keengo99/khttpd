@@ -81,9 +81,9 @@ public:
 	bool response_content_length(int64_t content_len) {
 		if (content_len >= 0) {
 			//有content-length时
-			char len_str[INT2STRING_LEN];
+			char* len_str = (char *)kgl_pnalloc(pool, INT2STRING_LEN);
 			int len = int2string2(content_len, len_str, false);
-			return response_header(kgl_header_content_length, len_str, len, false);
+			return response_header(kgl_header_content_length, len_str, len, true);
 		}
 		//无content-length时
 		if (data.http_version==0x100) {
