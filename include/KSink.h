@@ -78,12 +78,14 @@ public:
 		}
 		return response_connection(kgl_expand_string("keep-alive"));
 	}
+	bool response_header(kgl_header_type attr, int64_t value) {
+		char* tmpbuf = (char*)kgl_pnalloc(pool, INT2STRING_LEN);
+		int len = int2string2(value, tmpbuf);
+		return response_header(attr, tmpbuf, len, true);
+	}
 	bool response_content_length(int64_t content_len) {
 		if (content_len >= 0) {
-			//有content-length时
-			char* len_str = (char *)kgl_pnalloc(pool, INT2STRING_LEN);
-			int len = int2string2(content_len, len_str, false);
-			return response_header(kgl_header_content_length, len_str, len, true);
+			return response_header(kgl_header_content_length, content_len);
 		}
 		//无content-length时
 		if (data.http_version==0x100) {
