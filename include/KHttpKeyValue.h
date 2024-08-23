@@ -9,6 +9,7 @@
 #define KHTTPKEYVALUE_H_
 #include <stdio.h>
 #include "KHttpHeader.h"
+#include "KHttpLib.h"
 #include "kmalloc.h"
 
 #define METH_UNSET      0
@@ -49,11 +50,24 @@ constexpr int MAX_METHOD = 34;
 inline bool kgl_is_safe_method(uint8_t meth) {
 	return meth == METH_GET || meth == METH_HEAD;
 }
+extern kgl_str_t http_methods[MAX_METHOD];
 class KHttpKeyValue
 {
 public:
-	static kgl_str_t* get_method(int meth);
-	static int get_method(const char* src, int len);
+	static kgl_str_t* get_method(int meth) {
+		if (meth < 0 || meth >= MAX_METHOD) {
+			meth = 0;
+		}
+		return &http_methods[meth];
+	}
+	static int get_method(const char* src, int len) {
+		for (int i = 1; i < MAX_METHOD; i++) {
+			if (kgl_mem_case_same(src, len, http_methods[i].data, http_methods[i].len)) {
+				return i;
+			}
+		}
+		return METH_UNSET;
+	}
 	static void get_request_line(kgl_pool_t* pool, int status, kgl_str_t* ret) {
 		switch (status) {
 		case 100:kgl_str_set(ret, "HTTP/1.1 100 Continue"); return;

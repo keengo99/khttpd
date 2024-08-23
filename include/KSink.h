@@ -8,38 +8,56 @@
 #include "kstring.h"
 #include "KRequest.h"
 #include "kfiber.h"
+#include "KHttpServer.h"
+
 #define KGL_FLAG_PRECONDITION_MASK  7
 //#define KGL_DEBUG_TIME
 #ifdef KGL_DEBUG_TIME
-void kgl_log_total_timespec() ;
+void kgl_log_total_timespec();
 #endif
+struct kgl_request_ts
+{
+	kgl_list sinks;
+};
+extern krequest_start_func server_on_new_request;
+extern pthread_key_t kgl_request_key;
 class KSink
 {
 public:
 #ifdef KGL_DEBUG_TIME
-	void log_passed_time(const char *tip);
+	void log_passed_time(const char* tip);
 	void reset_start_time() {
 		clock_gettime(CLOCK_REALTIME, &start_time);
 	}
 	struct timespec start_time;
 #endif
-	KSink(kgl_pool_t* pool);
-	virtual ~KSink();
-
+	KSink(kgl_pool_t* pool) {
+		init_pool(pool);
+		kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
+		assert(ts);
+		klist_append(&ts->sinks, &queue);
+#ifdef KGL_DEBUG_TIME
+		reset_start_time();
+#endif
+	}
+	virtual ~KSink() {
+		if (pool) {
+			kgl_destroy_pool(pool);
+		}
+		klist_remove(&queue);
+	}
 	template<typename T>
 	T* alloc() {
 		T* t = (T*)kgl_pnalloc(pool, sizeof(T));
 		memset(t, 0, sizeof(T));
 		return t;
 	}
-	void push_flow_info(KFlowInfo* fi)
-	{
+	void push_flow_info(KFlowInfo* fi) {
 		KFlowInfoHelper* helper = new KFlowInfoHelper(fi);
 		helper->next = data.fh;
 		data.fh = helper;
 	}
-	void add_up_flow(int flow)
-	{
+	void add_up_flow(int flow) {
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
 			helper->fi->AddUpFlow((INT64)flow);
@@ -53,8 +71,7 @@ public:
 		assert(data.range);
 		return kgl_adjust_range(data.range, len);
 	}
-	void add_down_flow(int flow)
-	{
+	void add_down_flow(int flow) {
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
 			helper->fi->AddDownFlow((INT64)flow, KBIT_TEST(data.flags, RQ_CACHE_HIT));
@@ -63,7 +80,7 @@ public:
 	}
 	inline bool response_connection() {
 #ifdef HTTP_PROXY
-		if (data.meth==METH_CONNECT) {
+		if (data.meth == METH_CONNECT) {
 			return false;
 		}
 #endif
@@ -88,7 +105,7 @@ public:
 			return response_header(kgl_header_content_length, content_len);
 		}
 		//无content-length时
-		if (data.http_version==0x100) {
+		if (data.http_version == 0x100) {
 			//HTTP/1.0 client not support transfer-encoding
 			//The connection MUST close
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
@@ -97,8 +114,7 @@ public:
 		}
 		return true;
 	}
-	bool response_status(uint16_t status_code)
-	{
+	bool response_status(uint16_t status_code) {
 		if (data.status_code > 0) {
 			//status_code只能发送一次
 			return false;
@@ -108,9 +124,8 @@ public:
 		data.status_code = status_code;
 		return internal_response_status(status_code);
 	}
-	virtual bool response_header(kgl_header_type know_header,const char *val, int val_len, bool lock_value)
-	{
-		assert(know_header<kgl_header_unknow);
+	virtual bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) {
+		assert(know_header < kgl_header_unknow);
 		return response_header(kgl_header_type_string[(int)know_header].value.data, (int)kgl_header_type_string[(int)know_header].value.len, val, val_len);
 	}
 	virtual bool readhup(void* arg, result_callback result) = 0;
@@ -126,8 +141,7 @@ public:
 	virtual int64_t get_response_left() {
 		return -1;
 	}
-	bool get_peer_ip(char* ips, int ips_len)
-	{
+	bool get_peer_ip(char* ips, int ips_len) {
 		sockaddr_i* addr = get_peer_addr();
 		if (addr == nullptr) {
 			return false;
@@ -145,8 +159,7 @@ public:
 		data.self_port = ksocket_addr_port(&addr);
 		return data.self_port;
 	}
-	void set_self_port(uint16_t port, bool ssl)
-	{
+	void set_self_port(uint16_t port, bool ssl) {
 		if (port > 0) {
 			data.self_port = port;
 		}
@@ -162,8 +175,7 @@ public:
 			}
 		}
 	}
-	uint16_t get_self_ip(char* ips, int ips_len)
-	{
+	uint16_t get_self_ip(char* ips, int ips_len) {
 		sockaddr_i addr;
 		if (!get_self_addr(&addr)) {
 			return 0;
@@ -178,7 +190,7 @@ public:
 		return data.self_port;
 	}
 	const char* get_state();
-	void set_state(uint8_t state) {		
+	void set_state(uint8_t state) {
 #ifdef ENABLE_STAT_STUB
 		if (data.state == state) {
 			return;
@@ -221,12 +233,8 @@ public:
 	virtual void set_time_out(int tmo_count) = 0;
 	virtual kgl_pool_t* get_connection_pool() = 0;
 	virtual int get_time_out() = 0;
-	virtual void set_delay()
-	{
-	}
-	virtual void set_no_delay(bool forever)
-	{
-	}
+	virtual void set_delay() {}
+	virtual void set_no_delay(bool forever) {}
 	virtual void flush() {
 		set_no_delay(false);
 		set_delay();
@@ -234,8 +242,7 @@ public:
 	virtual kssl_session* get_ssl() {
 		return nullptr;
 	}
-	const char* get_client_ip()
-	{
+	const char* get_client_ip() {
 		if (data.client_ip) {
 			return data.client_ip;
 		}
@@ -248,8 +255,7 @@ public:
 	virtual void end_request() {
 
 	}
-	void set_client_ip(const char* ip)
-	{
+	void set_client_ip(const char* ip) {
 		if (data.client_ip) {
 			xfree(data.client_ip);
 		}
@@ -270,7 +276,7 @@ public:
 		return header_len >= 0;
 	}
 	int read(char* buf, int len);
-	/* 
+	/*
 	* write_all will send data until all success or failed.
 	* if failed return left byte.
 	* if return 0 will all success.
@@ -322,12 +328,10 @@ public:
 		}
 		return NULL;
 	}
-	virtual kgl_proxy_protocol* get_proxy_info()
-	{
+	virtual kgl_proxy_protocol* get_proxy_info() {
 		return nullptr;
 	}
-	virtual void* get_sni()
-	{
+	virtual void* get_sni() {
 		return nullptr;
 	}
 	virtual bool support_sendfile() {
@@ -388,4 +392,11 @@ private:
 bool kgl_init_sink_queue();
 typedef bool (*kgl_sink_iterator)(void* ctx, KSink* sink);
 void kgl_iterator_sink(kgl_sink_iterator it, void* ctx);
+inline void khttp_server_new_request(KSink* sink, int got) {
+	if (!sink->begin_request()) {
+		KBIT_SET(sink->data.flags, RQ_CONNECTION_CLOSE);
+		return;
+	}
+	server_on_new_request(sink, got);
+}
 #endif

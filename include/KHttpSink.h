@@ -14,8 +14,7 @@ class KHttpSink : public KSingleConnectionSink
 public:
 	KHttpSink(kconnection* c, kgl_pool_t* pool);
 	~KHttpSink();
-	bool is_locked() override
-	{
+	bool is_locked() override {
 		return KBIT_TEST(cn->st.base.st_flags, STF_LOCK);
 	}
 	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
@@ -23,12 +22,10 @@ public:
 	bool response_connection(const char* val, int val_len) override {
 		return response_header(kgl_header_connection, val, val_len, true);
 	}
-	bool readhup(void* arg, result_callback result) override
-	{
+	bool readhup(void* arg, result_callback result) override {
 		return selectable_readhup(&cn->st, result, arg);
 	}
-	void remove_readhup() override
-	{
+	void remove_readhup() override {
 		selectable_remove_readhup(&cn->st);
 	}
 	void set_delay() override {
@@ -37,29 +34,24 @@ public:
 	void set_no_delay(bool forever) override {
 		ksocket_no_delay(cn->st.fd, forever);
 	}
-	void shutdown() override
-	{
+	void shutdown() override {
 		selectable_shutdown(&cn->st);
 	}
-	void set_time_out(int tmo) override
-	{
+	void set_time_out(int tmo) override {
 		cn->st.base.tmo = tmo;
 		cn->st.base.tmo_left = tmo;
 	}
-	int get_time_out() override
-	{
+	int get_time_out() override {
 		return cn->st.base.tmo;
 	}
 	/* return true will use pipe_line */
 	void end_request() override;
 	ks_buffer buffer;
 	KResponseContext rc;
-	kconnection* get_connection() override
-	{
+	kconnection* get_connection() override {
 		return cn;
 	}
-	KDechunkContext* GetDechunkContext()
-	{
+	KDechunkContext* GetDechunkContext() {
 		return dechunk;
 	}
 	KHttpHeader* get_trailer() override {
@@ -71,21 +63,43 @@ public:
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
 	void start(int header_len) override;
 	bool skip_post();
-	bool start_pipe_line();
+	bool start_pipe_line() {
+		if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE | RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
+			return false;
+		}
+		assert(rc.empty());
+		ksocket_no_delay(cn->st.fd, false);
+		kassert(buffer.buf_size > 0);
+		kassert(data.left_read >= 0 || dechunk != NULL);
+
+		if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
+			//still have data to read
+			if (!skip_post()) {
+				return false;
+			}
+		}
+		kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
+		reset_pipeline();
+		memset(&parser, 0, sizeof(parser));
+		if (dechunk) {
+			delete dechunk;
+			dechunk = NULL;
+		}
+		return true;
+	}
 	int sendfile(kfiber_file* fp, int len) override;
 	int write_all(const char* buf, int len) override;
 	int write_all(const kbuf* buf, int len) override;
 protected:
-	bool response_altsvc_header(const char* val, int val_len) override
-	{
+	bool response_altsvc_header(const char* val, int val_len) override {
 		return response_header(kgl_header_alt_svc, val, val_len, false);
 	}
 	int internal_start_response_body(int64_t body_size, bool is_100_continue) override;
 	int internal_read(char* buf, int len) override;
-	int internal_write(const kbuf* buf, int len,const kgl_iovec *suffix) {
+	int internal_write(const kbuf* buf, int len, const kgl_iovec* suffix) {
 		if (!rc.empty()) {
 			rc.attach(buf, len);
-			int left = KSingleConnectionSink::write_buf(rc.get_buf(),rc.get_len(), suffix);
+			int left = KSingleConnectionSink::write_buf(rc.get_buf(), rc.get_len(), suffix);
 			rc.clean();
 			on_success_response(len - left);
 			return left;
@@ -127,12 +141,12 @@ private:
 					return kgl_parse_error;
 				}
 				if (rs.is_first && data.meth == METH_PRI && KBIT_TEST(cn->server->flags, KGL_SERVER_H2)) {
-	#ifdef ENABLE_HTTP2
+#ifdef ENABLE_HTTP2
 					ks_save_point(&buffer, hot);
 					if (!switch_h2c()) {
 						klog(KLOG_ERR, "cann't switch to h2c, buffer size=[%d] may greater than http2 buffer\n", buffer.used);
 					}
-	#endif
+#endif
 					return kgl_parse_error;
 				}
 				break;

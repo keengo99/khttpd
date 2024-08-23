@@ -237,7 +237,7 @@ bool KHttpSink::skip_post() {
 			}
 			if (got == 0) {
 				data.left_read = 0;
-				return start_pipe_line();
+				return true;
 			}
 			add_up_flow((INT64)got);
 		}
@@ -253,7 +253,7 @@ bool KHttpSink::skip_post() {
 	data.left_read -= skip_len;
 	add_up_flow((INT64)skip_len);
 	if (data.left_read <= 0) {
-		return start_pipe_line();
+		return true;
 	}
 	while (data.left_read > 0) {
 		int len = kfiber_net_read(cn, buf, (int)KGL_MIN((int64_t)buf_size, data.left_read));
@@ -261,28 +261,6 @@ bool KHttpSink::skip_post() {
 			return false;
 		}
 		data.left_read -= len;
-	}
-	return start_pipe_line();
-}
-bool KHttpSink::start_pipe_line() {
-	if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE | RQ_CONNECTION_UPGRADE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
-		return false;
-	}
-	assert(rc.empty());
-	ksocket_no_delay(cn->st.fd, false);
-	kassert(buffer.buf_size > 0);
-	kassert(data.left_read >= 0 || dechunk != NULL);
-
-	if (data.left_read != 0 && !KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
-		//still have data to read
-		return skip_post();
-	}
-	kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
-	reset_pipeline();
-	memset(&parser, 0, sizeof(parser));
-	if (dechunk) {
-		delete dechunk;
-		dechunk = NULL;
 	}
 	return true;
 }
@@ -342,13 +320,13 @@ void KHttpSink::start(int header_len) {
 #endif
 			if (!start_pipe_line()) {
 				return;
-		}
+			}
 			if (buffer.used > 0) {
 				goto parse_header;
 			}
 			break;
 		default:
 			return;
+		}
 	}
-}
 }

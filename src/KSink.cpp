@@ -9,25 +9,25 @@ struct kgl_timespec {
 	int64_t total;
 	int count;
 };
-struct kgl_timespec total_spec = {0};
+struct kgl_timespec total_spec = { 0 };
 #define NS_PER_SECOND 1000000000
-void sub_timespec(struct timespec t1,struct timespec t2,struct timespec *td) {
+void sub_timespec(struct timespec t1, struct timespec t2, struct timespec* td) {
 	td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
 	td->tv_sec = t2.tv_sec - t1.tv_sec;
-	if (td->tv_sec>0 && td->tv_nsec<0) {
+	if (td->tv_sec > 0 && td->tv_nsec < 0) {
 		td->tv_nsec += NS_PER_SECOND;
 		td->tv_sec--;
-	} else if (td->tv_sec<0 && td->tv_nsec>0) {
+	} else if (td->tv_sec < 0 && td->tv_nsec>0) {
 		td->tv_nsec -= NS_PER_SECOND;
 		td->tv_sec++;
 	}
 }
-void KSink::log_passed_time(const char *tip) {
-    struct timespec end,delta;
+void KSink::log_passed_time(const char* tip) {
+	struct timespec end, delta;
 	clock_gettime(CLOCK_REALTIME, &end);
-	sub_timespec(start_time,end,&delta);
-    klog(KLOG_ERR,"%p %s passed_time=[%d.%09ld]\n", this,tip,(int)delta.tv_sec,delta.tv_nsec);
-	if (*tip=='+') {
+	sub_timespec(start_time, end, &delta);
+	klog(KLOG_ERR, "%p %s passed_time=[%d.%09ld]\n", this, tip, (int)delta.tv_sec, delta.tv_nsec);
+	if (*tip == '+') {
 		int64_t v = delta.tv_sec * NS_PER_SECOND + delta.tv_nsec;
 		total_spec.total += v;
 		total_spec.count++;
@@ -37,16 +37,13 @@ void KSink::log_passed_time(const char *tip) {
 }
 void kgl_log_total_timespec() {
 	kgl_timespec a = total_spec;
-	if (a.count>0) {
-		klog(KLOG_ERR,"count=[%d] avg time=[%lld]\n",a.count, a.total/a.count);
+	if (a.count > 0) {
+		klog(KLOG_ERR, "count=[%d] avg time=[%lld]\n", a.count, a.total / a.count);
 	}
 }
 #endif
-struct kgl_request_ts
-{
-	kgl_list sinks;
-};
-static pthread_key_t kgl_request_key;
+
+pthread_key_t kgl_request_key;
 kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got) {
 	if (got == 0) {
 		//init
@@ -55,7 +52,7 @@ kev_result kgl_request_thread_init(KOPAQUE data, void* arg, int got) {
 		pthread_setspecific(kgl_request_key, rq);
 	} else {
 		//shutdown
-		kgl_request_ts* rq = (kgl_request_ts *)pthread_getspecific(kgl_request_key);
+		kgl_request_ts* rq = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
 		klist_empty(&rq->sinks);
 		delete rq;
 		pthread_setspecific(kgl_request_key, NULL);
@@ -90,30 +87,16 @@ void kgl_iterator_sink(kgl_sink_iterator it, void* ctx) {
 	for (int i = 0; i < selector_count; i++) {
 		kselector* selector = get_selector_by_index(i);
 		kgl_selector_module.next(selector, NULL, ksink_iterator, &param, 0);
-		param.cond->f->wait(param.cond,NULL);
+		param.cond->f->wait(param.cond, NULL);
 	}
 	param.cond->f->release(param.cond);
 }
-KSink::KSink(kgl_pool_t* pool) {
-	init_pool(pool);
-	kgl_request_ts* ts = (kgl_request_ts*)pthread_getspecific(kgl_request_key);
-	assert(ts);
-	klist_append(&ts->sinks, &queue);
-#ifdef KGL_DEBUG_TIME
-	reset_start_time();
-#endif
-}
-KSink::~KSink() {
-	if (pool) {
-		kgl_destroy_pool(pool);
-	}
-	klist_remove(&queue);
-}
+
 bool KSink::response_100_continue() {
 	if (!internal_response_status(100)) {
 		return false;
 	}
-	if (internal_start_response_body(0,true)<0) {
+	if (internal_start_response_body(0, true) < 0) {
 		return false;
 	}
 	flush();
@@ -125,7 +108,7 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 		start_parse();
 	}
 #if defined(ENABLE_HTTP2) || defined(ENABLE_HTTP3)
-	if (data.http_version>0x100 && *attr == ':') {
+	if (data.http_version > 0x100 && *attr == ':') {
 		//pseudo header
 		if (kgl_mem_same(attr, attr_len, kgl_expand_string(":method"))) {
 			if (!data.parse_method(val, val_len)) {
@@ -183,7 +166,7 @@ bool KSink::parse_header(const char* attr, int attr_len, const char* val, int va
 			//klog(KLOG_DEBUG, "httpparse:cann't parse http version [%s]\n", space);
 			return false;
 		}
-		if (data.http_version>0x100) {//data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
+		if (data.http_version > 0x100) {//data.http_major > 1 || (data.http_major == 1 && data.http_minor == 1)) {
 			KBIT_SET(data.flags, RQ_HAS_KEEP_CONNECTION);
 		}
 		return true;
@@ -413,7 +396,7 @@ int KSink::read(char* buf, int len) {
 		return 0;
 	}
 	if (length > 0) {
-		if (data.left_read>0) {
+		if (data.left_read > 0) {
 			assert(data.left_read >= length);
 			data.left_read -= length;
 		}
