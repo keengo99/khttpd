@@ -53,8 +53,7 @@ public:
 	/* return true will use pipe_line */
 	void end_request() override;
 	ks_buffer buffer;
-	bool read_header();	
-	KResponseContext* rc;
+	KResponseContext rc;
 	kconnection* get_connection() override
 	{
 		return cn;
@@ -84,11 +83,10 @@ protected:
 	int internal_start_response_body(int64_t body_size, bool is_100_continue) override;
 	int internal_read(char* buf, int len) override;
 	int internal_write(const kbuf* buf, int len,const kgl_iovec *suffix) {
-		if (rc && !rc->ab.empty()) {
-			rc->ab.attach_buffers(buf, len);
-			int left = KSingleConnectionSink::write_buf(rc->ab.getHead(),rc->ab.getLen(), suffix);
-			delete rc;
-			rc = nullptr;
+		if (!rc.empty()) {
+			rc.attach(buf, len);
+			int left = KSingleConnectionSink::write_buf(rc.get_buf(),rc.get_len(), suffix);
+			rc.clean();
 			on_success_response(len - left);
 			return left;
 		}
@@ -104,7 +102,6 @@ protected:
 	KDechunkContext* dechunk;
 	khttp_parser parser;
 private:
-
 	kgl_parse_result parse() {
 		khttp_parse_result rs;
 		char* hot = buffer.buf;
@@ -140,7 +137,7 @@ private:
 				}
 				break;
 			case kgl_parse_finished:
-				kassert(rc == NULL);
+				kassert(rc.get_buf() == nullptr);
 				ksocket_delay(cn->st.fd);
 				ks_save_point(&buffer, hot);
 				if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
@@ -148,7 +145,6 @@ private:
 					dechunk = new KDechunkContext;
 				}
 				//printf("***************body_len=[%d]\n", parser.body_len);
-				rc = new KResponseContext(pool);
 				return kgl_parse_finished;
 
 			default:

@@ -13,34 +13,65 @@
 class KResponseContext
 {
 public:
-	KResponseContext(kgl_pool_t *pool) : ab(pool)
+	KResponseContext()
 	{
+		clean();
 	}
-	void head_insert_const(const char *str,uint16_t len)
-	{
-		kbuf *t = (kbuf *)kgl_pnalloc(ab.pool, sizeof(kbuf));
+	void head_insert_const(kgl_pool_t *pool, const char* str, uint16_t len) {
+		kbuf* t = (kbuf*)kgl_pnalloc(pool, sizeof(kbuf));
+		t->data = (char*)str;
+		t->used = len;
+		insert(t);
+	}
+	void head_append(kgl_pool_t* pool, const char* str, uint16_t len) {
+		kbuf* t = (kbuf*)kgl_pnalloc(pool, sizeof(kbuf));
+		memset(t, 0, sizeof(kbuf));
 		t->data = (char *)str;
 		t->used = len;
-		ab.Insert(t);
+		append(t);
+	}	
+	inline void clean() {
+		head = last = nullptr;
+		total_len = 0;
 	}
-	void head_append(char *str,uint16_t len)
-	{
-		kbuf *t = (kbuf *)kgl_pnalloc(ab.pool,sizeof(kbuf));
-		memset(t,0,sizeof(kbuf));
-		t->data = str;
-		t->used = len;
-		ab.Append(t);
+	inline bool empty() {
+		return head == nullptr;
 	}
-	void head_append_const(const char *str,uint16_t len)
-	{
-		kbuf *t = (kbuf *)kgl_pnalloc(ab.pool, sizeof(kbuf));
-		t->data = (char *)str;
-		t->used = len;
-		ab.Append(t);
+	inline void attach(const kbuf* buf, int len) {
+		assert(last);
+		last->next = (kbuf*)buf;
+		total_len += len;
 	}
-
+	inline const kbuf* get_buf() {
+		return head;
+	}
+	inline int get_len() {
+		return total_len;
+	}
 	friend class KHttpSink;
 private:
-	KAutoBuffer ab;
+	inline void insert(kbuf* buf) {
+		buf->next = head;
+		if (last == NULL) {
+			last = buf;
+		}
+		head = buf;
+		total_len += buf->used;
+	}
+	inline void append(kbuf* buf) {
+		if (last == NULL) {
+			kassert(head == NULL);
+			head = buf;
+		} else {
+			assert(head);
+			last->next = buf;
+		}
+		buf->next = NULL;
+		last = buf;
+		total_len += buf->used;
+	}
+	kbuf* head;
+	kbuf* last;
+	int total_len;
 };
 #endif
