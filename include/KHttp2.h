@@ -412,12 +412,12 @@ public:
 		len = total_len;
 		return new_buf;
 	}
-	void CreateWriteWaitWindow(const kbuf* buf, int length) {
+	void CreateWriteWaitWindow(kfiber *fiber, const kbuf* buf, int length) {
 		kassert(write_wait == NULL);
 		write_wait = new kgl_http2_event;
 		write_wait->buf = buf;
 		write_wait->buf_len = length;
-		write_wait->fiber = kfiber_self();
+		write_wait->fiber = fiber;
 		write_wait->len = -1;
 	}
 	void set_content_length(INT64 content_length) {

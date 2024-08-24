@@ -944,12 +944,13 @@ int KHttp2::ReadHeader(KHttp2Context* http2_ctx) {
 		//return result(http2_ctx->data, arg, 0);
 		return 0;
 	}
+	auto fiber = kfiber_self(&c->st.base);
 	assert(http2_ctx);
 	assert(http2_ctx->read_wait);
 	assert(http2_ctx->read_wait->fiber == NULL);
-	http2_ctx->read_wait->fiber = kfiber_self();
+	http2_ctx->read_wait->fiber = fiber;
 	AddQueue(http2_ctx);
-	return kfiber_wait(http2_ctx->read_wait);
+	return __kfiber_wait(fiber, http2_ctx->read_wait);
 }
 bool KHttp2::check_recv_window(KHttp2Context* http2_ctx) {
 	if (http2_ctx->in_closed) {
@@ -1387,9 +1388,9 @@ int KHttp2::read(KHttp2Context* http2_ctx, char* buf, int len) {
 	http2_ctx->read_wait = new kgl_http2_event;
 	http2_ctx->read_wait->rbuf = buf;
 	http2_ctx->read_wait->buf_len = len;
-	http2_ctx->read_wait->fiber = kfiber_self();
+	http2_ctx->read_wait->fiber = kfiber_self2();
 	AddQueue(http2_ctx);
-	return kfiber_wait(http2_ctx->read_wait);
+	return kfiber_wait(&http2_ctx->read_wait->fiber->base, http2_ctx->read_wait);
 }
 int KHttp2::on_write_window_ready(KHttp2Context* http2_ctx) {
 	assert(http2_ctx->write_wait && IS_WRITE_WAIT_FOR_WINDOW(http2_ctx->write_wait));
@@ -1427,10 +1428,11 @@ int KHttp2::sendfile(KHttp2Context* ctx, kasync_file* file, int length) {
 		assert(!ctx->write_trailer);
 		send_header(ctx, ctx->content_left == 0);
 	}
+	auto fiber = kfiber_self(&file->st.base);
 	ctx->sendfile = 1;
-	ctx->CreateWriteWaitWindow((kbuf*)file, length);
+	ctx->CreateWriteWaitWindow(fiber, (kbuf*)file, length);
 	on_write_window_ready(ctx);
-	return kfiber_wait(ctx->write_wait);
+	return __kfiber_wait(fiber, ctx->write_wait);
 }
 int KHttp2::write(KHttp2Context* ctx, const kbuf* buf, int bc) {
 	if (ctx->write_wait) {
@@ -1447,10 +1449,11 @@ int KHttp2::write(KHttp2Context* ctx, const kbuf* buf, int bc) {
 		assert(!ctx->write_trailer);
 		send_header(ctx, ctx->content_left == 0);
 	}
+	auto fiber = kfiber_self(&c->st.base);
 	ctx->sendfile = 0;
-	ctx->CreateWriteWaitWindow(buf, bc);
+	ctx->CreateWriteWaitWindow(fiber, buf, bc);
 	on_write_window_ready(ctx);
-	return kfiber_wait(ctx->write_wait);
+	return __kfiber_wait(fiber, ctx->write_wait);
 }
 
 KHttp2Node* KHttp2::get_node(uint32_t sid, bool alloc) {
