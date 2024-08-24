@@ -10,18 +10,16 @@
 #include "kmalloc.h"
 #include "KHttpLib.h"
 #include "katom.h"
-
+#include "KSharedObj.h"
 
 
 class KUrl : public kgl_url{
 
 public:
-	KUrl() {
+	KUrl(bool support_share) {
 		memset(this, 0, sizeof(KUrl));
-		refs_count = 1;
+		refs_count = !!support_share;
 	}
-	
-
 	bool match_accept_encoding(u_char accept_encoding) {
 		if (encoding > 0) {
 			return KBIT_TEST(accept_encoding,encoding) > 0  && KBIT_TEST(this->accept_encoding,accept_encoding) == accept_encoding;
@@ -76,11 +74,20 @@ public:
 		}
 		return strcmp(param, a->param);
 	}
-	KUrl* refs() {
+	//only support share url call add_ref/release
+	KUrl* add_ref() {		
+		assert(refs_count > 0);
 		katom_inc16((void*)&refs_count);
 		return this;
 	}
-	bool IsBad() {
+	void release() {
+		assert(refs_count > 0);
+		if (katom_dec16((void*)&refs_count) > 0) {
+			return;
+		}
+		delete this;
+	}
+	bool is_bad() {
 		return host == NULL || path == NULL;
 	}
 	kgl_auto_cstr getUrl() {
@@ -124,17 +131,6 @@ public:
 			}
 		}
 	}
-	void GetHost(KWStream&s, uint16_t default_port)
-	{
-		if (unlikely(KBIT_TEST(flags, KGL_URL_IPV6))) {
-			s << "[" << host << "]";
-		} else {
-			s << host;
-		}
-		if (unlikely(port != default_port)) {
-			s << ":" << port;
-		}
-	}
 	bool GetSchema(KWStream& s)
 	{
 		if (unlikely(host == NULL || path == NULL)) {
@@ -151,27 +147,15 @@ public:
 		if (!GetSchema(s)) {
 			return false;
 		}
-		GetHost(s);
+		build_url_host_port(this, s);
 		GetPath(s, urlEncode);
 		return true;
 	}
 	void GetHost(KWStream& s)
 	{
-		int default_port = 80;
-		if (KBIT_TEST(flags, KGL_URL_SSL)) {
-			default_port = 443;
-		}
-		GetHost(s, default_port);
+		build_url_host_port(this, s);
 	}
-	void relase()
-	{
-		if (katom_dec16((void*)&refs_count) > 0) {
-			return;
-		}
-		delete this;
-	}
-private:
-	~KUrl() {
+	void clean() {
 		IF_FREE(host);
 		IF_FREE(path);
 		IF_FREE(param);
@@ -179,7 +163,13 @@ private:
 		flag_encoding = 0;
 #endif
 	}
+	~KUrl() {
+		assert(refs_count == 0);
+		clean();
+	}
 };
+using KSafeUrl = KSharedObj<KUrl>;
+#if 0
 class KAutoUrl
 {
 public:
@@ -193,4 +183,5 @@ public:
 	}
 	KUrl* u;
 };
+#endif
 #endif

@@ -1,7 +1,6 @@
 #include "KDechunkEngine.h"
 #include "KHttpLib.h"
-KDechunkResult KDechunkEngine::dechunk(const char** buf, const char* end, const char** piece, int* piece_length)
-{
+KDechunkResult KDechunkEngine::dechunk(const char** buf, const char* end, const char** piece, int* piece_length) {
 	int length;
 restart:
 	switch (chunk_size) {
@@ -50,13 +49,13 @@ restart:
 		if (chunk_size == KHTTPD_CHUNK_STATUS_READ_SIZE ||
 			KBIT_TEST(chunk_size, KHTTPD_CHUNK_PART_SIZE) == KHTTPD_CHUNK_PART_SIZE) {
 			for (;;) {
-				if (*buf>=end) {
+				if (*buf >= end) {
 					return KDechunkResult::Continue;
 				}
 				u_char ch = *((u_char*)*buf);
 				if (ch == '\n') {
 					KBIT_CLR(chunk_size, KHTTPD_CHUNK_STATUS_PREFIX);
-					(*buf)++;					
+					(*buf)++;
 					if (chunk_size == 0) {
 						chunk_size = KHTTPD_CHUNK_STATUS_READ_LAST;
 						goto restart;
@@ -109,7 +108,4 @@ restart:
 		return KDechunkResult::Success;
 	}
 }
-KDechunkResult KDechunkEngine::dechunk(const char** buf, int buf_len, const char** piece, int* piece_length)
-{
-	return dechunk(buf, (*buf) + buf_len, piece, piece_length);
-}
+

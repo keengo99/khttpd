@@ -51,13 +51,10 @@ public:
 	}
 	*/
 	int read(char* buf, int len) override {
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = len;
-		return http2->read(ctx, &bufs, 1);
+		return http2->read(ctx, buf, len);
 	}
-	int write(WSABUF* buf, int bc) override {
-		return http2->write(ctx, buf, bc);
+	int write_all(const kbuf* buf, int length) override {
+		return http2->write_all(ctx, buf, length);
 	}
 	bool send_connection(const char* val, hlen_t val_len) override {
 		return true;

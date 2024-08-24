@@ -1,5 +1,4 @@
 #include "KHttpHeader.h"
-#include "KHttp2.h"
 #include "KHttpLib.h"
 
 kgl_header_string kgl_header_type_string[] = {
@@ -35,54 +34,47 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("If-Unmodified-Since"),_KS("if-unmodified-since"),_KS("\r\nIf-Unmodified-Since: ")},
 	{_KS("Cookie"),_KS("cookie"),_KS("\r\nCookie: ")},
 	{_KS(":scheme"),_KS(":scheme"),_KS("\r\n:scheme: ")},
+	{_KS("Referer"),_KS("referer"),_KS("\r\nReferer: ")},
+	{_KS("User-Agent"),_KS("user-agent"),_KS("\r\nUser-Agent: ")},
 	{_KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 
-#define KGL_HEADER_STRING_COUNT                                      \
-    (sizeof(kgl_header_type_string)                                         \
-     / sizeof(kgl_header_string))
 
-void kgl_init_header_string() {
-#ifdef ENABLE_HTTP2
-	for (int i = 0; i < KGL_HEADER_STRING_COUNT; ++i) {
-		kgl_header_type_string[i].http2_index = kgl_find_http2_static_table(&kgl_header_type_string[i].low_case);
-		//printf("[%s] index=[%d]\n", kgl_header_type_string[i].low_case.data, kgl_header_type_string[i].http2_index);
-	}
-#endif
-}
+
 kgl_header_string* kgl_get_know_header(kgl_header_type type) {
 	return &kgl_header_type_string[type];
 }
-bool kgl_build_know_header_value(KHttpHeader* header, const char* val, int val_len, kgl_malloc m, void* arg) {
+bool kgl_build_know_header_value(kgl_pool_t* pool, KHttpHeader* header, const char* val, int val_len) {
 	switch (val_len) {
 	case KGL_HEADER_VALUE_INT64:
-		header->buf = (char*)m(arg, KGL_INT64_LEN + 1);
+		header->buf = (char*)(pool ? kgl_pnalloc(pool, KGL_INT64_LEN + 1) : xmalloc(KGL_INT64_LEN + 1));
 		header->val_len = snprintf(header->buf, KGL_INT64_LEN, INT64_FORMAT, *(int64_t*)val);
 		break;
 	case KGL_HEADER_VALUE_INT:
 	{
-		header->buf = (char*)m(arg, KGL_INT32_LEN + 1);
+		header->buf = (char*)(pool ? kgl_pnalloc(pool, KGL_INT32_LEN + 1) : xmalloc(KGL_INT32_LEN + 1));
 		header->val_len = snprintf(header->buf, KGL_INT32_LEN, "%d", *(int*)val);
 		break;
 	}
 	case KGL_HEADER_VALUE_TIME:
 	{
-		header->buf = (char*)m(arg, KGL_1123_TIME_LEN + 1);
+		header->buf = (char*)(pool ? kgl_pnalloc(pool, KGL_1123_TIME_LEN + 1) : xmalloc(KGL_1123_TIME_LEN + 1));
 		char* end = make_http_time(*(time_t*)val, header->buf, KGL_1123_TIME_LEN);
 		header->val_len = (hlen_t)(end - header->buf);
 		break;
 	}
 	default:
 		if (val_len <= 0 || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
-			fprintf(stderr, "unknow val_len=[%d]\n", val_len);
-			assert(false);
+			//fprintf(stderr, "unknow val_len=[%d]\n", val_len);
+			//assert(false);
 			return false;
 		}
-		header->buf = (char*)m(arg, val_len + 1);
+		header->buf = (char*)(pool ? kgl_pnalloc(pool, val_len + 1) : xmalloc(val_len + 1));
 		kgl_memcpy(header->buf, val, val_len);
 		header->val_len = val_len;
 		break;
 	}
+	header->buf_in_pool = !!pool;
 	header->buf[header->val_len] = '\0';
 	return true;
 }

@@ -4,7 +4,7 @@
 #include "kconnection.h"
 #include "kfiber.h"
 
-class KTcpSink : public KTcpServerSink
+class KTcpSink : public KSingleConnectionSink
 {
 public:
 	KTcpSink(kconnection *cn,kgl_pool_t *pool);
@@ -38,16 +38,11 @@ public:
 	{
 		return kfiber_net_read(cn, buf, len);
 	}
-	int internal_write(LPWSABUF buf, int bc) override
-	{
-		return kfiber_net_writev(cn, buf, bc);
-	}
 	kconnection *get_connection() override
 	{
 		return cn;
 	}
-	kev_result read_header() override;
-	int end_request() override;
+	void start(int header_len) override;
 	bool internal_response_status(uint16_t status_code) override
 	{
 		return false;
@@ -64,15 +59,12 @@ public:
 	{
 		return 0;
 	}
-	void set_delay() override
-	{
+	void set_delay() override {
 		ksocket_delay(cn->st.fd);
 	}
-	void set_no_delay(bool forever) override
-	{
+	void set_no_delay(bool forever) override {
 		ksocket_no_delay(cn->st.fd, forever);
 	}
-	kconnection *cn;
 };
 #endif
 

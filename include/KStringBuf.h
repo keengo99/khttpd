@@ -38,7 +38,12 @@ class KStringBuf;
 class KString final
 {
 public:
+#if 0
 	KString(const KString& a) : KString(kstring_refs(a.s)) {
+	}
+#endif
+	KString(const KString& a) {
+		s = kstring_refs(a.s);
 	}
 	KString(KStringBuf&& s) noexcept;
 	KString(KString&& a) noexcept {
@@ -58,9 +63,6 @@ public:
 	}
 	KString(const char a) {
 		s = kstring_from2(&a, 1);
-	}
-	KString(kgl_ref_str_t* a) noexcept {
-		s = a;
 	}
 	KString(const kgl_ref_str_t* a) noexcept {
 		s = kstring_refs(a);
@@ -239,7 +241,7 @@ public:
 	*/
 	KString str() {
 		end_with_zero();
-		return KString(kstring_refs(s));
+		return KString(s);
 	}
 	KString reset() {
 		auto s = str();

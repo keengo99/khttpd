@@ -1,6 +1,7 @@
 #include "KHttpUpstream.h"
 #include "KHttpKeyValue.h"
 #include "KHttpParser.h"
+#include "KTcpServerSink.h"
 
 bool KHttpUpstream::send_connection(const char* val, hlen_t val_len)
 {
@@ -48,31 +49,13 @@ KGL_RESULT KHttpUpstream::send_header_complete()
 	if (this->ctx.send_header_buffer == NULL) {
 		return KGL_ENOT_READY;
 	}
-	krw_write_str(ctx.send_header_buffer, kgl_expand_string("\r\n"));
-	KGL_RESULT result = KGL_OK;
-	WSABUF buf[32];
-	for (;;) {
-		int bc = krw_get_read_buffers(ctx.send_header_buffer, buf, kgl_countof(buf));
-		if (bc == 0) {
-			break;
-		}
-		/*
-		for (int i = 0; i < bc; i++) {
-			fwrite(buf[i].iov_base, 1, buf[i].iov_len, stdout);
-		}
-		//*/
-		int got = kfiber_net_writev(cn, buf, bc);
-		if (got <= 0) {
-			result = KGL_ECAN_RETRY_SOCKET_BROKEN;
-			break;
-		}
-		if (!krw_read_success(ctx.send_header_buffer, got)) {
-			break;
-		}
-	}
+	kgl_iovec header_end;
+	header_end.iov_base = (char*)"\r\n";
+	header_end.iov_len = 2;
+	int left = kangle::write_buf(cn, ctx.send_header_buffer->head, ctx.send_header_buffer->total_len, &header_end);
 	krw_buffer_destroy(ctx.send_header_buffer);
 	ctx.send_header_buffer = NULL;
-	return result;
+	return left == 0 ? KGL_OK : KGL_ECAN_RETRY_SOCKET_BROKEN;
 }
 KGL_RESULT KHttpUpstream::read_header()
 {

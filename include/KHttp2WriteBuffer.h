@@ -63,13 +63,14 @@ public:
 		* on client model before complete read header. 
 		* read_event will use header callback and the fiber can be NULL(no wait header) or NOT NULL(wait the header).
 		*/
-		WSABUF* buf;
+		const kbuf* buf;
 		kgl_header_callback header;
 		kasync_file* file;
+		char* rbuf;
 	};
 	union {
 		struct {
-			int bc;
+			int buf_len;
 			int len;
 		};
 		void* header_arg;
@@ -217,8 +218,7 @@ public:
 		http2_buff *buf = clean();
 		KHttp2WriteBuffer::remove_buff(buf,true);
 	}
-	int getReadBuffer(SOCKET fd, WSABUF *buffer,int bc)
-	{
+	kgl_iovec* get_read_buffer(SOCKET fd) {
 #ifdef ENABLE_HTTP2_TCP_CORK
 		if (!tcp_cork) {
 			tcp_cork = 1;
@@ -232,31 +232,13 @@ public:
 		}
 #endif
 		if (header->sendfile) {
-			assert(bc == 1);
-			buffer[0].iov_base = (char *)header->file;
-			buffer[0].iov_len = header->used;
-			return 1;
+			iovec_buf[0].iov_base = (char*)header->file;
+			iovec_buf[0].iov_len = header->used;
+		} else {
+			iovec_buf[0].iov_base = (char*)(iovec_buf+1);
+			iovec_buf[0].iov_len = get_read_buffer(iovec_buf + 1, MAX_IOVECT_COUNT - 1);
 		}
-		assert(hot);
-		int got = left;
-		assert(header);
-		http2_buff *tmp = header;
-		buffer[0].iov_base = hot;
-		int hot_left = header->used - (int)(hot - header->data);
-		hot_left = KGL_MIN(hot_left,got);
-		buffer[0].iov_len = hot_left;
-		got -= hot_left;
-		int i;
-		for (i=1;i<bc;i++) {
-			tmp = tmp->next;
-			if (tmp==NULL || got<=0 || tmp->sendfile) {
-				break;
-			}
-			buffer[i].iov_base = tmp->data;
-			buffer[i].iov_len = KGL_MIN(got,tmp->used);
-			got -= buffer[i].iov_len;
-		}
-		return i;
+		return iovec_buf;
 	}
 	http2_buff *readSuccess(SOCKET fd,int got)
 	{
@@ -333,6 +315,28 @@ public:
 		return;
 	}
 private:
+	int get_read_buffer(WSABUF* buffer, int bc) {
+		assert(hot);
+		int got = left;
+		assert(header);
+		http2_buff* tmp = header;
+		buffer[0].iov_base = hot;
+		int hot_left = header->used - (int)(hot - header->data);
+		hot_left = KGL_MIN(hot_left, got);
+		buffer[0].iov_len = hot_left;
+		got -= hot_left;
+		int i;
+		for (i = 1; i < bc; i++) {
+			tmp = tmp->next;
+			if (tmp == NULL || got <= 0 || tmp->sendfile) {
+				break;
+			}
+			buffer[i].iov_base = tmp->data;
+			buffer[i].iov_len = KGL_MIN(got, tmp->used);
+			got -= buffer[i].iov_len;
+		}
+		return i;
+	}
 	void reset()
 	{
 #ifndef NDEBUG
@@ -371,6 +375,7 @@ private:
 			last = buf;
 		}
 	}
+	kgl_iovec  iovec_buf[MAX_IOVECT_COUNT];
 	http2_buff *last;
 	http2_buff *header;
 	char *hot;

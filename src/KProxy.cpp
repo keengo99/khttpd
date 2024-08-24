@@ -12,6 +12,8 @@ public:
 	KRequestProxy()
 	{
 		memset(this, 0, sizeof(*this));
+		iovec_buf[0].iov_base = (char*)&iovec_buf[1];
+		iovec_buf[0].iov_len = 1;
 	}
 	~KRequestProxy()
 	{
@@ -26,18 +28,14 @@ public:
 	proxy_state_handler_pt state_handle;
 	kgl_proxy_hdr_v2 hdr;
 	char *body;
+	kgl_iovec iovec_buf[2];
+	/*
 	char *hot;
 	int left;
+	*/
 	kconnection *cn;
 	result_callback cb;
 };
-int buffer_proxy_read(KOPAQUE data, void *arg, LPWSABUF buf, int bc)
-{
-	KRequestProxy *proxy = (KRequestProxy *)arg;
-	buf->iov_len = proxy->left;
-	buf->iov_base = proxy->hot;
-	return 1;
-}
 kev_result result_proxy_reader(KOPAQUE data, void *arg, int got)
 {
 	KRequestProxy *proxy = (KRequestProxy *)arg;
@@ -108,8 +106,8 @@ kev_result KRequestProxy::state_header()
 	}
 	kassert(body == NULL);
 	body = (char *)xmalloc(hdr.len);
-	left = hdr.len;
-	hot = body;
+	iovec_buf[1].iov_len = hdr.len;
+	iovec_buf[1].iov_base = body;
 	uint8_t ver = (hdr.ver_cmd >> 4);
 	uint8_t cmd = (hdr.ver_cmd & 0xF);
 	if (ver != 2) {
@@ -121,7 +119,7 @@ kev_result KRequestProxy::state_header()
 		return destroy();
 	}
 	state_handle = &KRequestProxy::state_body;
-	return selectable_read(&cn->st, result_proxy_reader, buffer_proxy_read, this);
+	return selectable_read(&cn->st, result_proxy_reader, iovec_buf, this);
 }
 kev_result KRequestProxy::state(int got)
 {
@@ -129,10 +127,10 @@ kev_result KRequestProxy::state(int got)
 		destroy();
 		return kev_destroy;
 	}
-	hot += got;
-	left -= got;
-	if (left > 0) {
-		return selectable_read(&cn->st, result_proxy_reader, buffer_proxy_read, this);
+	iovec_buf[1].iov_base = (char *)iovec_buf[1].iov_base + got;
+	iovec_buf[1].iov_len -= got;
+	if (iovec_buf[1].iov_len > 0) {
+		return selectable_read(&cn->st, result_proxy_reader, iovec_buf, this);
 	}
 	return (this->*state_handle)();
 }
@@ -140,12 +138,12 @@ kev_result KRequestProxy::state(int got)
 kev_result handl_proxy_request(kconnection *cn, result_callback cb)
 {
 	KRequestProxy *proxy = new KRequestProxy;
-	proxy->hot = (char *)&proxy->hdr;
-	proxy->left = sizeof(kgl_proxy_hdr_v2);
+	proxy->iovec_buf[1].iov_base = (char *)&proxy->hdr;
+	proxy->iovec_buf[1].iov_len = sizeof(kgl_proxy_hdr_v2);
 	proxy->state_handle = &KRequestProxy::state_header;
 	proxy->cn = cn;
 	proxy->cb = cb;
-	return selectable_read(&cn->st,result_proxy_reader, buffer_proxy_read,proxy);
+	return selectable_read(&cn->st,result_proxy_reader, proxy->iovec_buf,proxy);
 }
 kbuf *build_proxy_header(const char *ip)
 {

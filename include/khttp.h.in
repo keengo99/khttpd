@@ -13,7 +13,7 @@
 #ifdef ENABLE_HTTP2
 #define ENABLE_UPSTREAM_HTTP2 1
 #endif
-
+#define ENABLE_STAT_STUB           1
 #define MAX_HTTP_HEAD_SIZE	4194304
 #define IF_FREE(p) {if ( p ) xfree(p);p=NULL;}
 
@@ -101,7 +101,7 @@
 #define WORK_MODEL_ALT_H3    (1<<4)
 #ifdef  ENABLE_PROXY_PROTOCOL
 #define WORK_MODEL_PROXY     (1<<5)
-//proxy in ssl
+/* proxy in ssl */
 #define WORK_MODEL_SSL_PROXY (1<<6)
 #endif
 #define WORK_MODEL_TPROXY    (1<<7)
@@ -153,6 +153,8 @@ typedef enum _kgl_header_type
 	kgl_header_if_unmodified_since,
 	kgl_header_cookie,
 	kgl_header_scheme,
+	kgl_header_referer,
+	kgl_header_user_agent,
 	kgl_header_unknow
 } kgl_header_type;
 
@@ -175,6 +177,9 @@ struct _KHttpHeader
 					uint8_t name_hash;
 					uint8_t name_is_know : 1;
 					uint8_t name_is_internal : 1;
+					uint8_t buf_in_pool : 1;
+					uint8_t header_in_pool : 1;
+					uint8_t buf_reoffset : 1;
 				};
 				uint16_t name_flags;
 			};
@@ -221,7 +226,7 @@ typedef enum _KGL_RESULT
 	KGL_EABORT = -9,
 	KGL_EHAS_SEND_HEADER = -11,
 	KGL_ESOCKET_BROKEN = -20,
-	KGL_ECAN_RETRY_SOCKET_BROKEN = -21, // this error should retry with new connection
+	KGL_ECAN_RETRY_SOCKET_BROKEN = -21, /* this error should retry with new connection */
 	KGL_EIO = -22,
 	KGL_ENOT_PREPARE = -23,
 	KGL_EEXSIT = -24,
@@ -233,7 +238,7 @@ inline bool is_status_code_no_body(int status_code) {
 	if (status_code == 100
 		|| status_code == STATUS_NOT_MODIFIED
 		|| status_code == STATUS_NO_CONTENT) {
-		//no content,see rfc2616.
+		/* no content,see rfc2616. */
 		return true;
 	}
 	return false;
@@ -258,25 +263,39 @@ typedef union _kgl_precondition
 
 typedef enum
 {
+	/**
+	* three bit precondition flag
+	* 0 bit precondition is unmidified-since/match or modified-since/none-match
+	* 1 bit precondition is time(if-modified-since|if-unmodified-since) or entry(if-none-match|if-match)
+	* 2 bit show if-range format is date or entry.
+	*/
 	kgl_precondition_if_match_unmodified = (1),
 	kgl_precondition_if_time = (1 << 1),
-	kgl_precondition_if_none_match = 0,
-	kgl_precondition_if_match = 1,
-	kgl_precondition_if_modified_since = 2,
-	kgl_precondition_if_unmodified_since = 3,
-	kgl_precondition_mask = 3,
 	kgl_precondition_if_range_date = (1<<2),
+
+	/*
+	* precondition two bit
+	*/
+	kgl_precondition_if_none_match = 0,      /*00*/
+	kgl_precondition_if_match = 1,           /*01*/
+	kgl_precondition_if_modified_since = 2,  /*10*/
+	kgl_precondition_if_unmodified_since = 3,/*11*/
+
+	/* precondition use 2 bit ,the third bit show if-range format
+	* if-range can coexsit with <if-none-match|if-match|if-modified-since|if-unmodified-since>
+	*/
+	kgl_precondition_mask = 3,
 } kgl_precondition_flag;
 
 typedef struct _kgl_url
 {
-#define KGL_URL_SSL       1   /* 根据端口判断是否是ssl */
-#define KGL_URL_IPV6      2
-#define KGL_URL_REWRITED  8
-#define KGL_URL_RANGED    0x10
-#define KGL_URL_ENCODE    0x20
-#define KGL_URL_ORIG_SSL  0x40  //源建议的ssl
-
+#define KGL_URL_SSL       1      /* listen port is ssl */
+#define KGL_URL_IPV6      (1<<1)
+#define KGL_URL_REWRITED  (1<<3)
+#define KGL_URL_RANGED    (1<<4)
+#define KGL_URL_ENCODE    (1<<5)
+#define KGL_URL_ORIG_SSL  (1<<6) /* request is ssl */
+#define KGL_URL_HAS_PORT  (1<<7) /* url has port */
 
 #define KGL_ENCODING_DEFLATE  1
 #define KGL_ENCODING_COMPRESS (1<<1)

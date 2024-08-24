@@ -1,6 +1,8 @@
 #include "KTcpUpstream.h"
 #include "KPoolableSocketContainer.h"
 #include "khttp.h"
+#include "KTcpServerSink.h"
+
 void KTcpUpstream::unbind_selector()
 {
 #ifndef _WIN32
@@ -40,9 +42,20 @@ int KTcpUpstream::read(char* buf, int len)
 {
 	return kfiber_net_read(cn, buf, len);
 }
-int KTcpUpstream::write(WSABUF* buf, int bc)
+int KTcpUpstream::write_all(const char* buf, int length) {
+	while (length > 0) {
+		int got = kfiber_net_write(cn, buf, length);
+		if (got <= 0) {
+			return length;
+		}
+		length -= got;
+		buf += got;
+	}
+	return 0;
+}
+int KTcpUpstream::write_all(const kbuf* buf, int length)
 {
-	return kfiber_net_writev(cn, buf, bc);
+	return kangle::write_buf(cn, buf, length, nullptr);
 }
 
 void KTcpUpstream::bind_selector(kselector *selector)

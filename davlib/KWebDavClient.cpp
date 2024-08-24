@@ -23,15 +23,15 @@ void KWebDavClient::set_auth(const char* user, const char* passwd) {
 bool KWebDavClient::set_url(const char* url, const char *host)
 {
 	if (this->url) {
-		this->url->relase();
+		this->url->release();
 	}
-	this->url = new KUrl;
+	this->url = new KUrl(true);
 	if (this->sock_pool) {
 		this->sock_pool->release();
 		this->sock_pool = NULL;
 	}
 	if (!parse_url(url, this->url)) {
-		this->url->relase();
+		this->url->release();
 		this->url = NULL;
 		return false;
 	}
@@ -51,7 +51,7 @@ bool KWebDavClient::set_url(const char* url, const char *host)
 KWebDavClient::~KWebDavClient()
 {
 	if (url) {
-		url->relase();
+		url->release();
 	}
 	if (sock_pool) {
 		sock_pool->release();

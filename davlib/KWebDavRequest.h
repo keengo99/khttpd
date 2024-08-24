@@ -168,7 +168,7 @@ public:
 	bool send_lock_token(KWebDavLockToken* token);
 	KGL_RESULT write_all(const char* buf, int len)
 	{
-		return resp.us->write_all(buf, len);
+		return resp.us->write_all(buf, len)==0?KGL_OK:KGL_EIO;
 	}
 	int read(char* buf, int len)
 	{

@@ -28,13 +28,11 @@ public:
 	{
 		return this->cn;
 	}
-	void set_delay() override
-	{
+	void set_delay() override {
 		ksocket_delay(cn->st.fd);
 	}
-	void set_no_delay(bool forever) override
-	{
-		ksocket_no_delay(cn->st.fd,forever);
+	void set_no_delay(bool forever) override {
+		ksocket_no_delay(cn->st.fd, forever);
 	}
 	void shutdown() override
 	{
@@ -61,7 +59,8 @@ public:
 	bool set_header_callback(void* arg, kgl_header_callback cb) override;
 	virtual KGL_RESULT read_header() override;
 	int read(char* buf, int len) override;
-	int write(WSABUF* buf, int bc) override;
+	int write_all(const kbuf* buf,int bc) override;
+	int write_all(const char* buf, int bc) override;
 	void bind_selector(kselector *selector) override;
 	virtual void gc(int life_time) override;
 	void unbind_selector() override;

@@ -1,4 +1,5 @@
 #include "KAutoBuffer.h"
+
 int KAutoBuffer::write(const char *buf, int len)
 {
 	int wlen;
@@ -16,6 +17,7 @@ void KAutoBuffer::writeSuccess(int got)
 	total_len += got;
 	hot += got;
 }
+
 kbuf *KAutoBuffer::stealBuff()
 {
 	if (last==NULL || NBUFF_SIZE - last->used < 64) {
@@ -30,6 +32,7 @@ kbuf *KAutoBuffer::stealBuff()
 	}
 	return stealBuffFast();
 }
+
 char *KAutoBuffer::getWriteBuffer(int &len)
 {
 	if (last == NULL) {
@@ -50,6 +53,7 @@ char *KAutoBuffer::getWriteBuffer(int &len)
 	assert(len > 0);
 	return hot;
 }
+/*
 int KAutoBuffer::getReadBuffer(LPWSABUF buffer, int bufferCount)
 {
 	if (hot == NULL) {
@@ -92,3 +96,4 @@ bool KAutoBuffer::readSuccess(int *got)
 	}
 	return true;
 }
+*/

@@ -57,7 +57,8 @@ public:
 		return us->get_trailer();
 	}
 	int read(char* buf, int len) override;
-	int write(WSABUF* buf, int bc) override;
+	int write_all(const char* buf, int len) override;
+	int write_all(const kbuf* buf, int len) override;
 	bool send_trailer(const char* name, hlen_t name_len, const char* val, hlen_t val_len) override {
 		return us->send_trailer(name, name_len, val, val_len);
 	}
@@ -93,6 +94,9 @@ public:
 	}
 	kgl_refs_string* get_param() override {
 		return us->get_param();
+	}
+	KPoolableSocketContainer* get_container() override {
+		return us->get_container();
 	}
 	void gc(int life_time) override;
 	KUpstreamCallBack stack;

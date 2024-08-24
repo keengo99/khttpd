@@ -2,6 +2,7 @@
 #define KHTTP2SINK_H_99 1
 #include "KTcpServerSink.h"
 #include "KHttp2.h"
+#include "KHttpServer.h"
 #ifdef ENABLE_HTTP2
 class KHttp2Sink : public KTcpServerSink
 {
@@ -10,11 +11,19 @@ public:
 	{
 		this->http2 = http2;
 		this->ctx = ctx;
-		this->data.raw_url = new KUrl;
 	}
 	~KHttp2Sink()
 	{
-		kassert(ctx == NULL);
+		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+		if (unlikely(ctx->content_left > 0)) {
+			http2->shutdown(ctx);
+		} else {
+			if (KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
+				ctx->in_closed = 1;
+			}
+			http2->write_end(ctx);
+		}
+		http2->release(ctx);
 	}
 	bool set_transfer_chunked() override
 	{
@@ -80,32 +89,20 @@ public:
 	}
 	int internal_read(char* buf, int len) override
 	{
-		WSABUF bufs;
-		bufs.iov_base = buf;
-		bufs.iov_len = len;
-		return http2->read(ctx, &bufs, 1);
+		return http2->read(ctx, buf, len);
 	}
-	int internal_write(WSABUF* buf, int bc) override
+	int write_all(const kbuf* buf, int length) override
 	{
-		return http2->write(ctx, buf, bc);
+		int left = http2->write_all(ctx, buf, length);
+		add_down_flow(nullptr, length - left);
+		return left;
 	}
-	int end_request() override
+	int write_all(const char* str, int length) override
 	{
-		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (unlikely(ctx->content_left>0)) {
-			http2->shutdown(ctx);
-		} else {
-			if(KBIT_TEST(data.flags, RQ_HAVE_EXPECT)) {
-				ctx->in_closed = 1;
-			}
-			http2->write_end(ctx);
-		}
-		http2->release(ctx);
-#ifndef NDEBUG
-		ctx = NULL;
-#endif
-		delete this;
-		return 0;
+		kbuf buf{ 0 };
+		buf.data = (char*)str;
+		buf.used = length;
+		return write_all(&buf, length);
 	}
 	void shutdown() override
 	{
@@ -127,7 +124,9 @@ public:
 	void flush() override
 	{
 	}
-	kev_result read_header() override;
+	void start(int got) override {
+		khttp_server_new_request(this, got);
+	}
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override {
 		if (!ctx->write_trailer) {
 			assert(ctx->content_left == -1);

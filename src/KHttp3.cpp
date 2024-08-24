@@ -29,7 +29,6 @@ struct kgl_quic_package
 	char* buffer;
 };
 kev_result h3_result_udp_recv(KOPAQUE data, void* arg, int got);
-int h3_buffer_udp_recv(KOPAQUE data, void* arg, struct iovec* buf, int bc);
 int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int got);
 static lsquic_stream_ctx_t* http_server_on_new_stream(void* stream_if_ctx, lsquic_stream_t* stream) {
 	auto lsquic_cn = lsquic_stream_conn(stream);
@@ -89,30 +88,7 @@ http_server_on_goaway(lsquic_conn_t* conn) {
 static struct lsquic_stream_if http_server_if;
 static struct lsquic_hset_if header_bypass_api;
 inline kev_result h3_recv_package(KHttp3ServerEngine* h3_engine, kconnection* uc) {
-	for (;;) {
-	retry:
-		int got = kudp_recvmsg(uc, h3_result_udp_recv, h3_buffer_udp_recv, uc);
-		switch (got) {
-		case KASYNC_IO_PENDING:
-			goto done;
-		case KASYNC_IO_ERR_BUFFER:
-			goto retry;
-		case KASYNC_IO_ERR_SYS:
-			if (h3_engine->server->is_shutdown()) {
-				h3_engine->release();
-				return kev_destroy;
-			}
-			klog(KLOG_ERR, "MAY HAVE BUG! I DO NOT KNOW HOW TO DO. recv msg error.\n");
-			h3_engine->release();
-			return kev_destroy;
-		default:
-			//printf("h3_process_package_in got=[%d]\n", got);
-			h3_process_package_in(h3_engine, uc, got);
-		}
-	}
-done:
-	//h3_engine->ticked();
-	return kev_ok;
+	return selectable_read(&uc->st, h3_result_udp_recv, h3_engine->iov_buf, uc);
 }
 static void
 setup_control_msg(
@@ -290,7 +266,7 @@ int send_packets_out(
 		msg.lpBuffers = specs[n].iov;
 		msg.dwFlags = 0;
 #endif        
-		if (h3_engine->is_server_model() && specs[n].local_sa->sa_family) {
+		if (h3_engine->allow_src_ip() && specs[n].local_sa->sa_family) {
 			cw = CW_SENDADDR;
 			ancil_key = (uintptr_t)specs[n].local_sa;
 			assert(0 == (ancil_key & 3));
@@ -365,17 +341,11 @@ static kev_result next_quic_package_in(KOPAQUE data, void* arg, int got) {
 	xfree(package);
 	return kev_ok;
 }
-int h3_buffer_udp_recv(KOPAQUE data, void* arg, struct iovec* buf, int bc) {
-	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)data;
-	buf[0].iov_base = h3_engine->udp_buffer;
-	buf[0].iov_len = MAX_QUIC_UDP_SIZE;
-	return 1;
-}
 int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int got) {
 	if (h3_engine->is_multi()) {
 		lsquic_cid_t cid;
 		cid.len = 0;
-		if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->udp_buffer, got, &cid) || cid.len < sizeof(kgl_h3_cid_header)) {
+		if (0 != lsquic_cid_from_packet((unsigned char*)h3_engine->get_udp_buffer(), got, &cid) || cid.len < sizeof(kgl_h3_cid_header)) {
 			return -1;
 
 		}
@@ -395,7 +365,7 @@ int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int go
 	}
 
 	kgl_quic_package package;
-	package.buffer = h3_engine->udp_buffer;
+	package.buffer = (char *)h3_engine->iov_buf[1].iov_base;
 	package.peer_addr = &uc->addr;
 	parse_local_addr(&package, uc);
 	return kgl_quic_package_in(h3_engine, &package, got);
@@ -404,17 +374,16 @@ kev_result h3_result_udp_recv(KOPAQUE data, void* arg, int got) {
 	kconnection* uc = (kconnection*)arg;
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)data;
 	if (got == ST_ERR_TIME_OUT) {
-		//lsquic_engine_process_conns(h3_engine->engine);
-		//h3_engine->ticked();
 		return kev_ok;
 	}
-	if (got < 0) {
-		return h3_recv_package(h3_engine, uc);
-	}
-	if (got>0) {
+	if (got > 0) {
 		h3_process_package_in(h3_engine, uc, got);
 	}
-	return h3_recv_package(h3_engine, uc);
+	if (h3_engine->server->is_shutdown()) {
+		h3_engine->release();
+		return kev_destroy;
+	}
+	return h3_recv_package(h3_engine, uc);	
 }
 SSL_CTX* h3_lookup_cert(void* lsquic_cert_lookup_ctx, const struct sockaddr* local, const char* hostname) {
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)lsquic_cert_lookup_ctx;
@@ -472,7 +441,7 @@ interop_server_hset_add_header(void* hset_p, struct lsxpack_header* xhdr) {
 	const char* name, * value;
 	int name_len, value_len;
 	if (!xhdr) {
-		if (req->sink->data.raw_url->IsBad()) {
+		if (req->sink->data.raw_url.is_bad()) {
 			return 1;
 		}
 		return 0;
@@ -481,7 +450,7 @@ interop_server_hset_add_header(void* hset_p, struct lsxpack_header* xhdr) {
 	value = lsxpack_header_get_value(xhdr);
 	name_len = xhdr->name_len;
 	value_len = xhdr->val_len;
-	bool result = req->sink->parse_header(name, name_len, (char*)value, value_len, req->is_first);
+	bool result = req->sink->parse_header<const char *>(name, name_len, (char*)value, value_len, req->is_first);
 	req->is_first = false;
 	if (result) {
 		return 0;
@@ -605,6 +574,18 @@ int KHttp3Server::init(const char* ip, uint16_t port, int sock_flags, kgl_ssl_ct
 	if (!ksocket_getaddr(ip, port, PF_UNSPEC, AI_NUMERICHOST, &addr)) {
 		return -1;
 	}
+	allow_src_ip = 0;
+	if (addr.v4.sin_family == PF_INET) {
+		if (addr.v4.sin_addr.s_addr == INADDR_ANY) {
+			allow_src_ip = 1;
+		}
+#ifdef KSOCKET_IPV6
+	} else {
+		if (memcmp(&addr.v6.sin6_addr, &in6addr_any, sizeof(addr.v6.sin6_addr)) == 0) {
+			allow_src_ip = 1;
+		}
+#endif
+	}
 	kgl_add_ref_ssl_ctx(ssl_ctx);
 	this->ssl_ctx = ssl_ctx;
 	this->flags = model;
@@ -702,6 +683,9 @@ void KHttp3ServerEngine::release() {
 }
 bool KHttp3ServerEngine::is_multi() {
 	return server->engine_count > 1;
+}
+bool KHttp3ServerEngine::allow_src_ip() {
+	return server->allow_src_ip;
 }
 int KHttp3ServerEngine::shutdown() {
 	if (uc == nullptr) {

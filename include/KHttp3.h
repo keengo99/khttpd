@@ -53,14 +53,14 @@ public:
 		uc = nullptr;
 		engine = nullptr;
 		selector_tick = NULL;
-		udp_buffer = (char *)xmalloc(MAX_QUIC_UDP_SIZE);
 		seq = rand();
 		this->server = server;
+		iov_buf[0].iov_base = (char*)(iov_buf + 1);
+		iov_buf[0].iov_len = 1;
+		iov_buf[1].iov_base = (char *)xmalloc(MAX_QUIC_UDP_SIZE);
+		iov_buf[1].iov_len = MAX_QUIC_UDP_SIZE;
 	}
-	bool is_server_model()
-	{
-		return true;
-	}
+	bool allow_src_ip();
 	void ticked()
 	{
 		if (lsquic_engine_has_unsent_packets(engine)) {
@@ -83,9 +83,12 @@ public:
 	bool is_multi();
 	char* realloc_buffer()
 	{
-		char* old_buffer = udp_buffer;
-		udp_buffer = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
+		char* old_buffer = (char *)iov_buf[1].iov_base;
+		iov_buf[1].iov_base = (char*)xmalloc(MAX_QUIC_UDP_SIZE);
 		return old_buffer;
+	}
+	char* get_udp_buffer() {
+		return (char *)iov_buf[1].iov_base;
 	}
 	int start();
 	int init(kselector *selector, int udp_flag);
@@ -112,7 +115,7 @@ public:
 		}
 		last_sni = new KHttp3CachedSni(hostname, sni);
 	}
-	char* udp_buffer;
+	kgl_iovec iov_buf[2];
 	kconnection* uc;
 	lsquic_engine* engine;
 	uint32_t seq;
@@ -129,7 +132,7 @@ protected:
 		if (engine) {
 			lsquic_engine_destroy(engine);
 		}
-		xfree(udp_buffer);
+		xfree(iov_buf[1].iov_base);
 		assert(selector_tick == NULL);
 		if (last_sni) {
 			delete last_sni;
@@ -145,6 +148,7 @@ public:
 		ssl_ctx = nullptr;
 		free_opaque = nullptr;
 		data = NULL;
+		count_flags = 0;
 		engine_count = count;
 		engines = (KHttp3ServerEngine **)malloc(sizeof(KHttp3ServerEngine*)*count);
 		for (int i = 0; i < (int)count; i++) {
@@ -186,8 +190,14 @@ public:
 	sockaddr_i addr;
 	kgl_ssl_ctx* ssl_ctx;
 	uint32_t flags;
-protected:	
-	uint16_t engine_count;
+protected:
+	union {
+		struct {
+			uint16_t allow_src_ip : 1;
+			uint16_t engine_count;
+		};
+		uint32_t count_flags;
+	};
 	kserver_free_opaque free_opaque;
 	KOPAQUE data;
 	void try_free_data()
