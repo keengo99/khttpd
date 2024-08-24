@@ -30,7 +30,7 @@ else()
 	if (NOT ZLIB_FOUND)
 		message(FATAL_ERROR "cann't found zlib")
 	endif()
-	list(APPEND KHTTPD_LIBS ZLIB::ZLIB)
+	list(APPEND KHTTPD_LIBS ${ZLIB_LIBRARIES})
 endif()
 
 ################ boringssl ################
