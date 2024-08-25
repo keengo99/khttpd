@@ -42,7 +42,9 @@ public:
 	//piece_length是in,out参数，in时指示最大块长度
 	//如果返回的是trailer数据，piece_length会忽略传进来的值。
 	KDechunkResult dechunk(const char** buf, const char* end, const char** piece, int* piece_length);
-	KDechunkResult dechunk(const char** buf, int buf_len, const char** piece, int* piece_length);
+	KDechunkResult dechunk(const char** buf, int buf_len, const char** piece, int* piece_length) {
+		return dechunk(buf, (*buf) + buf_len, piece, piece_length);
+	}
 	bool is_success() {
 		return chunk_size == KHTTPD_CHUNK_STATUS_IS_END;
 	}
@@ -55,7 +57,6 @@ class KDechunkReader
 public:
 	KDechunkReader()
 	{
-
 	}
 	template<typename T>
 	int read(T* us, char* buf, int len)

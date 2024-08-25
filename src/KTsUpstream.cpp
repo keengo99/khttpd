@@ -25,9 +25,9 @@ static bool ts_header_callback(KUpstream *us, void *arg, const char *attr, int a
 	kgl_pool_t *pool = ts->us->GetPool();
 	KHttpHeader* header = nullptr;
 	if (!attr) {
-		header = new_pool_http_know_header((kgl_header_type)attr_len, val, val_len, (kgl_malloc)kgl_pnalloc, pool);
+		header = new_pool_http_know_header(pool, (kgl_header_type)attr_len, val, val_len);
 	} else {
-		header = new_pool_http_header(attr, attr_len, val, val_len, (kgl_malloc)kgl_pnalloc, pool);
+		header = new_pool_http_header(pool, attr, attr_len, val, val_len);
 	}
 	if (ts->header) {
 		ts->last_header->next = header;

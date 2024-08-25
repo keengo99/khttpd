@@ -47,6 +47,28 @@ public:
 	/* return true will use pipe_line */
 	void end_request() override;
 	ks_buffer buffer;
+	char* parserd_hot;
+	char* get_read_buffer(int* size) {
+		assert(parserd_hot - buffer.buf >= 0 && parserd_hot - buffer.buf <= buffer.used);
+		assert(buffer.used <= buffer.buf_size);
+	retry:
+		*size = buffer.buf_size - (int)buffer.used;
+		if (*size > 0) {
+			return buffer.buf + buffer.used;
+		}
+		{
+			int new_size = buffer.buf_size * 2;
+			char* nb = (char*)xmalloc(new_size);
+			kgl_memcpy(nb, buffer.buf, buffer.used);
+			ptrdiff_t delta_point = nb - buffer.buf;
+			data.adjust_buffer_offset(delta_point);
+			xfree(buffer.buf);
+			buffer.buf = nb;
+			buffer.buf_size = new_size;
+			parserd_hot += delta_point;
+			goto retry;
+		}
+	}
 	KResponseContext rc;
 	kconnection* get_connection() override {
 		return cn;
@@ -60,6 +82,7 @@ public:
 		}
 		return dechunk->trailer->header;
 	}
+
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
 	void start(int header_len) override;
 	bool skip_post();
@@ -80,11 +103,6 @@ public:
 		}
 		kassert(data.left_read == 0 || KBIT_TEST(data.flags, RQ_HAVE_EXPECT));
 		reset_pipeline();
-		memset(&parser, 0, sizeof(parser));
-		if (dechunk) {
-			delete dechunk;
-			dechunk = NULL;
-		}
 		return true;
 	}
 	int sendfile(kfiber_file* fp, int len) override;
@@ -114,15 +132,32 @@ protected:
 #endif
 	bool internal_response_status(uint16_t status_code) override;
 	KDechunkContext* dechunk;
-	khttp_parser parser;
 private:
-	kgl_parse_result parse() {
+	void reset_pipeline() {
+		data.clean();
+		data.init();
+		set_state(STATE_IDLE);
+	}
+	void begin_request() {
+		data.free_lazy_memory();
+		data.free_header();
+		if (pool) {
+			kgl_reset_pool(pool);
+		}
+		data.begin_request();
+	}
+	void save_point() {
+		ks_save_point(&buffer, parserd_hot);
+		parserd_hot = buffer.buf;
+	}
+	kgl_parse_result parse(khttp_parser* parser) {
 		khttp_parse_result rs;
-		char* hot = buffer.buf;
 		char* end = buffer.buf + buffer.used;
+		assert(parserd_hot >= buffer.buf && parserd_hot <= end);
 		for (;;) {
 			memset(&rs, 0, sizeof(rs));
-			kgl_parse_result result = khttp_parse(&parser, &hot, end, &rs);
+			kgl_parse_result result = khttp_parse(parser, &parserd_hot, end, &rs);
+			assert(parserd_hot >= buffer.buf && parserd_hot <= end);
 			//printf("len=[%d],result=[%d]\n", len,result);
 			switch (result) {
 			case kgl_parse_continue:
@@ -130,19 +165,19 @@ private:
 				if (kgl_current_msec - data.begin_time_msec > 60000) {
 					return kgl_parse_error;
 				}
-				if (parser.header_len > MAX_HTTP_HEAD_SIZE) {
+				if (parser->header_len > MAX_HTTP_HEAD_SIZE) {
 					return kgl_parse_error;
 				}
-				ks_save_point(&buffer, hot);
+				//ks_save_point(&buffer, hot);
 				return kgl_parse_continue;
 			}
 			case kgl_parse_success:
-				if (!parse_header(rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
+				if (!parse_header<char*>(rs.attr, rs.attr_len, rs.val, rs.val_len, rs.is_first)) {
 					return kgl_parse_error;
 				}
 				if (rs.is_first && data.meth == METH_PRI && KBIT_TEST(cn->server->flags, KGL_SERVER_H2)) {
 #ifdef ENABLE_HTTP2
-					ks_save_point(&buffer, hot);
+					save_point();
 					if (!switch_h2c()) {
 						klog(KLOG_ERR, "cann't switch to h2c, buffer size=[%d] may greater than http2 buffer\n", buffer.used);
 					}
@@ -153,10 +188,9 @@ private:
 			case kgl_parse_finished:
 				kassert(rc.get_buf() == nullptr);
 				ksocket_delay(cn->st.fd);
-				ks_save_point(&buffer, hot);
 				if (KBIT_TEST(data.flags, RQ_INPUT_CHUNKED)) {
 					kassert(dechunk == NULL);
-					dechunk = new KDechunkContext;
+					dechunk = new KDechunkContext(parserd_hot, (int)(buffer.used - (parserd_hot - buffer.buf)));
 				}
 				//printf("***************body_len=[%d]\n", parser.body_len);
 				return kgl_parse_finished;

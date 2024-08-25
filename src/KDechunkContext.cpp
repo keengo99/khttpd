@@ -1,29 +1,33 @@
 #include "KDechunkContext.h"
 #include "KHttpSink.h"
 #include "kfiber.h"
-bool KDechunkContext::read_from_net(KHttpSink* sink) {
+bool KDechunkContext::read_from_net(kconnection* cn) {
 	int len;
-	char* hot_buf = ks_get_read_buffer(&sink->buffer, &len);
-	int got = kfiber_net_read(sink->cn, hot_buf, len);
+	char* hot_buf = ks_get_read_buffer(&buffer, &len);
+	int got = kfiber_net_read(cn, hot_buf, len);
 	if (got <= 0) {
 		return false;
 	}
-	ks_write_success(&sink->buffer, got);
+#if 0
+	printf("*[");
+	fwrite(hot_buf, 1, got, stdout);
+	printf("]\n");
+#endif
+	ks_write_success(&buffer, got);
 	return true;
 }
-int KDechunkContext::read(KHttpSink* sink, char* buf, int length) {
+int KDechunkContext::read(kconnection* cn, char* buf, int length) {
 	const char* piece;
-	const char* hot;
 	for (;;) {
-		hot = sink->buffer.buf;
-		const char* end = hot + sink->buffer.used;
+		const char* end = buffer.buf + buffer.used;
+		assert(hot >= buffer.buf && hot <= end);
 		if (hot == end) {
-			if (!read_from_net(sink)) {
+			save_point();
+			if (!read_from_net(cn)) {
 				return -1;
 			}
 			continue;
 		}
-
 	continue_dechunk:
 		int piece_length = length;
 		KDechunkResult status = dechunk(&hot, end, &piece, &piece_length);
@@ -37,7 +41,7 @@ int KDechunkContext::read(KHttpSink* sink, char* buf, int length) {
 			}
 			hlen_t attr_len = (hlen_t)(sp - piece);
 			sp++;
-			while (sp < trailer_end && isspace((unsigned char)*sp)) {
+			while (sp < trailer_end && KHTTP_ISSPACE((unsigned char)*sp)) {
 				sp++;
 			}
 			get_trailer()->add_header(piece, attr_len, sp, (hlen_t)(trailer_end - sp));
@@ -45,22 +49,19 @@ int KDechunkContext::read(KHttpSink* sink, char* buf, int length) {
 		}
 		case KDechunkResult::End:
 		{
-			ks_save_point(&sink->buffer, hot);
+			save_point();
 			return 0;
 		}
 		case KDechunkResult::Success:
 		{
 			assert(piece && piece_length > 0);
-			if (buf) {
-				memcpy(buf, piece, piece_length);
-			}
-			ks_save_point(&sink->buffer, hot);
+			memmove(buf, piece, piece_length);
 			return piece_length;
 		}
 		case KDechunkResult::Continue:
 		{
-			ks_save_point(&sink->buffer, hot);
-			if (!read_from_net(sink)) {
+			save_point();
+			if (!read_from_net(cn)) {
 				return -1;
 			}
 			break;

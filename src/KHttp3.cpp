@@ -450,7 +450,7 @@ interop_server_hset_add_header(void* hset_p, struct lsxpack_header* xhdr) {
 	value = lsxpack_header_get_value(xhdr);
 	name_len = xhdr->name_len;
 	value_len = xhdr->val_len;
-	bool result = req->sink->parse_header(name, name_len, (char*)value, value_len, req->is_first);
+	bool result = req->sink->parse_header<const char *>(name, name_len, (char*)value, value_len, req->is_first);
 	req->is_first = false;
 	if (result) {
 		return 0;
