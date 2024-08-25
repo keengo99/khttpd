@@ -334,7 +334,7 @@ void KHttpSink::start(int header_len) {
 					delete dechunk;
 					dechunk = nullptr;
 				} else {
-					if (parserd_hot <= buffer.buf + buffer.used) {
+					if (parserd_hot < buffer.buf + buffer.used) {
 						//have data
 						begin_request();
 						save_point();
