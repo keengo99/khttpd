@@ -448,7 +448,7 @@ KHttpHeader* KSockPoolHelper::get_proxy_header(kgl_pool_t* pool) {
 		KStringBuf val;
 		up << auth_user.c_str() << ":" << auth_passwd.c_str();
 		val << "Basic " << b64encode((const unsigned char*)up.c_str(), up.size());
-		header = new_pool_http_header(_KS("Proxy-Authorization"), val.buf(), val.size(), (kgl_malloc)kgl_pnalloc, pool);
+		header = new_pool_http_header(pool, _KS("Proxy-Authorization"), val.buf(), val.size());
 	}
 	lock.Unlock();
 	return header;
