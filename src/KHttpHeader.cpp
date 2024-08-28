@@ -1,5 +1,4 @@
 #include "KHttpHeader.h"
-#include "KHttp2.h"
 #include "KHttpLib.h"
 
 kgl_header_string kgl_header_type_string[] = {
@@ -40,18 +39,8 @@ kgl_header_string kgl_header_type_string[] = {
 	{_KS("Unknow") ,_KS("unknow"),_KS("\r\nUnknow: ")},
 };
 
-#define KGL_HEADER_STRING_COUNT                                      \
-    (sizeof(kgl_header_type_string)                                         \
-     / sizeof(kgl_header_string))
 
-void kgl_init_header_string() {
-#ifdef ENABLE_HTTP2
-	for (int i = 0; i < KGL_HEADER_STRING_COUNT; ++i) {
-		kgl_header_type_string[i].http2_index = kgl_find_http2_static_table(&kgl_header_type_string[i].low_case);
-		//printf("[%s] index=[%d]\n", kgl_header_type_string[i].low_case.data, kgl_header_type_string[i].http2_index);
-	}
-#endif
-}
+
 kgl_header_string* kgl_get_know_header(kgl_header_type type) {
 	return &kgl_header_type_string[type];
 }

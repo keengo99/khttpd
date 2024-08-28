@@ -45,6 +45,15 @@ void dump_hex(void* d, int len) {
 	}
 	printf("\n");
 }
+
+void kgl_init_header_string() {
+#ifdef ENABLE_HTTP2
+	for (int i = 0; i < kgl_header_unknow; ++i) {
+		kgl_header_type_string[i].http2_index = kgl_find_http2_static_table(&kgl_header_type_string[i].low_case);
+		//printf("[%s] index=[%d]\n", kgl_header_type_string[i].low_case.data, kgl_header_type_string[i].http2_index);
+	}
+#endif
+}
 kev_result resultHttp2Read(KOPAQUE data, void* arg, int got) {
 	KHttp2* http2 = (KHttp2*)data;
 	return http2->on_read_result(arg, got);
