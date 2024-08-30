@@ -282,7 +282,7 @@ namespace khttpd {
 			return true;
 		}
 		KString get_tag() const {
-			return KString(kstring_refs(key.tag));
+			return KString(key.tag);
 		}
 		KString get_character() const {
 			auto body = get_first();
