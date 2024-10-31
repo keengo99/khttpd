@@ -204,7 +204,7 @@ class KHttp2Context;
 class KHttp2;
 class KHttp2Sink;
 class KHttp2Upstream;
-u_char kgl_find_http2_static_table(const kgl_str_t *name);
+u_char kgl_find_http2_static_table(const kgl_str_t* name);
 typedef int (*http2_header_parser_pt)(KHttp2Context* ctx, kgl_str_t* name, kgl_str_t* value);
 typedef int (*http2_accept_handler_pt)(KHttp2Context* ctx);
 typedef u_char* (KHttp2::* kgl_http_v2_handler_pt) (u_char* pos, u_char* end);
@@ -356,6 +356,7 @@ public:
 				if (len <= 0) {
 					break;
 				}
+				assert(hot_buf);
 				http2_buff* new_buf = new http2_buff;
 				new_buf->skip_data_free = 1;
 				new_buf->data = (char*)hot_buf->data;
@@ -412,7 +413,7 @@ public:
 		len = total_len;
 		return new_buf;
 	}
-	void CreateWriteWaitWindow(kfiber *fiber, const kbuf* buf, int length) {
+	void CreateWriteWaitWindow(kfiber* fiber, const kbuf* buf, int length) {
 		kassert(write_wait == NULL);
 		write_wait = new kgl_http2_event;
 		write_wait->buf = buf;
@@ -493,7 +494,7 @@ public:
 public:
 	int ReadHeader(KHttp2Context* ctx);
 	int read(KHttp2Context* ctx, char* buf, int length);
-	int write(KHttp2Context* ctx, const kbuf *buf, int length);
+	int write(KHttp2Context* ctx, const kbuf* buf, int length);
 	int write_all(KHttp2Context* ctx, const kbuf* buf, int length) {
 		kbuf header{ 0 };
 		const kbuf* hot_buf = buf;
@@ -508,8 +509,8 @@ public:
 			}
 			do {
 				if (hot_buf->used <= got) {
-					hot_buf = hot_buf->next;
 					got -= hot_buf->used;
+					hot_buf = hot_buf->next;
 					continue;
 				}
 				header.used = hot_buf->used - got;
