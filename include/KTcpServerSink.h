@@ -25,17 +25,7 @@ namespace kangle {
 					return length;
 				}
 				length -= got;
-				/* see iovec_buf left data */
-				while (got > 0) {
-					if ((int)hot_buf->iov_len > got) {
-						hot_buf->iov_len -= got;
-						hot_buf->iov_base = (char*)(hot_buf->iov_base) + got;
-						break;
-					}
-					got -= hot_buf->iov_len;
-					hot_buf++;
-					bc--;
-				}
+				hot_buf = kgl_iovec_seek(hot_buf, &bc, got);
 			}
 		}
 		return 0;

@@ -496,30 +496,15 @@ public:
 	int read(KHttp2Context* ctx, char* buf, int length);
 	int write(KHttp2Context* ctx, const kbuf* buf, int length);
 	int write_all(KHttp2Context* ctx, const kbuf* buf, int length) {
-		kbuf header{ 0 };
-		const kbuf* hot_buf = buf;
-		for (;;) {
-			int got = write(ctx, hot_buf, length);
+		kbuf header;
+		while(length>0) {
+			int got = write(ctx, buf, length);
 			if (got <= 0) {
 				break;
 			}
+			buf = kbuf_seek(buf, got, &header);
 			length -= got;
-			if (length <= 0) {
-				return 0;
-			}
-			do {
-				if (hot_buf->used <= got) {
-					got -= hot_buf->used;
-					hot_buf = hot_buf->next;
-					continue;
-				}
-				header.used = hot_buf->used - got;
-				header.data = hot_buf->data + got;
-				header.next = hot_buf->next;
-				hot_buf = &header;
-				break;
-			} while (got > 0);
-		}
+		};
 		return length;
 	}
 	int sendfile(KHttp2Context* ctx, kasync_file* file, int length);
