@@ -95,7 +95,7 @@ public:
 	int write_all(const kbuf* buf, int length) override
 	{
 		int left = http2->write_all(ctx, buf, length);
-		add_down_flow(length - left);
+		add_down_flow(nullptr, length - left);
 		return left;
 	}
 	int write_all(const char* str, int length) override

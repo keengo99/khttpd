@@ -72,7 +72,11 @@ public:
 		assert(data.range);
 		return kgl_adjust_range(data.range, len);
 	}
-	void add_down_flow(int flow) {
+	void add_down_flow(const kgl_iovec* suffix, int flow) {
+		if (suffix) {
+			flow += (int)suffix->iov_len;
+		}
+		assert(flow >= 0);
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
 			helper->fi->AddDownFlow((INT64)flow, KBIT_TEST(data.flags, RQ_CACHE_HIT));
@@ -273,14 +277,15 @@ public:
 			body_len = 0;
 		}
 		int header_len = internal_start_response_body(body_len, false);
-		add_down_flow(header_len);
+		add_down_flow(nullptr, header_len);
 		return header_len >= 0;
 	}
 	int read(char* buf, int len);
 	/*
 	* write_all will send data until all success or failed.
-	* if failed return left byte.
+	* if failed return left byte to send.
 	* if return 0 will all success.
+	* notice: left byte may be greater than len.
 	*/
 	virtual int write_all(const char* buf, int len) = 0;
 	virtual int write_all(const kbuf* buf, int len) {

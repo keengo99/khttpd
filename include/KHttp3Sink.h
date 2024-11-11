@@ -210,7 +210,7 @@ public:
 		if (content_left > 0) {
 			content_left -= ev[OP_WRITE].result;
 		}
-		add_down_flow(ev[OP_WRITE].result);
+		add_down_flow(nullptr, ev[OP_WRITE].result);
 		return ev[OP_WRITE].result;
 	}
 	void on_read(lsquic_stream_t* st);

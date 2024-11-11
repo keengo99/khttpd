@@ -104,14 +104,14 @@ int KHttpSink::internal_start_response_body(int64_t body_size, bool is_100_conti
 	int header_len = rc.get_len();
 	assert(!kfiber_is_main());
 	if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
-		if (0 != KSingleConnectionSink::write_all(rc.get_buf(), header_len)) {
+		if (0 != KSingleConnectionSink::write_buf(rc.get_buf(), header_len, nullptr)) {
 			return -1;
 		}
 		rc.clean();
 		return header_len;
 	}
 	if (is_100_continue) {
-		if (0 != KSingleConnectionSink::write_all(rc.get_buf(), header_len)) {
+		if (0 != KSingleConnectionSink::write_buf(rc.get_buf(), header_len, nullptr)) {
 			return -1;
 		}
 		rc.clean();
@@ -134,7 +134,7 @@ int KHttpSink::internal_read(char* buf, int len) {
 }
 int KHttpSink::sendfile(kfiber_file* fp, int len) {
 	if (!rc.empty()) {
-		int left = KSingleConnectionSink::write_all(rc.get_buf(), rc.get_len());
+		int left = KSingleConnectionSink::write_buf(rc.get_buf(), rc.get_len(), nullptr);
 		rc.clean();
 		if (left != 0) {
 			return 0;
@@ -150,7 +150,7 @@ int KHttpSink::sendfile(kfiber_file* fp, int len) {
 	}
 	int size2 = len;
 	bool result = kfiber_sendfile_full(cn, fp, &size2);
-	add_down_flow(len - size2 + size + 2);
+	add_down_flow(nullptr, len - size2 + size + 2);
 	if (!result) {
 		return -1;
 	}
@@ -201,7 +201,7 @@ void KHttpSink::end_request() {
 
 	if (!rc.empty()) {
 		//has header to send.
-		if (KSingleConnectionSink::write_all(rc.get_buf(), rc.get_len()) != 0) {
+		if (KSingleConnectionSink::write_buf(rc.get_buf(), rc.get_len(), nullptr) != 0) {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 			return;
 		}
@@ -223,7 +223,8 @@ void KHttpSink::end_request() {
 			bufs.iov_base = (char*)"\r\n";
 			bufs.iov_len = 2;
 		}
-		if (!kfiber_net_writev_full(cn, &bufs, &bc)) {
+		kfiber_net_writev_full(cn, &bufs, &bc);
+		if (bc>0) {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}
@@ -281,7 +282,8 @@ bool KHttpSink::response_trailer(const char* name, int name_len, const char* val
 	bufs[bc].iov_base = (char*)"\r\n";
 	bufs[bc].iov_len = 2;
 	bc++;
-	return kfiber_net_writev_full(cn, bufs, &bc);
+	kfiber_net_writev_full(cn, bufs, &bc);
+	return bc == 0;
 }
 void KHttpSink::start(int header_len) {
 	assert(header_len == 0);
