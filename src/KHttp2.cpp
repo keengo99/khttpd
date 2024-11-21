@@ -730,10 +730,7 @@ kev_result KHttp2::try_write() {
 	assert(write_processing == 1);
 	if (write_buffer.getBufferSize() > 0) {
 		if (write_buffer.is_sendfile()) {
-			if (!kgl_selector_module.sendfile(&c->st, resultHttp2Write, get_write_buffer(), this)) {
-				return resultHttp2Write(c->st.data, this, -1);
-			}
-			return kev_ok;
+			return selectable_sendfile(&c->st, resultHttp2Write, get_write_buffer(), this);
 		}
 		return selectable_write(&c->st, resultHttp2Write, get_write_buffer(), this);
 	}
