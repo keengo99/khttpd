@@ -113,7 +113,7 @@ public:
 	KHttpHeader* add_header(kgl_pool_t* pool, char* attr, int attr_len, char* val, int val_len, bool tail = true) {
 		assert(pool);
 		if (val_len < 0) {
-			return add_header(pool, (const char*)attr, attr_len, (const char*)val, val_len, tail);
+			return nullptr;
 		}
 		if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
 			return nullptr;

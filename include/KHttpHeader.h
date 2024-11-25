@@ -34,6 +34,7 @@ inline KHttpHeader* new_pool_http_header(kgl_pool_t* pool, const char* attr, int
 	if (attr_len > MAX_HEADER_ATTR_VAL_SIZE || val_len > MAX_HEADER_ATTR_VAL_SIZE) {
 		return NULL;
 	}
+	assert(val_len>=0);
 	KHttpHeader* header = (KHttpHeader*)(pool ? kgl_pnalloc(pool, sizeof(KHttpHeader)) : xmalloc(sizeof(KHttpHeader)));
 	memset(header, 0, sizeof(KHttpHeader));
 	header->header_in_pool = !!pool;
