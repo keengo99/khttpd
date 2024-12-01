@@ -63,10 +63,10 @@ inline KHttpHeader* new_pool_http_know_header(kgl_pool_t* pool, kgl_header_type 
 	return header;
 }
 inline KHttpHeader* new_http_know_header(kgl_header_type type, const char* val, int val_len) {
-	return new_pool_http_know_header(nullptr, type, val, val_len);
+	return new_pool_http_know_header(NULL, type, val, val_len);
 }
 inline KHttpHeader* new_http_header(const char* attr, int attr_len, const char* val, int val_len) {
-	return new_pool_http_header(nullptr, attr, attr_len, val, val_len);
+	return new_pool_http_header(NULL, attr, attr_len, val, val_len);
 }
 inline void xfree_header_buffer(KHttpHeader* av) {
 	if (!av->buf_in_pool) {
