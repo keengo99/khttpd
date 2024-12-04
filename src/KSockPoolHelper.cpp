@@ -261,8 +261,7 @@ bool KSockPoolHelper::setHostPort(KString host, int port, const char* s) {
 	if (s && (*s != 's' && *s != 'S')) {
 		s = NULL;
 	}
-
-	if (this->host != host || this->port != port) {
+	if (this->host != host || this->port != port || this->ssl!=s) {
 		destChanged = true;
 	}
 	this->host = host;
