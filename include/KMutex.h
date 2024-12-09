@@ -146,9 +146,22 @@ public:
 		lock->Lock();
 		this->lock = lock;
 	}
+	KLocker(const KLocker& a) = delete;
+	KLocker(KLocker&& a) noexcept {
+		this->lock = a.lock;
+		a.lock = nullptr;
+	}
 	~KLocker()
 	{
-		lock->Unlock();
+		if (lock) {
+			lock->Unlock();
+		}
+	}
+	KLocker& operator=(const KLocker& a) = delete;
+	KLocker& operator=(KLocker&& a) noexcept {
+		this->lock = a.lock;
+		a.lock = nullptr;
+		return *this;
 	}
 private:
 	KMutex *lock;
