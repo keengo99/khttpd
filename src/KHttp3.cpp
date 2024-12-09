@@ -441,7 +441,7 @@ interop_server_hset_add_header(void* hset_p, struct lsxpack_header* xhdr) {
 	const char* name, * value;
 	int name_len, value_len;
 	if (!xhdr) {
-		if (req->sink->data.raw_url->is_bad()) {
+		if (req->sink->data.raw_url.is_bad()) {
 			return 1;
 		}
 		return 0;

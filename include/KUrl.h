@@ -16,9 +16,9 @@
 class KUrl : public kgl_url{
 
 public:
-	KUrl() {
+	KUrl(bool support_share) {
 		memset(this, 0, sizeof(KUrl));
-		refs_count = 1;
+		refs_count = !!support_share;
 	}
 	bool match_accept_encoding(u_char accept_encoding) {
 		if (encoding > 0) {
@@ -74,9 +74,18 @@ public:
 		}
 		return strcmp(param, a->param);
 	}
-	KUrl* add_ref() {
+	//only support share url call add_ref/release
+	KUrl* add_ref() {		
+		assert(refs_count > 0);
 		katom_inc16((void*)&refs_count);
 		return this;
+	}
+	void release() {
+		assert(refs_count > 0);
+		if (katom_dec16((void*)&refs_count) > 0) {
+			return;
+		}
+		delete this;
 	}
 	bool is_bad() {
 		return host == NULL || path == NULL;
@@ -146,21 +155,17 @@ public:
 	{
 		build_url_host_port(this, s);
 	}
-	void release()
-	{
-		if (katom_dec16((void*)&refs_count) > 0) {
-			return;
-		}
-		delete this;
-	}
-private:
-	~KUrl() {
+	void clean() {
 		IF_FREE(host);
 		IF_FREE(path);
 		IF_FREE(param);
 #ifndef NDEBUG
 		flag_encoding = 0;
 #endif
+	}
+	~KUrl() {
+		assert(refs_count == 0);
+		clean();
 	}
 };
 using KSafeUrl = KSharedObj<KUrl>;

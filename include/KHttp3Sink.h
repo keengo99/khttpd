@@ -29,7 +29,6 @@ public:
 		cn->addRef();
 		this->cn = cn;
 		this->st = NULL;
-		this->data.raw_url = new KUrl;
 		data.set_http_version(3, 0);
 		st_flags = 0;
 		for (int i = 0; i < 2; i++) {

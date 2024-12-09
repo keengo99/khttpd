@@ -48,7 +48,7 @@ public:
 		}
 		assert(!header);
 	}
-	KRequestData() {
+	KRequestData(): raw_url(false){
 		memset(this, 0, sizeof(*this));
 		begin_time_msec = kgl_current_msec;
 		begin_request();
@@ -60,7 +60,7 @@ public:
 	/*
 	 * ԭʼurl
 	 */
-	KUrl* raw_url;
+	KUrl raw_url;
 	KUrl* url;
 	KHttpOpaque* opaque;
 	friend class KSink;
@@ -86,9 +86,8 @@ protected:
 	void begin_request() {
 		meth = METH_UNSET;
 		mark = 0;
-		assert(raw_url == NULL);
 		assert(url == NULL);
-		raw_url = new KUrl;
+		assert(!raw_url.host);
 	}
 
 	void free_lazy_memory() {
@@ -96,10 +95,7 @@ protected:
 			xfree(client_ip);
 			client_ip = NULL;
 		}
-		if (raw_url) {
-			raw_url->release();
-			raw_url = NULL;
-		}
+		raw_url.clean();
 		mark = 0;
 	}
 	void free_header() {
@@ -115,16 +111,17 @@ protected:
 		if (!ss) {
 			return false;
 		}
-		KBIT_CLR(raw_url->flags, KGL_URL_ORIG_SSL);
-		KBIT_SET(raw_url->flags, KGL_URL_HAS_PORT);
-		raw_url->host = kgl_strndup((char*)src, ss - src);
+		assert(!raw_url.host);
+		KBIT_CLR(raw_url.flags, KGL_URL_ORIG_SSL);
+		KBIT_SET(raw_url.flags, KGL_URL_HAS_PORT);
+		raw_url.host = kgl_strndup((char*)src, ss - src);
 		len -= (ss - src);
-		raw_url->port = (uint16_t)kgl_atoi(ss + 1, len - 1);
+		raw_url.port = (uint16_t)kgl_atoi(ss + 1, len - 1);
 		return true;
 	}
 	bool parse_host(const char* val, size_t len) {
-		if (raw_url->host == NULL) {
-			return parse_url_host(raw_url, val, len);
+		if (!raw_url.host) {
+			return parse_url_host(&raw_url, val, len);
 		}
 		return true;
 	}

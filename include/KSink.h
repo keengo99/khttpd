@@ -169,14 +169,14 @@ public:
 			data.self_port = port;
 		}
 		if (ssl) {
-			KBIT_SET(data.raw_url->flags, KGL_URL_SSL);
-			if (data.raw_url->port == 80) {
-				data.raw_url->port = 443;
+			KBIT_SET(data.raw_url.flags, KGL_URL_SSL);
+			if (data.raw_url.port == 80) {
+				data.raw_url.port = 443;
 			}
 		} else {
-			KBIT_CLR(data.raw_url->flags, KGL_URL_SSL);
-			if (data.raw_url->port == 443) {
-				data.raw_url->port = 80;
+			KBIT_CLR(data.raw_url.flags, KGL_URL_SSL);
+			if (data.raw_url.port == 443) {
+				data.raw_url.port = 80;
 			}
 		}
 	}
@@ -325,7 +325,7 @@ public:
 				return data.parse_http_version((u_char*)val, val_len);
 			}
 			if (kgl_mem_same(attr, attr_len, kgl_expand_string(":path"))) {
-				return parse_url(val, val_len, data.raw_url);
+				return parse_url(val, val_len, &data.raw_url);
 			}
 			if (kgl_mem_same(attr, attr_len, kgl_expand_string(":authority"))) {
 				return data.parse_host(val, val_len);
@@ -359,7 +359,7 @@ public:
 			case METH_PRI:
 				return true;
 			default:
-				if (!parse_url(val, url_len, data.raw_url)) {
+				if (!parse_url(val, url_len, &data.raw_url)) {
 					return false;
 				}
 			}
@@ -386,17 +386,17 @@ public:
 						}
 					}
 					if (field.is(kgl_expand_string("gzip"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_GZIP);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_GZIP);
 					} else if (field.is(kgl_expand_string("deflate"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_DEFLATE);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_DEFLATE);
 					} else if (field.is(kgl_expand_string("compress"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_COMPRESS);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_COMPRESS);
 					} else if (field.is(kgl_expand_string("br"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_BR);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_BR);
 					} else if (field.is(kgl_expand_string("zstd"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_ZSTD);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_ZSTD);
 					} else if (!field.is(kgl_expand_string("identity"))) {
-						KBIT_SET(data.raw_url->accept_encoding, KGL_ENCODING_UNKNOW);
+						KBIT_SET(data.raw_url.accept_encoding, KGL_ENCODING_UNKNOW);
 					}
 				next_field:
 					if (!field.next(field_end)) {
@@ -554,9 +554,9 @@ public:
 		case 'x':
 			if (kgl_mem_case_same(attr, attr_len, kgl_expand_string("X-Forwarded-Proto"))) {
 				if (kgl_mem_case_same(val, val_len, kgl_expand_string("https"))) {
-					KBIT_SET(data.raw_url->flags, KGL_URL_ORIG_SSL);
+					KBIT_SET(data.raw_url.flags, KGL_URL_ORIG_SSL);
 				} else {
-					KBIT_CLR(data.raw_url->flags, KGL_URL_ORIG_SSL);
+					KBIT_CLR(data.raw_url.flags, KGL_URL_ORIG_SSL);
 				}
 				return true;
 			}
@@ -570,20 +570,20 @@ public:
 		katom_inc64((void*)&kgl_total_requests);
 		set_state(STATE_RECV);
 		assert(data.url == NULL);
-		if (data.raw_url == nullptr) {
+		if (!data.raw_url.host) {
 			return false;
 		}
-		data.url = new KUrl;
-		if (data.raw_url->host) {
-			data.url->host = xstrdup(data.raw_url->host);
+		data.url = new KUrl(true);
+		if (data.raw_url.host) {
+			data.url->host = xstrdup(data.raw_url.host);
 		}
-		if (data.raw_url->param) {
-			data.url->param = strdup(data.raw_url->param);
+		if (data.raw_url.param) {
+			data.url->param = strdup(data.raw_url.param);
 		}
-		data.url->flag_encoding = data.raw_url->flag_encoding;
-		data.url->port = data.raw_url->port;
-		if (data.raw_url->path) {
-			data.url->path = xstrdup(data.raw_url->path);
+		data.url->flag_encoding = data.raw_url.flag_encoding;
+		data.url->port = data.raw_url.port;
+		if (data.raw_url.path) {
+			data.url->path = xstrdup(data.raw_url.path);
 			url_decode(data.url->path, 0, data.url, false);
 		}
 		return true;
@@ -626,7 +626,7 @@ public:
 protected:
 	void start_parse() {
 		if (KBIT_TEST(get_server_model(), WORK_MODEL_SSL)) {
-			KBIT_SET(data.raw_url->flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
+			KBIT_SET(data.raw_url.flags, KGL_URL_SSL | KGL_URL_ORIG_SSL);
 		}
 	}
 

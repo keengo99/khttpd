@@ -698,7 +698,7 @@ KHttp2Context* KHttp2::create_stream() {
 	stream->sink = sink;
 #ifdef KSOCKET_SSL
 	if (kconnection_is_ssl(c)) {
-		KBIT_SET(stream->sink->data.raw_url->flags, KGL_URL_SSL);
+		KBIT_SET(stream->sink->data.raw_url.flags, KGL_URL_SSL);
 	}
 #endif
 	return stream;

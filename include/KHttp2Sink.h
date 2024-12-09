@@ -11,7 +11,6 @@ public:
 	{
 		this->http2 = http2;
 		this->ctx = ctx;
-		this->data.raw_url = new KUrl;
 	}
 	~KHttp2Sink()
 	{

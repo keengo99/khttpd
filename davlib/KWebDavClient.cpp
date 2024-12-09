@@ -25,7 +25,7 @@ bool KWebDavClient::set_url(const char* url, const char *host)
 	if (this->url) {
 		this->url->release();
 	}
-	this->url = new KUrl;
+	this->url = new KUrl(true);
 	if (this->sock_pool) {
 		this->sock_pool->release();
 		this->sock_pool = NULL;
