@@ -55,10 +55,6 @@ public:
 	{
 		return http2->add_header(ctx, name, name_len, val, val_len);
 	}
-	bool response_connection(const char* val, int val_len) override
-	{
-		return false;
-	}
 	//返回头长度,-1表示出错
 	int internal_start_response_body(int64_t body_size, bool is_100_continue) override
 	{

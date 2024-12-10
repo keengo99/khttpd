@@ -23,7 +23,6 @@ static int handle_http2https_error(void* arg, int got) {
 	sink->response_status(STATUS_HTTP_TO_HTTPS);
 	sink->response_content_length(body_len);
 	sink->response_header(kgl_expand_string("Cache-Control"), kgl_expand_string("no-cache,no-store"));
-	sink->response_connection();
 	sink->start_response_body(body_len);
 	sink->write_all(body, body_len);
 	return 0;
@@ -95,6 +94,9 @@ bool KHttpSink::response_header(const char* name, int name_len, const char* val,
 	return true;
 }
 int KHttpSink::internal_start_response_body(int64_t body_size, bool is_100_continue) {
+	if (!is_100_continue) {
+		response_connection();
+	}
 	if (rc.empty()) {
 		return 0;
 	}
@@ -224,7 +226,7 @@ void KHttpSink::end_request() {
 			bufs.iov_len = 2;
 		}
 		kfiber_net_writev_full(cn, &bufs, &bc);
-		if (bc>0) {
+		if (bc > 0) {
 			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
 		}
 	}

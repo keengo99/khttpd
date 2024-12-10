@@ -9,7 +9,6 @@ void on_new_http_request(KSink *rq, int header_size)
 {
 	rq->response_status(STATUS_OK);
 	rq->response_content_length(4);
-	rq->response_connection();
 	rq->response_header(kgl_expand_string("x-server"), kgl_expand_string("test"));
 	rq->start_response_body(4);
 	rq->write_all(kgl_expand_string("test"));

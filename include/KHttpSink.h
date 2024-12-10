@@ -19,8 +19,22 @@ public:
 	}
 	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
 	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
-	bool response_connection(const char* val, int val_len) override {
-		return response_header(kgl_header_connection, val, val_len, true);
+	inline bool response_connection() {
+#ifdef HTTP_PROXY
+		if (data.meth == METH_CONNECT) {
+			return false;
+		}
+#endif
+		if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
+			return response_header(kgl_header_connection, kgl_expand_string("upgrade"), true);
+		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
+			return response_header(kgl_header_connection, kgl_expand_string("close"), true);
+		}
+		if (data.http_version > 0x100) {
+			//HTTP/1.1 default keep-alive
+			return true;
+		}
+		return response_header(kgl_header_connection, kgl_expand_string("keep-alive"), true);
 	}
 	bool readhup(void* arg, result_callback result) override {
 		return selectable_readhup(&cn->st, result, arg);

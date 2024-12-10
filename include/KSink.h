@@ -83,23 +83,6 @@ public:
 			helper = helper->next;
 		}
 	}
-	inline bool response_connection() {
-#ifdef HTTP_PROXY
-		if (data.meth == METH_CONNECT) {
-			return false;
-		}
-#endif
-		if (KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE)) {
-			return response_connection(kgl_expand_string("upgrade"));
-		} else if (KBIT_TEST(data.flags, RQ_CONNECTION_CLOSE) || !KBIT_TEST(data.flags, RQ_HAS_KEEP_CONNECTION)) {
-			return response_connection(kgl_expand_string("close"));
-		}
-		if (data.http_version > 0x100) {
-			//HTTP/1.1 default keep-alive
-			return true;
-		}
-		return response_connection(kgl_expand_string("keep-alive"));
-	}
 	bool response_header(kgl_header_type attr, int64_t value) {
 		char* tmpbuf = (char*)kgl_pnalloc(pool, INT2STRING_LEN);
 		int len = int2string2(value, tmpbuf);
@@ -638,7 +621,6 @@ protected:
 	}
 	virtual int internal_read(char* buf, int len) = 0;
 	virtual bool internal_response_status(uint16_t status_code) = 0;
-	virtual bool response_connection(const char* val, int val_len) = 0;
 	virtual int internal_start_response_body(int64_t body_size, bool is_100_continue) = 0;
 private:
 	bool response_100_continue();
