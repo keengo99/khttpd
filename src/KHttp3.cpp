@@ -45,13 +45,11 @@ static lsquic_stream_ctx_t* http_server_on_new_stream(void* stream_if_ctx, lsqui
 	return (lsquic_stream_ctx_t*)sink;
 }
 
-static lsquic_conn_ctx_t*
-http_server_on_new_conn(void* stream_if_ctx, lsquic_conn_t* conn) {
+static lsquic_conn_ctx_t* http_server_on_new_conn(void* stream_if_ctx, lsquic_conn_t* conn) {
 	KHttp3Connection* cn = new KHttp3Connection(conn, (KHttp3ServerEngine*)stream_if_ctx);
 	return (lsquic_conn_ctx_t*)cn;
 }
-static void
-http_server_on_conn_closed(lsquic_conn_t* conn) {
+static void http_server_on_conn_closed(lsquic_conn_t* conn) {
 	KHttp3Connection* cn = (KHttp3Connection*)lsquic_conn_get_ctx(conn);
 	lsquic_conn_set_ctx(conn, NULL);
 	cn->detach_connection();
@@ -62,22 +60,20 @@ static void http_server_on_read(struct lsquic_stream* stream, lsquic_stream_ctx_
 	KHttp3Sink* sink = (KHttp3Sink*)st_h;
 	sink->on_read(stream);
 }
-static void
-http_server_on_write(lsquic_stream_t* stream, lsquic_stream_ctx_t* st_h) {
+static void http_server_on_write(lsquic_stream_t* stream, lsquic_stream_ctx_t* st_h) {
 	assert(st_h);
 	KHttp3Sink* sink = (KHttp3Sink*)st_h;
 	sink->on_write(stream);
 }
-static void
-http_server_on_close(lsquic_stream_t* stream, lsquic_stream_ctx_t* st_h) {
+static void http_server_on_close(lsquic_stream_t* stream, lsquic_stream_ctx_t* st_h) {
 	if (st_h) {
 		KHttp3Sink* sink = (KHttp3Sink*)st_h;
+		lsquic_stream_set_ctx(stream, NULL);
 		if (sink->is_processing()) {
 			sink->detach_stream();
-			lsquic_stream_set_ctx(stream, NULL);
-			return;
+		} else {
+			delete sink;
 		}
-		delete sink;
 	}
 }
 static void
@@ -365,7 +361,7 @@ int h3_process_package_in(KHttp3ServerEngine* h3_engine, kconnection* uc, int go
 	}
 
 	kgl_quic_package package;
-	package.buffer = (char *)h3_engine->iov_buf[1].iov_base;
+	package.buffer = (char*)h3_engine->iov_buf[1].iov_base;
 	package.peer_addr = &uc->addr;
 	parse_local_addr(&package, uc);
 	return kgl_quic_package_in(h3_engine, &package, got);
@@ -383,7 +379,7 @@ kev_result h3_result_udp_recv(KOPAQUE data, void* arg, int got) {
 		h3_engine->release();
 		return kev_destroy;
 	}
-	return h3_recv_package(h3_engine, uc);	
+	return h3_recv_package(h3_engine, uc);
 }
 SSL_CTX* h3_lookup_cert(void* lsquic_cert_lookup_ctx, const struct sockaddr* local, const char* hostname) {
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)lsquic_cert_lookup_ctx;
@@ -450,7 +446,7 @@ interop_server_hset_add_header(void* hset_p, struct lsxpack_header* xhdr) {
 	value = lsxpack_header_get_value(xhdr);
 	name_len = xhdr->name_len;
 	value_len = xhdr->val_len;
-	bool result = req->sink->parse_header<const char *>(name, name_len, (char*)value, value_len, req->is_first);
+	bool result = req->sink->parse_header<const char*>(name, name_len, (char*)value, value_len, req->is_first);
 	req->is_first = false;
 	if (result) {
 		return 0;

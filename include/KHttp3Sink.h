@@ -37,21 +37,19 @@ public:
 		response_headers.new_first();
 	}
 	~KHttp3Sink() {
-		KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		if (st && content_left > 0) {
-			//printf("stream reset [%p]\n", st);
-			lsquic_stream_maybe_reset(st, 0, 0);
-		}
-		KBIT_CLR(st_flags, H3_IS_PROCESSING);
-		if (st) {
-			//printf("stream close st=[%p]\n", st);
-			lsquic_stream_close(st);
-			st = NULL;
+		if (is_processing()) {
+			if (st) {
+				lsquic_stream_set_ctx(st, NULL);
+				if (content_left > 0) {
+					lsquic_stream_maybe_reset(st, 0, 0);
+				}
+				lsquic_stream_close(st);
+			}
+			KBIT_CLR(st_flags, H3_IS_PROCESSING);
 		}
 		for (int i = 0; i < 2; i++) {
 			ev[i].cd->f->release(ev[i].cd);
 		}
-		assert(st == NULL);
 		assert(cn);
 		cn->release();
 	}
