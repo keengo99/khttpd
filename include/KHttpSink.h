@@ -9,7 +9,7 @@
 #include "KHttpServer.h"
 #include "klog.h"
 //handle http/1.x protocol
-class KHttpSink : public KSingleConnectionSink
+class KHttpSink final : public KSingleConnectionSink
 {
 public:
 	KHttpSink(kconnection* c, kgl_pool_t* pool);

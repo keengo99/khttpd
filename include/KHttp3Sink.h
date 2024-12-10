@@ -22,10 +22,10 @@ struct kgl_fiber_event
 	int bc;
 	int result;
 };
-class KHttp3Sink : public KSink
+class KHttp3Sink final: public KSink
 {
 public:
-	KHttp3Sink(KHttp3Connection* cn) : KSink(NULL), response_headers(16) {
+	KHttp3Sink(KHttp3Connection* cn) : KSink(NULL), response_headers(16), content_left{ 0 } {
 		cn->addRef();
 		this->cn = cn;
 		this->st = NULL;

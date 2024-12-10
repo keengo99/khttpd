@@ -4,7 +4,7 @@
 #include "KHttp2.h"
 #include "KHttpServer.h"
 #ifdef ENABLE_HTTP2
-class KHttp2Sink : public KTcpServerSink
+class KHttp2Sink final: public KTcpServerSink
 {
 public:
 	KHttp2Sink(KHttp2* http2, KHttp2Context* ctx, kgl_pool_t* pool) : KTcpServerSink(pool)
