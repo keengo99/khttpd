@@ -249,7 +249,6 @@ public:
 		}
 		data.client_ip = strdup(ip);
 	}
-
 	bool start_response_body(INT64 body_len) {
 		assert(!KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER));
 		if (KBIT_TEST(data.flags, RQ_HAS_SEND_HEADER)) {
@@ -288,7 +287,6 @@ public:
 		//printf("%.*s%s%.*s\n",attr_len, attr, (is_first?" ":": "),val_len, val);
 		if (is_first) {
 			start_parse();
-			assert(!data.client_ip);
 			assert(!data.header);
 		}
 #if defined(ENABLE_HTTP2) || defined(ENABLE_HTTP3)

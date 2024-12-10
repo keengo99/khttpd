@@ -80,6 +80,7 @@ public:
 		}
 		this->opaque = opaque;
 	}
+	/* client_ip use heap memory, In future will change to use pool memory. */
 	char* client_ip;
 protected:
 	/* call begin_request when read first package or first new request */

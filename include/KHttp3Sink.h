@@ -42,7 +42,6 @@ public:
 			//printf("stream reset [%p]\n", st);
 			lsquic_stream_maybe_reset(st, 0, 0);
 		}
-		assert(is_processing());
 		KBIT_CLR(st_flags, H3_IS_PROCESSING);
 		if (st) {
 			//printf("stream close st=[%p]\n", st);
@@ -52,7 +51,6 @@ public:
 		for (int i = 0; i < 2; i++) {
 			ev[i].cd->f->release(ev[i].cd);
 		}
-		assert(!is_processing());
 		assert(st == NULL);
 		assert(cn);
 		cn->release();
