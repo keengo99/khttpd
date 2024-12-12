@@ -14,11 +14,36 @@ class KHttpSink final : public KSingleConnectionSink
 public:
 	KHttpSink(kconnection* c, kgl_pool_t* pool);
 	~KHttpSink();
-	bool is_locked() override {
+	virtual bool is_locked() override {
 		return KBIT_TEST(cn->st.base.st_flags, STF_LOCK);
 	}
-	bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override;
-	bool response_header(const char* name, int name_len, const char* val, int val_len) override;
+	virtual bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) override {
+		assert(know_header < kgl_header_unknow);
+		rc.head_append(pool, kgl_header_type_string[know_header].http11.data, (uint16_t)kgl_header_type_string[know_header].http11.len);
+		if (lock_value) {
+			rc.head_append(pool, val, val_len);
+		} else {
+			char* buf = (char*)kgl_pnalloc(pool, val_len);
+			memcpy(buf, val, val_len);
+			rc.head_append(pool, buf, (uint16_t)val_len);
+		}
+		return true;
+	}
+	virtual bool response_header(const char* name, int name_len, const char* val, int val_len) override {
+		int len = name_len + val_len + 4;
+		char* buf = (char*)kgl_pnalloc(pool, len);
+		char* hot = buf;
+		kgl_memcpy(hot, "\r\n", 2);
+		hot += 2;
+		kgl_memcpy(hot, name, name_len);
+		hot += name_len;
+		kgl_memcpy(hot, ": ", 2);
+		hot += 2;
+		kgl_memcpy(hot, val, val_len);
+		hot += val_len;
+		rc.head_append(pool, buf, len);
+		return true;
+	}
 	inline bool response_connection() {
 #ifdef HTTP_PROXY
 		if (data.meth == METH_CONNECT) {
@@ -96,7 +121,9 @@ public:
 		}
 		return dechunk->trailer->header;
 	}
-
+	virtual bool response_headers(const KHttpHeader* header) override {
+		return khttpd::response_headers<KHttpSink>(this, header);
+	}
 	bool response_trailer(const char* name, int name_len, const char* val, int val_len) override;
 	void start(int header_len) override;
 	bool skip_post();

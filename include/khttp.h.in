@@ -177,9 +177,10 @@ struct _KHttpHeader
 					uint8_t name_hash;
 					uint8_t name_is_know : 1;
 					uint8_t name_is_internal : 1;
-					uint8_t buf_in_pool : 1;
-					uint8_t header_in_pool : 1;
-					uint8_t buf_reoffset : 1;
+					uint8_t buf_in_pool : 1; /* buf do not free when call free_header*/
+					uint8_t header_in_pool : 1; /* header do not free */
+					uint8_t buf_reoffset : 1; /* buf can reoffset by ptrdiff_t and buf_in_pool must set */
+					uint8_t buf_cannot_lock : 1; /* buf can not lock by sink response_header and must copy buffer by sink */
 				};
 				uint16_t name_flags;
 			};

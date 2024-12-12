@@ -494,7 +494,9 @@ public:
 public:
 	int ReadHeader(KHttp2Context* ctx);
 	int read(KHttp2Context* ctx, char* buf, int length);
+	/* return success write byte */
 	int write(KHttp2Context* ctx, const kbuf* buf, int length);
+	/* return left byte to send */
 	int write_all(KHttp2Context* ctx, const kbuf* buf, int length) {
 		kbuf header;
 		while(length>0) {
@@ -507,6 +509,7 @@ public:
 		};
 		return length;
 	}
+	/* return success sendfile byte */
 	int sendfile(KHttp2Context* ctx, kasync_file* file, int length);
 	bool add_status(KHttp2Context* ctx, uint16_t status_code);
 	bool add_method(KHttp2Context* ctx, u_char meth);

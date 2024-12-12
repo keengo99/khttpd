@@ -19,7 +19,6 @@ extern kgl_header_string kgl_header_type_string[];
 void kgl_init_header_string();
 bool kgl_build_know_header_value(kgl_pool_t *pool, KHttpHeader* header, const char* val, int val_len);
 #define kgl_cpymem(dst, src, n)   (((u_char *) kgl_memcpy(dst, src, n)) + (n))
-
 inline void kgl_get_header_name(KHttpHeader* header, kgl_str_t* result) {
 	if (header->name_is_know) {
 		result->data = kgl_header_type_string[header->know_header].value.data;

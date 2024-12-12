@@ -19,6 +19,24 @@ struct kgl_request_ts
 {
 	kgl_list sinks;
 };
+namespace khttpd {
+	template<typename T>
+	inline bool response_headers(T* sink, const KHttpHeader* header) {
+		while (header) {
+			if (header->name_is_know) {
+				if (!sink->response_header((kgl_header_type)header->know_header, header->buf + header->val_offset, header->val_len, !header->buf_cannot_lock)) {
+					return false;
+				}
+			} else {
+				if (!sink->response_header(header->buf, header->name_len, header->buf + header->val_offset, header->val_len)) {
+					return false;
+				}
+			}
+			header = header->next;
+		}
+		return true;
+	}
+}
 extern krequest_start_func server_on_new_request;
 extern pthread_key_t kgl_request_key;
 class KSink
@@ -65,8 +83,6 @@ public:
 			helper = helper->next;
 		}
 	}
-	//called by low level to start sink.
-	//virtual kev_result read_header() = 0;
 	virtual void start(int header_len) = 0;
 	bool adjust_range(int64_t* len) {
 		assert(data.range);
@@ -88,20 +104,6 @@ public:
 		int len = int2string2(value, tmpbuf);
 		return response_header(attr, tmpbuf, len, true);
 	}
-	bool response_content_length(int64_t content_len) {
-		if (content_len >= 0) {
-			return response_header(kgl_header_content_length, content_len);
-		}
-		//无content-length时
-		if (data.http_version == 0x100) {
-			//HTTP/1.0 client not support transfer-encoding
-			//The connection MUST close
-			KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
-		} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && set_transfer_chunked()) {
-			KBIT_SET(data.flags, RQ_TE_CHUNKED);
-		}
-		return true;
-	}
 	bool response_status(uint16_t status_code) {
 		if (data.status_code > 0) {
 			//status_code只能发送一次
@@ -111,6 +113,9 @@ public:
 		data.first_response_time_msec = kgl_current_msec;
 		data.status_code = status_code;
 		return internal_response_status(status_code);
+	}
+	virtual bool response_headers(const KHttpHeader* header) {
+		return khttpd::response_headers<KSink>(this, header);
 	}
 	virtual bool response_header(kgl_header_type know_header, const char* val, int val_len, bool lock_value) {
 		assert(know_header < kgl_header_unknow);
@@ -255,7 +260,26 @@ public:
 			return true;
 		}
 		KBIT_SET(data.flags, RQ_HAS_SEND_HEADER);
+		if (likely(!is_status_code_no_body(data.status_code))) {
+			if (body_len >= 0) {
+				/* know content-length and response header */
+				response_header(kgl_header_content_length, body_len);
+			} else {
+				/* unknow content-length */
+				if (data.http_version == 0x100) {
+					//HTTP/1.0 client not support transfer-encoding
+					//The connection MUST close
+					KBIT_SET(data.flags, RQ_CONNECTION_CLOSE);
+				} else if (!KBIT_TEST(data.flags, RQ_CONNECTION_UPGRADE) && set_transfer_chunked()) {
+					KBIT_SET(data.flags, RQ_TE_CHUNKED);
+				}
+			}
+		} else {
+			/* status_code is no body not need send content-length */
+			body_len = 0;
+		}
 		if (data.meth == METH_HEAD) {
+			/* request is HEAD method so do not send any body */
 			body_len = 0;
 		}
 		int header_len = internal_start_response_body(body_len, false);
