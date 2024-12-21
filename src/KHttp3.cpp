@@ -498,15 +498,16 @@ bool kgl_init_khttp3() {
 	return true;
 
 }
-
-void kgl_h3_generate_scid(void* ctx, lsquic_conn_t* cn, lsquic_cid_t* cid, unsigned len) {
+void kgl_h3_generate_scid(void* ctx, lsquic_conn_t* cn, uint8_t*buf, unsigned len) {
+//}
+//void kgl_h3_generate_scid(void* ctx, lsquic_conn_t* cn, lsquic_cid_t* cid, unsigned len) {
 	KHttp3ServerEngine* h3_engine = (KHttp3ServerEngine*)ctx;
 	kselector* selector = kgl_get_tls_selector();
-	kgl_h3_cid_header* header = (kgl_h3_cid_header*)cid->idbuf;
+	kgl_h3_cid_header* header = (kgl_h3_cid_header*)buf;
 	header->port_id = (uint8_t)selector->sid;
 	header->seq = h3_engine->seq++;
-	RAND_bytes(cid->idbuf + sizeof(kgl_h3_cid_header), len - sizeof(kgl_h3_cid_header));
-	cid->len = len;
+	RAND_bytes(buf + sizeof(kgl_h3_cid_header), len - sizeof(kgl_h3_cid_header));
+	//cid->len = len;
 }
 
 int h3_start_server_engine(void* arg, int got) {

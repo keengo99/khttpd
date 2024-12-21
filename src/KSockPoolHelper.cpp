@@ -412,6 +412,30 @@ KString KSockPoolHelper::get_port() {
 	}
 	return s.str();
 }
+void KSockPoolHelper::dump(kgl::serializable* s) {
+	kgl_refs_string* str = GetParam();
+	lock.Lock();
+	s->add("host", host);
+	s->add("port", get_port());
+	s->add("life_time",getLifeTime());
+	if (str) {
+		s->add("param", str->data);
+	}
+	kstring_release(str);
+#ifdef HTTP_PROXY
+	if (!auth_user.empty()) {
+		s->add("auth_user", auth_user);
+	}
+	if (!auth_passwd.empty()) {
+		s->add("auth_passwd", auth_passwd);
+	}
+#endif
+	if (ip && *ip) {
+		s->add("self_ip", ip);
+	}
+	s->add("sign", sign);
+	lock.Unlock();
+}
 void KSockPoolHelper::build(std::map<KString, KString>& attr) {
 	kgl_refs_string* str = GetParam();
 	lock.Lock();
