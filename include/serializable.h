@@ -39,6 +39,7 @@ namespace kgl {
 		std::vector<string>* add_string_array(const string& name);
 		std::vector<int64_t>* add_int_array(const string& name);
 		serializable* add_obj_array(const string& name);
+		std::vector<serializable> *add_obj_array2(const string& name);
 		serializable& operator = (serializable&& a) noexcept;
 		serializable& operator = (const serializable& a);
 
@@ -90,7 +91,7 @@ namespace kgl {
 			case data_type::OBJ:
 			{
 				auto v = obj;
-				objs = new std::vector< serializable>();
+				objs = new std::vector<serializable>();
 				objs->emplace_back(std::move(*v));
 				delete v;
 				type = data_type::OBJ_ARRAY;

@@ -81,7 +81,7 @@ public:
 	void shutdown() override;
 	bool parse(const KXmlAttribute& attr);
 	void build(std::map<KString, KString>& attr);
-	void dump(kgl::serializable* s);
+	void dump(kgl::serializable* s, bool as_mserver=false);
 	KUpstream* get_upstream(uint32_t flags, const char* sni_host = NULL);
 	KString get_port();
 	bool setHostPort(KString host, const char* port);

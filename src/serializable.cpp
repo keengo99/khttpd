@@ -248,6 +248,15 @@ namespace kgl {
 		}
 		return nullptr;
 	}
+	std::vector<serializable> *serializable::add_obj_array2(const string& name) {
+		auto it = data.find(name);
+		if (it == data.end()) {
+			data_value* dv = new data_value(data_type::OBJ_ARRAY);
+			data.emplace(name, dv);
+			return dv->objs;
+		}
+		return nullptr;
+	}
 	serializable* serializable::add_obj_array(const string& name) {
 		auto it = data.find(name);
 		if (it == data.end()) {

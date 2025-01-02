@@ -412,7 +412,7 @@ KString KSockPoolHelper::get_port() {
 	}
 	return s.str();
 }
-void KSockPoolHelper::dump(kgl::serializable* s) {
+void KSockPoolHelper::dump(kgl::serializable* s, bool as_mserver) {
 	kgl_refs_string* str = GetParam();
 	lock.Lock();
 	s->add("host", host);
@@ -434,6 +434,15 @@ void KSockPoolHelper::dump(kgl::serializable* s) {
 		s->add("self_ip", ip);
 	}
 	s->add("sign", sign);
+	s->add("idle_size", getSize());
+	s->add("total_connect", total_connect);
+	s->add("total_hit", total_hit);
+	s->add("total_err", total_error);
+	if (as_mserver) {	
+		s->add("avg_monitor_tick", avg_monitor_tick);
+		s->add("weight", weight);
+		s->add("enable", is_enabled());
+	}
 	lock.Unlock();
 }
 void KSockPoolHelper::build(std::map<KString, KString>& attr) {
