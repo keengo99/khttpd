@@ -39,6 +39,9 @@ public:
 		}
 		return (*it).second;
 	}
+	void merge(const KXmlAttribute& a) {
+		insert(a.begin(), a.end());
+	}
 	const KString &operator[](const KString& key) const {
 		auto it = find(key);
 		if (it == end()) {
