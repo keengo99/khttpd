@@ -89,10 +89,12 @@ public:
 		return kgl_adjust_range(data.range, len);
 	}
 	void add_down_flow(const kgl_iovec* suffix, int flow) {
+		if (flow <= 0) {
+			return;
+		}
 		if (suffix) {
 			flow += (int)suffix->iov_len;
 		}
-		assert(flow >= 0);
 		KFlowInfoHelper* helper = data.fh;
 		while (helper) {
 			helper->fi->AddDownFlow((INT64)flow, KBIT_TEST(data.flags, RQ_CACHE_HIT));

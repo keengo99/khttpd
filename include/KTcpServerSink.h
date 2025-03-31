@@ -128,9 +128,7 @@ public:
 	}
 	virtual int sendfile(kfiber_file* fp, int len) override {
 		int got = on_success_response(kfiber_sendfile(cn, fp, len));
-		if (got > 0) {
-			add_down_flow(nullptr, got);
-		}
+		add_down_flow(nullptr, got);
 		return got;
 	}
 	int64_t get_response_left() override {
