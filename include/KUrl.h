@@ -159,9 +159,7 @@ public:
 		IF_FREE(host);
 		IF_FREE(path);
 		IF_FREE(param);
-#ifndef NDEBUG
 		flag_encoding = 0;
-#endif
 	}
 	~KUrl() {
 		assert(refs_count == 0);
@@ -169,19 +167,4 @@ public:
 	}
 };
 using KSafeUrl = KSharedObj<KUrl>;
-#if 0
-class KAutoUrl
-{
-public:
-	KAutoUrl()
-	{
-		u = new KUrl;		
-	}
-	~KAutoUrl()
-	{
-		u->relase();
-	}
-	KUrl* u;
-};
-#endif
 #endif
