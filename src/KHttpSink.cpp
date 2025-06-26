@@ -24,7 +24,9 @@ static int handle_http2https_error(void* arg, int got) {
 	//sink->response_content_length(body_len);
 	sink->response_header(kgl_expand_string("Cache-Control"), kgl_expand_string("no-cache,no-store"));
 	sink->start_response_body(body_len);
-	sink->write_all(body, body_len);
+	if (sink->data.meth != METH_HEAD) {
+		sink->write_all(body, body_len);
+	}
 	return 0;
 }
 #endif

@@ -9,7 +9,7 @@
 
 
 kev_result handle_ssl_accept(KOPAQUE data, void* arg, int got);
-#define KGL_BUSY_MSG "HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\n\r\nServer is busy."
+//#define KGL_BUSY_MSG "HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\n\r\nServer is busy."
 int kgl_sink_start_fiber(void* arg, int got) {
 	KSink* sink = (KSink*)arg;
 	sink->start(got);
